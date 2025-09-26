@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <title>PDF Uploader - Google Drive</title>
     
+    <!-- CSP CẬP NHẬT để cho phép tất cả các nguồn Google cần thiết cho OAuth -->
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self';
-        script-src 'self' https://apis.google.com https://accounts.google.com;
+        script-src 'self' https://apis.google.com https://accounts.google.com https://www.gstatic.com;
         style-src 'self' 'unsafe-inline';
-        connect-src 'self' https://www.googleapis.com https://accounts.google.com;
-        frame-src https://accounts.google.com https://oauth2.googleapis.com;
+        connect-src 'self' https://www.googleapis.com https://accounts.google.com https://content.googleapis.com;
+        frame-src https://accounts.google.com https://oauth2.googleapis.com https://content.googleapis.com;
         img-src 'self' data:;
         font-src 'self';
     ">
@@ -79,8 +80,10 @@
         <div id="history-list"></div>
     </div>
 
+    <!-- Tải thư viện Google API Client -->
     <script src="https://apis.google.com/js/api.js"></script>
     
+    <!-- Tải mã JavaScript của ứng dụng từ file app.js -->
     <script src="./app.js"></script>
 </body>
 </html>
