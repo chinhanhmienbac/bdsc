@@ -4,18 +4,19 @@
     <meta charset="UTF-8">
     <title>PDF Uploader - Google Drive</title>
     
-    <!-- CSP CẬP NHẬT để cho phép các script và iframe của Google hoạt động đúng cách -->
+    <!-- CSP ĐÃ ĐƯỢC SỬA -->
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self';
         script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://accounts.google.com https://www.gstatic.com;
         style-src 'self' 'unsafe-inline';
         connect-src 'self' https://apis.google.com https://www.googleapis.com https://accounts.google.com https://content.googleapis.com;
-        frame-src https://accounts.google.com https://oauth2.googleapis.com https://content.googleapis.com;
-        img-src 'self' data:;
-        font-src 'self';
+        frame-src 'self' https://accounts.google.com https://oauth2.googleapis.com;
+        img-src 'self' data: https:;
+        font-src 'self' data:;
     ">
 
     <style>
+        /* Giữ nguyên CSS */
         body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; border: 1px solid #eee; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
         h1 { text-align: center; color: #1a73e8; }
         h2 { border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; color: #3c4043; }
@@ -81,7 +82,7 @@
     </div>
 
     <!-- Tải thư viện Google API Client -->
-    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://apis.google.com/js/api.js" onload="handleClientLoad()" async defer></script>
     
     <!-- Tải mã JavaScript của ứng dụng từ file app.js -->
     <script src="./app.js"></script>
