@@ -2,7 +2,7 @@
 
 // --- 1. CẤU HÌNH API VÀ BIẾN SỐ ---
 const CLIENT_ID = '588583798336-o4gjnfqaupmmdp8mi38o9m8r4n0bbghs.apps.googleusercontent.com';
-const FOLDER_ID = '1uyHJHfNFLIdPQbYu1uF4zliORCM6QK3P'; // ID folder Dữ liệu Bán Hàng
+const FOLDER_ID = '1uyHJHfNFLIdPQbYu1uF4zliORCM6QK3P';
 const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
 const SCOPES = 'https://www.googleapis.com/auth/drive.file'; 
 const LOCAL_STORAGE_KEY = 'pdfLinksHistory';
@@ -10,20 +10,53 @@ const LOCAL_STORAGE_KEY = 'pdfLinksHistory';
 // Biến UI
 let authButton, uploadButton, fileInput, uploadStatus, newFileLinkDiv, historyListDiv, downloadHistoryButton;
 
-// --- 2. KHỞI TẠO VÀ XÁC THỰC (AUTHENTICATION) ---
+// --- 2. KHỞI TẠO ỨNG DỤNG ---
 
-// Khởi tạo thư viện Google API
-function handleClientLoad() {
-    // Đảm bảo DOM đã sẵn sàng
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initApp);
-    } else {
-        initApp();
+// Hàm kiểm tra và chờ gapi sẵn sàng
+function waitForGapi() {
+    return new Promise((resolve, reject) => {
+        let attempts = 0;
+        const checkGapi = () => {
+            attempts++;
+            if (window.gapi) {
+                resolve(gapi);
+            } else if (attempts < 50) { // Thử tối đa 5 giây
+                setTimeout(checkGapi, 100);
+            } else {
+                reject(new Error('Google API không tải được sau 5 giây'));
+            }
+        };
+        checkGapi();
+    });
+}
+
+// Khởi tạo ứng dụng
+async function initializeApp() {
+    try {
+        // Đợi DOM sẵn sàng
+        if (document.readyState === 'loading') {
+            await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve));
+        }
+        
+        // Khởi tạo biến UI
+        initUIElements();
+        
+        // Đợi gapi sẵn sàng
+        await waitForGapi();
+        
+        // Khởi tạo Google API Client
+        await initClient();
+        
+    } catch (error) {
+        console.error('Lỗi khởi tạo ứng dụng:', error);
+        if (uploadStatus) {
+            uploadStatus.textContent = 'Lỗi khởi tạo: ' + (error.message || error);
+        }
     }
 }
 
-function initApp() {
-    // Khởi tạo biến UI sau khi DOM ready
+// Khởi tạo các phần tử UI
+function initUIElements() {
     authButton = document.getElementById('auth-button');
     uploadButton = document.getElementById('upload-button');
     fileInput = document.getElementById('pdf-file-input');
@@ -31,17 +64,17 @@ function initApp() {
     newFileLinkDiv = document.getElementById('new-file-link');
     historyListDiv = document.getElementById('history-list');
     downloadHistoryButton = document.getElementById('download-history-button');
-    
-    gapi.load('client:auth2', initClient);
 }
 
 // Khởi tạo Client OAuth
-function initClient() {
-    gapi.client.init({
-        clientId: CLIENT_ID,
-        scope: SCOPES,
-        discoveryDocs: DISCOVERY_DOCS
-    }).then(() => {
+async function initClient() {
+    try {
+        await gapi.client.init({
+            clientId: CLIENT_ID,
+            scope: SCOPES,
+            discoveryDocs: DISCOVERY_DOCS
+        });
+        
         const authInstance = gapi.auth2.getAuthInstance();
         
         // Lắng nghe trạng thái đăng nhập
@@ -60,13 +93,16 @@ function initClient() {
         }
         if (downloadHistoryButton) downloadHistoryButton.onclick = downloadHistory;
 
-    }).catch((error) => {
+        console.log('Google API Client đã khởi tạo thành công');
+        
+    } catch (error) {
         console.error("Lỗi khởi tạo Google API Client:", error);
         if (uploadStatus) {
             uploadStatus.textContent = 'Lỗi khởi tạo API: ' + 
                 (error.details || error.message || JSON.stringify(error));
         }
-    });
+        throw error;
+    }
 }
 
 // Cập nhật giao diện dựa trên trạng thái đăng nhập
@@ -110,7 +146,7 @@ async function handleUploadClick() {
         
         const accessToken = token.access_token;
         
-        // A. Tải lên file bằng cách sử dụng Fetch API với uploadType=multipart
+        // Tải lên file
         const fileMetadata = {
             'name': file.name,
             'parents': [FOLDER_ID],
@@ -130,7 +166,8 @@ async function handleUploadClick() {
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(`HTTP error! status: ${response.status}, details: ${errorText}`);
         }
 
         const uploadedFile = await response.json();
@@ -138,7 +175,7 @@ async function handleUploadClick() {
 
         if (!fileId) throw new Error('Tải lên thất bại hoặc không nhận được ID file.');
 
-        // B. Thiết lập quyền chia sẻ công khai
+        // Thiết lập quyền chia sẻ công khai
         await gapi.client.drive.permissions.create({
             fileId: fileId,
             resource: {
@@ -147,7 +184,7 @@ async function handleUploadClick() {
             }
         });
 
-        // C. Lấy đường dẫn xem (webViewLink)
+        // Lấy đường dẫn xem
         const getFileResponse = await gapi.client.drive.files.get({
             fileId: fileId,
             fields: 'webViewLink, name' 
@@ -162,7 +199,7 @@ async function handleUploadClick() {
         uploadButton.disabled = false;
         fileInput.value = ''; 
 
-        // D. Lưu đường dẫn vào Local Storage và cập nhật lịch sử
+        // Lưu đường dẫn vào Local Storage
         saveLinkToLocalStorage(fileName, fileLink);
 
     } catch (error) {
@@ -175,7 +212,6 @@ async function handleUploadClick() {
 
 // --- 4. QUẢN LÝ LOCAL STORAGE ---
 
-// Lưu đường dẫn
 function saveLinkToLocalStorage(name, link) {
     let history = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
     const newEntry = { name: name, link: link, date: new Date().toLocaleString() };
@@ -184,7 +220,6 @@ function saveLinkToLocalStorage(name, link) {
     loadHistoryFromLocalStorage(); 
 }
 
-// Tải và hiển thị lịch sử
 function loadHistoryFromLocalStorage() {
     if (!historyListDiv) return;
     
@@ -204,7 +239,6 @@ function loadHistoryFromLocalStorage() {
     });
 }
 
-// Cho phép người dùng tải về file TXT
 function downloadHistory() {
     const history = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
     if (history.length === 0) {
@@ -228,9 +262,5 @@ function downloadHistory() {
     URL.revokeObjectURL(url);
 }
 
-// Khởi động ứng dụng khi trang đã tải xong
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', handleClientLoad);
-} else {
-    handleClientLoad();
-}
+// Khởi động ứng dụng
+initializeApp();
