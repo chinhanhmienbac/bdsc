@@ -3,28 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <title>PDF Uploader - Google Drive</title>
+    
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' https://apis.google.com https://accounts.google.com;
+        style-src 'self' 'unsafe-inline';
+        connect-src 'self' https://www.googleapis.com https://accounts.google.com;
+        frame-src https://accounts.google.com https://oauth2.googleapis.com;
+        img-src 'self' data:;
+        font-src 'self';
+    ">
+
     <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
-        h1 { text-align: center; color: #4285F4; }
-        #auth-button, #upload-button, #download-history-button { background-color: #4285F4; color: white; border: none; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; border-radius: 4px; }
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; border: 1px solid #eee; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+        h1 { text-align: center; color: #1a73e8; }
+        h2 { border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; color: #3c4043; }
+        
+        button { 
+            background-color: #4285F4; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            text-align: center; 
+            text-decoration: none; 
+            display: inline-block; 
+            font-size: 16px; 
+            margin: 8px 2px; 
+            cursor: pointer; 
+            border-radius: 4px; 
+            transition: background-color 0.3s;
+        }
+        button:hover:not(:disabled) { background-color: #3367D6; }
+        button:disabled { background-color: #aeb4b8; cursor: not-allowed; }
+
         #upload-section, #history-section { border-top: 1px solid #eee; margin-top: 20px; padding-top: 20px; }
-        .file-link { margin-bottom: 5px; padding: 5px; border-bottom: 1px dotted #ccc; }
-        .file-link a { color: green; text-decoration: none; }
-        .status { margin-top: 10px; font-weight: bold; }
+        
+        .file-link { 
+            margin-bottom: 8px; 
+            padding: 8px; 
+            border-bottom: 1px dotted #ccc; 
+            background-color: #f7f9fa; 
+            border-radius: 4px;
+        }
+        .file-link a { 
+            color: #188038; /* Màu xanh của thành công */
+            text-decoration: none; 
+            font-weight: bold;
+        }
+        .status { margin-top: 10px; font-weight: bold; color: red; }
     </style>
 </head>
 <body>
 
-    <h1>🚀 PDF Uploader lên Google Drive</h1>
+    <h1>🚀 Tải File PDF lên Google Drive & Quản lý Link</h1>
 
     <div id="auth-section" style="text-align: center;">
-        <p>Vui lòng đăng nhập bằng tài khoản Google để sử dụng.</p>
+        <p>Vui lòng đăng nhập bằng tài khoản Google để ứng dụng có thể kết nối với Drive của bạn.</p>
         <button id="auth-button">Đăng nhập với Google</button>
     </div>
 
     <div id="upload-section" style="display: none;">
         <h2>Tải File PDF Lên Drive</h2>
-        <input type="file" id="pdf-file-input" accept="application/pdf">
+        <p>Thư mục đích: <span style="font-weight: bold; color: #3c4043;">Dữ liệu Bán Hàng</span></p>
+        <input type="file" id="pdf-file-input" accept="application/pdf" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
         <button id="upload-button" disabled>Tải Lên Drive</button>
         <div class="status" id="upload-status"></div>
 
@@ -33,22 +74,21 @@
     </div>
 
     <div id="history-section" style="display: none;">
-        <h2>Lịch sử Đường dẫn Đã Lưu (Trong Trình duyệt)</h2>
+        <h2>Lịch sử Đường dẫn Đã Lưu (Bộ nhớ Trình duyệt)</h2>
         <button id="download-history-button">Tải về danh sách (TXT)</button>
         <div id="history-list"></div>
     </div>
 
     <script src="https://apis.google.com/js/api.js"></script>
     <script>
-        // --- 1. CẤU HÌNH API ---
+        // --- 2. CẤU HÌNH API VÀ BIẾN SỐ ---
         const CLIENT_ID = '588583798336-o4gjnfqaupmmdp8mi38o9m8r4n0bbghs.apps.googleusercontent.com';
-        // Bạn cần Client Secret ở phía Server (Backend), nhưng vì đây là Client-side, chúng ta chỉ cần Client ID
-        // và cấu hình Scopes phù hợp.
-        const FOLDER_ID = '1uyHJHfNFLIdPQbYu1uF4zliORCM6QK3P';
+        const FOLDER_ID = '1uyHJHfNFLIdPQbYu1uF4zliORCM6QK3P'; // ID folder Dữ liệu Bán Hàng
         const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
-        const SCOPES = 'https://www.googleapis.com/auth/drive.file'; // Quyền chỉ truy cập/tạo file của ứng dụng
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file'; 
+        const LOCAL_STORAGE_KEY = 'pdfLinksHistory';
 
-        // --- 2. BIẾN UI ---
+        // Biến UI
         const authButton = document.getElementById('auth-button');
         const uploadButton = document.getElementById('upload-button');
         const fileInput = document.getElementById('pdf-file-input');
@@ -57,7 +97,7 @@
         const historyListDiv = document.getElementById('history-list');
         const downloadHistoryButton = document.getElementById('download-history-button');
 
-        // --- 3. KHỞI TẠO VÀ XÁC THỰC ---
+        // --- 3. KHỞI TẠO VÀ XÁC THỰC (AUTHENTICATION) ---
 
         // Khởi tạo thư viện Google API
         function handleClientLoad() {
@@ -71,13 +111,15 @@
                 scope: SCOPES,
                 discoveryDocs: DISCOVERY_DOCS
             }).then(() => {
+                const authInstance = gapi.auth2.getAuthInstance();
+                
                 // Lắng nghe trạng thái đăng nhập
-                gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
+                authInstance.isSignedIn.listen(updateSigninStatus);
 
                 // Cập nhật trạng thái ban đầu
-                updateSigninStatus(gapi.auth2.getAuthInstance().isSignedIn.get());
+                updateSigninStatus(authInstance.isSignedIn.get());
 
-                // Gán sự kiện cho nút đăng nhập
+                // Gán sự kiện
                 authButton.onclick = handleAuthClick;
                 uploadButton.onclick = handleUploadClick;
                 fileInput.onchange = () => {
@@ -87,6 +129,7 @@
 
             }, (error) => {
                 uploadStatus.textContent = 'Lỗi khởi tạo API: ' + JSON.stringify(error);
+                console.error("Lỗi khởi tạo Google API Client:", error);
             });
         }
 
@@ -109,24 +152,25 @@
             gapi.auth2.getAuthInstance().signIn();
         }
 
-        // --- 4. CHỨC NĂNG TẢI LÊN FILE ---
+        // --- 4. CHỨC NĂNG TẢI LÊN FILE & LẤY LINK ---
 
         async function handleUploadClick() {
             const file = fileInput.files[0];
-            if (!file) {
-                uploadStatus.textContent = 'Vui lòng chọn file PDF.';
-                return;
-            }
+            if (!file) return;
 
-            uploadStatus.textContent = `Đang tải lên "${file.name}"...`;
+            uploadStatus.textContent = `Đang tải lên "${file.name}"... Vui lòng chờ...`;
+            newFileLinkDiv.innerHTML = '';
             uploadButton.disabled = true;
 
             try {
-                // A. Tải lên file
+                const accessToken = gapi.auth.getToken().access_token;
+                if (!accessToken) throw new Error('Không lấy được Access Token. Vui lòng đăng nhập lại.');
+                
+                // A. Tải lên file bằng cách sử dụng Fetch API với uploadType=multipart
                 const fileMetadata = {
                     'name': file.name,
-                    // Lưu file vào thư mục đích
-                    'parents': [FOLDER_ID]
+                    'parents': [FOLDER_ID], // Thư mục đích
+                    'mimeType': file.type // Loại file (application/pdf)
                 };
 
                 const form = new FormData();
@@ -136,7 +180,7 @@
                 const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
                     method: 'POST',
                     headers: new Headers({
-                        'Authorization': 'Bearer ' + gapi.auth.getToken().access_token
+                        'Authorization': 'Bearer ' + accessToken
                     }),
                     body: form
                 });
@@ -144,10 +188,11 @@
                 const uploadedFile = await response.json();
                 const fileId = uploadedFile.id;
 
-                if (!fileId) throw new Error('Không nhận được ID file sau khi upload.');
+                if (!fileId) throw new Error('Tải lên thất bại hoặc không nhận được ID file.');
 
-                // B. Thiết lập quyền chia sẻ công khai ("Anyone with the link")
-                const permissionResponse = await gapi.client.drive.permissions.create({
+                // B. Thiết lập quyền chia sẻ công khai ("Anyone with the link can view")
+                // Việc này cần quyền Drive/Share, nhưng Drive.file cũng đủ nếu folder đích đã được chia sẻ
+                await gapi.client.drive.permissions.create({
                     fileId: fileId,
                     resource: {
                         'type': 'anyone',
@@ -155,10 +200,11 @@
                     }
                 });
 
-                // C. Lấy thông tin file (để có webViewLink)
+                // C. Lấy đường dẫn xem (webViewLink)
                 const getFileResponse = await gapi.client.drive.files.get({
                     fileId: fileId,
-                    fields: 'webViewLink, name'
+                    // webViewLink là đường dẫn trực tiếp để mở file
+                    fields: 'webViewLink, name' 
                 });
 
                 const fileLink = getFileResponse.result.webViewLink;
@@ -166,54 +212,55 @@
                 const linkHTML = `<a href="${fileLink}" target="_blank">${fileName}</a> (Tải lên thành công!)`;
 
                 newFileLinkDiv.innerHTML = linkHTML;
-                uploadStatus.textContent = 'Tải lên hoàn tất.';
+                uploadStatus.textContent = `Tải lên và chia sẻ hoàn tất: ${fileName}`;
                 uploadButton.disabled = false;
-                fileInput.value = ''; // Xóa file đã chọn
+                fileInput.value = ''; 
 
                 // D. Lưu đường dẫn vào Local Storage và cập nhật lịch sử
                 saveLinkToLocalStorage(fileName, fileLink);
 
             } catch (error) {
-                console.error(error);
-                uploadStatus.textContent = 'LỖI TẢI LÊN: ' + (error.message || 'Kiểm tra Console để biết chi tiết.');
+                console.error("LỖI TẢI LÊN FILE:", error);
+                uploadStatus.textContent = 'LỖI TẢI LÊN: ' + (error.result && error.result.error ? error.result.error.message : error.message || 'Lỗi không xác định.');
                 uploadButton.disabled = false;
             }
         }
 
-        // --- 5. QUẢN LÝ LOCAL STORAGE ---
+        // --- 5. QUẢN LÝ LOCAL STORAGE (THAY THẾ CHO Ổ E:) ---
 
         // Lưu đường dẫn
         function saveLinkToLocalStorage(name, link) {
-            let history = JSON.parse(localStorage.getItem('pdfLinksHistory') || '[]');
+            let history = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
             const newEntry = { name: name, link: link, date: new Date().toLocaleString() };
-            history.unshift(newEntry); // Thêm vào đầu danh sách
-            localStorage.setItem('pdfLinksHistory', JSON.stringify(history));
+            history.unshift(newEntry); // Thêm vào đầu danh sách (mới nhất)
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(history));
             loadHistoryFromLocalStorage(); // Cập nhật danh sách hiển thị
         }
 
         // Tải và hiển thị lịch sử
         function loadHistoryFromLocalStorage() {
-            const history = JSON.parse(localStorage.getItem('pdfLinksHistory') || '[]');
+            const history = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
             historyListDiv.innerHTML = '';
 
             if (history.length === 0) {
-                historyListDiv.innerHTML = '<p>Chưa có đường dẫn nào được lưu trong trình duyệt này.</p>';
+                historyListDiv.innerHTML = '<p>Chưa có đường dẫn nào được lưu trữ trong bộ nhớ trình duyệt này.</p>';
                 return;
             }
 
             history.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'file-link';
+                // Hiển thị link có thể kích hoạt và mở được PDF
                 div.innerHTML = `<a href="${item.link}" target="_blank">${item.name}</a> <span style="font-size: small; color: #888;">(${item.date})</span>`;
                 historyListDiv.appendChild(div);
             });
         }
 
-        // Cho phép người dùng tải về file TXT
+        // Cho phép người dùng tải về file TXT (giải pháp thay thế ổ E:)
         function downloadHistory() {
-            const history = JSON.parse(localStorage.getItem('pdfLinksHistory') || '[]');
+            const history = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
             if (history.length === 0) {
-                alert('Không có đường dẫn nào để tải về.');
+                alert('Không có lịch sử đường dẫn để tải về.');
                 return;
             }
             
@@ -233,7 +280,7 @@
             URL.revokeObjectURL(url);
         }
 
-        // Khởi động ứng dụng khi trang web tải xong
+        // Khởi động ứng dụng
         window.onload = handleClientLoad;
     </script>
 
