@@ -6,7 +6,26 @@
     
     <!-- TẠM THỜI LOẠI BỎ CSP ĐỂ TEST -->
     <!-- <meta http-equiv="Content-Security-Policy" content="..."> -->
-
+<!-- Thay thế script Google API bằng -->
+<script>
+    function loadGoogleAPI() {
+        return new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = 'https://apis.google.com/js/api.js';
+            script.onload = resolve;
+            document.head.appendChild(script);
+        });
+    }
+    
+    loadGoogleAPI().then(() => {
+        // Chờ app.js tải xong
+        setTimeout(() => {
+            if (window.initializeApp) {
+                initializeApp();
+            }
+        }, 100);
+    });
+</script>
     <style>
         body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; border: 1px solid #eee; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
         h1 { text-align: center; color: #1a73e8; }
@@ -79,3 +98,4 @@
     <script src="./app.js"></script>
 </body>
 </html>
+
