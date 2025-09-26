@@ -8,18 +8,30 @@ const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 const LOCAL_STORAGE_KEY = 'pdfLinksHistory';
 
 // Biến UI
-const authButton = document.getElementById('auth-button');
-const uploadButton = document.getElementById('upload-button');
-const fileInput = document.getElementById('pdf-file-input');
-const uploadStatus = document.getElementById('upload-status');
-const newFileLinkDiv = document.getElementById('new-file-link');
-const historyListDiv = document.getElementById('history-list');
-const downloadHistoryButton = document.getElementById('download-history-button');
+let authButton, uploadButton, fileInput, uploadStatus, newFileLinkDiv, historyListDiv, downloadHistoryButton;
 
 // --- 2. KHỞI TẠO VÀ XÁC THỰC (AUTHENTICATION) ---
 
 // Khởi tạo thư viện Google API
 function handleClientLoad() {
+    // Đảm bảo DOM đã sẵn sàng
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+        initApp();
+    }
+}
+
+function initApp() {
+    // Khởi tạo biến UI sau khi DOM ready
+    authButton = document.getElementById('auth-button');
+    uploadButton = document.getElementById('upload-button');
+    fileInput = document.getElementById('pdf-file-input');
+    uploadStatus = document.getElementById('upload-status');
+    newFileLinkDiv = document.getElementById('new-file-link');
+    historyListDiv = document.getElementById('history-list');
+    downloadHistoryButton = document.getElementById('download-history-button');
+    
     gapi.load('client:auth2', initClient);
 }
 
@@ -39,30 +51,39 @@ function initClient() {
         updateSigninStatus(authInstance.isSignedIn.get());
 
         // Gán sự kiện
-        authButton.onclick = handleAuthClick;
-        uploadButton.onclick = handleUploadClick;
-        fileInput.onchange = () => {
-            uploadButton.disabled = !fileInput.files.length;
-        };
-        downloadHistoryButton.onclick = downloadHistory;
+        if (authButton) authButton.onclick = handleAuthClick;
+        if (uploadButton) uploadButton.onclick = handleUploadClick;
+        if (fileInput) {
+            fileInput.onchange = () => {
+                if (uploadButton) uploadButton.disabled = !fileInput.files.length;
+            };
+        }
+        if (downloadHistoryButton) downloadHistoryButton.onclick = downloadHistory;
 
-    }, (error) => {
-        uploadStatus.textContent = 'Lỗi khởi tạo API: ' + JSON.stringify(error);
+    }).catch((error) => {
         console.error("Lỗi khởi tạo Google API Client:", error);
+        if (uploadStatus) {
+            uploadStatus.textContent = 'Lỗi khởi tạo API: ' + 
+                (error.details || error.message || JSON.stringify(error));
+        }
     });
 }
 
 // Cập nhật giao diện dựa trên trạng thái đăng nhập
 function updateSigninStatus(isSignedIn) {
+    const authSection = document.getElementById('auth-section');
+    const uploadSection = document.getElementById('upload-section');
+    const historySection = document.getElementById('history-section');
+    
     if (isSignedIn) {
-        document.getElementById('auth-section').style.display = 'none';
-        document.getElementById('upload-section').style.display = 'block';
-        document.getElementById('history-section').style.display = 'block';
+        if (authSection) authSection.style.display = 'none';
+        if (uploadSection) uploadSection.style.display = 'block';
+        if (historySection) historySection.style.display = 'block';
         loadHistoryFromLocalStorage();
     } else {
-        document.getElementById('auth-section').style.display = 'block';
-        document.getElementById('upload-section').style.display = 'none';
-        document.getElementById('history-section').style.display = 'none';
+        if (authSection) authSection.style.display = 'block';
+        if (uploadSection) uploadSection.style.display = 'none';
+        if (historySection) historySection.style.display = 'none';
     }
 }
 
@@ -74,22 +95,26 @@ function handleAuthClick() {
 // --- 3. CHỨC NĂNG TẢI LÊN FILE & LẤY LINK ---
 
 async function handleUploadClick() {
-    const file = fileInput.files[0];
-    if (!file) return;
+    if (!fileInput || !fileInput.files[0]) return;
 
+    const file = fileInput.files[0];
     uploadStatus.textContent = `Đang tải lên "${file.name}"... Vui lòng chờ...`;
     newFileLinkDiv.innerHTML = '';
     uploadButton.disabled = true;
 
     try {
-        const accessToken = gapi.auth.getToken().access_token;
-        if (!accessToken) throw new Error('Không lấy được Access Token. Vui lòng đăng nhập lại.');
+        const token = gapi.auth.getToken();
+        if (!token || !token.access_token) {
+            throw new Error('Không lấy được Access Token. Vui lòng đăng nhập lại.');
+        }
+        
+        const accessToken = token.access_token;
         
         // A. Tải lên file bằng cách sử dụng Fetch API với uploadType=multipart
         const fileMetadata = {
             'name': file.name,
-            'parents': [FOLDER_ID], // Thư mục đích
-            'mimeType': file.type // Loại file (application/pdf)
+            'parents': [FOLDER_ID],
+            'mimeType': file.type
         };
 
         const form = new FormData();
@@ -98,18 +123,22 @@ async function handleUploadClick() {
 
         const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
             method: 'POST',
-            headers: new Headers({
+            headers: {
                 'Authorization': 'Bearer ' + accessToken
-            }),
+            },
             body: form
         });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
         const uploadedFile = await response.json();
         const fileId = uploadedFile.id;
 
         if (!fileId) throw new Error('Tải lên thất bại hoặc không nhận được ID file.');
 
-        // B. Thiết lập quyền chia sẻ công khai ("Anyone with the link can view")
+        // B. Thiết lập quyền chia sẻ công khai
         await gapi.client.drive.permissions.create({
             fileId: fileId,
             resource: {
@@ -138,7 +167,8 @@ async function handleUploadClick() {
 
     } catch (error) {
         console.error("LỖI TẢI LÊN FILE:", error);
-        uploadStatus.textContent = 'LỖI TẢI LÊN: ' + (error.result && error.result.error ? error.result.error.message : error.message || 'Lỗi không xác định.');
+        uploadStatus.textContent = 'LỖI TẢI LÊN: ' + 
+            (error.result?.error?.message || error.message || 'Lỗi không xác định.');
         uploadButton.disabled = false;
     }
 }
@@ -156,6 +186,8 @@ function saveLinkToLocalStorage(name, link) {
 
 // Tải và hiển thị lịch sử
 function loadHistoryFromLocalStorage() {
+    if (!historyListDiv) return;
+    
     const history = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
     historyListDiv.innerHTML = '';
 
@@ -196,5 +228,9 @@ function downloadHistory() {
     URL.revokeObjectURL(url);
 }
 
-// Khởi động ứng dụng
-window.onload = handleClientLoad;
+// Khởi động ứng dụng khi trang đã tải xong
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', handleClientLoad);
+} else {
+    handleClientLoad();
+}
