@@ -152,7 +152,6 @@
             display: block;
         }
         
-        /* --- CẢI TIẾN: CSS cho dropdown hiển thị link hồ sơ --- */
         .links-dropdown {
             display: block;
             position: absolute;
@@ -183,6 +182,7 @@
     </style>
     <script src="https://apis.google.com/js/api.js"></script>
     <script src="https://accounts.google.com/gsi/client"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -328,19 +328,15 @@
             tokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: CLIENT_ID,
                 scope: SCOPES,
-                callback: () => {}, // Callback trống, xử lý qua promise
+                callback: () => {},
             });
         }
 
-        // Hàm đảm bảo đã xác thực, trả về một promise
         function ensureGapiAuthenticated() {
             return new Promise((resolve, reject) => {
                 if (gapi.client.getToken()) {
                     return resolve(gapi.client.getToken());
                 }
-                // CẢI TIẾN: Thay đổi prompt để cho phép đăng nhập tự động
-                // Bằng cách xóa `prompt: 'consent'`, Google sẽ tự động gia hạn token
-                // nếu người dùng đã đăng nhập và cấp quyền trước đó.
                 tokenClient.requestAccessToken({ prompt: '' }); 
                 tokenClient.callback = (resp) => {
                     if (resp.error) {
@@ -409,20 +405,24 @@
                     let i = 1;
                     while(true) {
                         const ngayTHKey = `Ngày TH (${i})`;
-                        if (row[ngayTHKey] === undefined && row[`Số lượng (${i})`] === undefined) break;
+                        // BỔ SUNG: Thêm cột `Hồ sơ Link` vào điều kiện lặp và đọc dữ liệu
+                        const hoSoLinkKey = `Hồ sơ Link (${i})`;
+                        if (row[ngayTHKey] === undefined && row[`Số lượng (${i})`] === undefined && row[hoSoLinkKey] === undefined) break;
 
                         const ngayThucHien = row[ngayTHKey];
                         const dvt = parseNumber(row[`Số lượng (${i})`]);
                         const thanhTien = parseNumber(row[`Thành tiền (${i})`]);
+                        const hoSoLink = row[hoSoLinkKey];
 
-                        if (ngayThucHien || dvt > 0 || thanhTien > 0) {
+                        if (ngayThucHien || dvt > 0 || thanhTien > 0 || hoSoLink) {
                             taskNode.executions.push({
                                 ngayThucHien: ngayThucHien,
                                 dvt: dvt,
                                 donGia: parseNumber(row[`Đơn giá (${i})`]),
                                 thanhTien: thanhTien,
                                 timestamp: row[`Timestamp (${i})`] || null,
-                                lanThucHien: i
+                                lanThucHien: i,
+                                hoSoLink: hoSoLink || null
                             });
                         }
                         i++;
@@ -518,7 +518,6 @@
             event.target.nextElementSibling.classList.toggle("show");
         };
 
-        // CẢI TIẾN: Hàm hiển thị các link hồ sơ trong dropdown
         window.showLinks = (event) => {
             event.stopPropagation();
             const existingDropdown = document.getElementById('links-dropdown-container');
@@ -551,7 +550,6 @@
             if (!event.target.matches('.dropbtn')) {
                 document.querySelectorAll(".dropdown-content").forEach(content => content.classList.remove('show'));
             }
-            // CẢI TIẾN: Đóng dropdown hồ sơ khi click ra ngoài
             const linksDropdown = document.getElementById('links-dropdown-container');
             if (linksDropdown && !linksDropdown.contains(event.target) && !event.target.matches('[data-links]')) {
                  linksDropdown.remove();
@@ -563,7 +561,7 @@
             tableBody.innerHTML = `<tr><td colspan="11">Đang tải dữ liệu...</td></tr>`;
             try {
                 const executedGrandchildPaths = new Set();
-                const hoSoLinkMap = new Map(); // CẢI TIẾN: Lưu trữ các link hồ sơ
+                const hoSoLinkMap = new Map();
 
                 const execQuery = query(collectionGroup(db, 'thực hiện'));
                 const execSnapshot = await getDocs(execQuery);
@@ -572,7 +570,6 @@
                     if (data.dvt && parseNumber(data.dvt) !== 0) {
                         executedGrandchildPaths.add(docSnap.ref.parent.parent.path);
                     }
-                    // CẢI TIẾN: Tổng hợp link hồ sơ và gom nhóm theo cấp độ
                     if (data.hoSoLink) {
                         const pathParts = docSnap.ref.path.split('/');
                         const grandchildPath = pathParts.slice(0, 6).join('/');
@@ -594,7 +591,6 @@
                     totalPlannedCost += parentData.chiPhi || 0;
                     totalExecutedCost += parentData.chiPhiThucHien || 0;
                     const parentPath = `công việc mẹ/${parentData.id}`;
-                    // CẢI TIẾN: Tạo nút "Có" cho công việc mẹ nếu có hồ sơ
                     const parentLinks = hoSoLinkMap.get(parentPath);
                     let parentHoSoHtml = '<td></td>';
                     if (parentLinks && parentLinks.size > 0) {
@@ -617,7 +613,6 @@
                     for (const childData of children) {
                         if (!childData.isHidden) totalChildTasks++;
                         const childPath = `${parentPath}/công việc con/${childData.id}`;
-                         // CẢI TIẾN: Tạo nút "Có" cho công việc con nếu có hồ sơ
                         const childLinks = hoSoLinkMap.get(childPath);
                         let childHoSoHtml = '<td></td>';
                         if (childLinks && childLinks.size > 0) {
@@ -645,7 +640,6 @@
                         for (const grandchildData of grandchildren) {
                             const grandchildPath = `${childPath}/công việc cháu/${grandchildData.id}`;
                             const noiDungStyle = executedGrandchildPaths.has(grandchildPath) ? 'style="color: #5B77A8;"' : '';
-                             // CẢI TIẾN: Tạo nút "Có" cho công việc cháu nếu có hồ sơ
                             const grandchildLinks = hoSoLinkMap.get(grandchildPath);
                             let grandchildHoSoHtml = '<td></td>';
                             if (grandchildLinks && grandchildLinks.size > 0) {
@@ -1044,7 +1038,6 @@
             }
         };
 
-        // --- CHỨC NĂNG MỚI: TẢI HỒ SƠ LÊN GOOGLE DRIVE ---
         window.handleProfileUploadClick = async (timestampKey) => {
             if (!gapiReady) {
                 alert("Dịch vụ Google chưa sẵn sàng, vui lòng thử lại sau giây lát.");
@@ -1054,7 +1047,7 @@
                 await ensureGapiAuthenticated();
                 const uploadModal = document.getElementById('uploadPdfModal');
                 const uploadButton = document.getElementById('uploadPdfButton');
-                document.getElementById('pdf_file_input').value = ''; // Xóa file cũ
+                document.getElementById('pdf_file_input').value = '';
                 
                 uploadModal.style.display = 'block';
                 uploadButton.onclick = () => performPdfUpload(timestampKey);
@@ -1129,7 +1122,6 @@
             }
         }
 
-        // --- CÁC HÀM CƠ BẢN KHÁC ---
         window.toggleSelection = (checkbox) => {
             const grandchildPath = checkbox.dataset.path;
             if (checkbox.checked) { selectedGrandchildren.add(grandchildPath); } 
@@ -1223,11 +1215,13 @@
                     executions.sort((a, b) => a.lanThucHien - b.lanThucHien);
                     if (executions.length > maxExecutions) { maxExecutions = executions.length; }
                 });
+
                 statusDiv.innerText = 'Đang tạo cấu trúc file Excel...';
                 const baseHeaders = ['TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Chi phí', 'Chi phí thực hiện', 'Kế hoạch còn lại', 'Cấp độ'];
                 const executionHeaders = [];
                 for (let i = 1; i <= maxExecutions; i++) {
-                    executionHeaders.push(`Ngày TH (${i})`, `Số lượng (${i})`, `Đơn giá (${i})`, `Thành tiền (${i})`, `Timestamp (${i})`);
+                    // BỔ SUNG: Thêm cột `Hồ sơ Link` vào file Excel xuất ra
+                    executionHeaders.push(`Ngày TH (${i})`, `Số lượng (${i})`, `Đơn giá (${i})`, `Thành tiền (${i})`, `Timestamp (${i})`, `Hồ sơ Link (${i})`);
                 }
                 const fullHeaders = [...baseHeaders, ...executionHeaders];
                 const rows = [];
@@ -1237,7 +1231,7 @@
                 for (const parentData of parents) {
                     boldRows.add(rows.length);
                     const parentRowData = [ parentData.tt, parentData.noiDung, parentData.donVi, parentData.soLuong, parentData.chiPhi, parentData.chiPhiThucHien, parentData.keHoachConLai, parentData.capDo ];
-                    parentRowData.push(...Array(maxExecutions * 5).fill('')); 
+                    parentRowData.push(...Array(maxExecutions * 6).fill('')); 
                     rows.push(parentRowData);
                     const childSnapshot = await getDocs(query(collection(db, `công việc mẹ/${parentData.id}/công việc con`)));
                     const children = childSnapshot.docs.map(d => ({id: d.id, ...d.data()}));
@@ -1245,7 +1239,7 @@
                         if(childData.isHidden) continue;
                         boldRows.add(rows.length); 
                         const childRowData = [ childData.tt, childData.noiDung, childData.donVi, childData.soLuong, childData.chiPhi, childData.chiPhiThucHien, childData.keHoachConLai, childData.capDo ];
-                        childRowData.push(...Array(maxExecutions * 5).fill('')); 
+                        childRowData.push(...Array(maxExecutions * 6).fill('')); 
                         rows.push(childRowData);
                         const grandchildSnapshot = await getDocs(query(collection(db, `công việc mẹ/${parentData.id}/công việc con/${childData.id}/công việc cháu`)));
                         const grandchildren = grandchildSnapshot.docs.map(d => ({path: d.ref.path, ...d.data()})).sort((a,b) => naturalSort(a,b));
@@ -1254,9 +1248,10 @@
                             const executions = executionsMap.get(grandchildData.path) || [];
                             executions.forEach(exec => {
                                 const execTimestamp = exec.timestamp && typeof exec.timestamp.toMillis === 'function' ? new Date(exec.timestamp.toMillis()).toLocaleString('vi-VN') : (exec.timestamp || '');
-                                grandchildRowData.push(exec.ngayThucHien, exec.dvt, exec.donGia, exec.thanhTien, execTimestamp);
+                                // BỔ SUNG: Thêm dữ liệu `hoSoLink` vào hàng
+                                grandchildRowData.push(exec.ngayThucHien, exec.dvt, exec.donGia, exec.thanhTien, execTimestamp, exec.hoSoLink || '');
                             });
-                            const paddingCount = (maxExecutions - executions.length) * 5;
+                            const paddingCount = (maxExecutions - executions.length) * 6; // Cập nhật số cột padding
                             if (paddingCount > 0) { grandchildRowData.push(...Array(paddingCount).fill('')); }
                             rows.push(grandchildRowData);
                         }
@@ -1279,7 +1274,8 @@
                 }
                 const colWidths = [ { wch: 8 }, { wch: 60 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 } ];
                 for (let i = 0; i < maxExecutions; i++) {
-                    colWidths.push({ wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 22 });
+                    // BỔ SUNG: Thêm độ rộng cho cột `Hồ sơ Link`
+                    colWidths.push({ wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 22 }, { wch: 40 });
                 }
                 ws['!cols'] = colWidths;
                 XLSX.utils.book_append_sheet(wb, ws, 'Danh sách công việc');
@@ -1292,7 +1288,7 @@
         };
 
         fetchData();
-        initializeGoogleClients(); // Khởi tạo Google API client khi tải trang
+        initializeGoogleClients();
 
         const scrollToTopBtn = document.getElementById("scrollToTopBtn");
         window.onscroll = () => {
