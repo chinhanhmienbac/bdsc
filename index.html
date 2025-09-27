@@ -151,6 +151,34 @@
         .show {
             display: block;
         }
+        
+        /* --- CẢI TIẾN: CSS cho dropdown hiển thị link hồ sơ --- */
+        .links-dropdown {
+            display: block;
+            position: absolute;
+            background-color: #fff;
+            min-width: 300px;
+            max-width: 500px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 20;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            padding: 5px;
+        }
+        .links-dropdown a {
+            color: #0056b3;
+            padding: 8px 12px;
+            text-decoration: none;
+            display: block;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .links-dropdown a:hover {
+            background-color: #f1f1f1;
+            text-decoration: underline;
+        }
 
     </style>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -191,14 +219,15 @@
                 <tr>
                     <th style="width: 3%;"><input type="checkbox" onchange="toggleAllCheckboxes(this)"></th>
                     <th style="width: 4%;">TT</th>
-                    <th style="width: 38%;">Nội dung</th>
+                    <th style="width: 34%;">Nội dung</th>
                     <th style="width: 7%;">Đơn vị</th>
                     <th style="width: 7%;">Số lượng</th>
                     <th class="text-right" style="width: 10%;">Chi phí</th>
                     <th class="text-right" style="width: 10%;">Chi phí thực hiện</th>
                     <th class="text-right" style="width: 10%;">Kế hoạch còn lại</th>
                     <th style="width: 3%;">Cấp độ</th>
-                    <th style="width: 8%;">Hành động</th>
+                    <th style="width: 5%;">Hồ sơ</th>
+                    <th style="width: 7%;">Hành động</th>
                 </tr>
             </thead>
             <tbody id="taskListBody"></tbody>
@@ -309,16 +338,16 @@
                 if (gapi.client.getToken()) {
                     return resolve(gapi.client.getToken());
                 }
-                tokenClient.requestAccessToken({ prompt: 'consent' });
-                // Cần một cơ chế để biết khi nào callback hoàn tất. 
-                // Cách đơn giản là ghi đè callback tạm thời.
+                // CẢI TIẾN: Thay đổi prompt để cho phép đăng nhập tự động
+                // Bằng cách xóa `prompt: 'consent'`, Google sẽ tự động gia hạn token
+                // nếu người dùng đã đăng nhập và cấp quyền trước đó.
+                tokenClient.requestAccessToken({ prompt: '' }); 
                 tokenClient.callback = (resp) => {
                     if (resp.error) {
                         reject(resp.error);
                     } else {
                         resolve(resp);
                     }
-                    // Reset callback
                     tokenClient.callback = () => {};
                 };
             });
@@ -489,24 +518,70 @@
             event.target.nextElementSibling.classList.toggle("show");
         };
 
+        // CẢI TIẾN: Hàm hiển thị các link hồ sơ trong dropdown
+        window.showLinks = (event) => {
+            event.stopPropagation();
+            const existingDropdown = document.getElementById('links-dropdown-container');
+            if (existingDropdown) existingDropdown.remove();
+
+            const button = event.target;
+            const links = JSON.parse(button.dataset.links);
+            if (!links || links.length === 0) return;
+
+            const dropdown = document.createElement('div');
+            dropdown.id = 'links-dropdown-container';
+            dropdown.className = 'links-dropdown';
+
+            links.forEach(link => {
+                const a = document.createElement('a');
+                a.href = link;
+                a.textContent = link.length > 50 ? link.substring(0, 50) + '...' : link;
+                a.target = '_blank';
+                a.title = link;
+                dropdown.appendChild(a);
+            });
+
+            document.body.appendChild(dropdown);
+            const rect = button.getBoundingClientRect();
+            dropdown.style.left = `${rect.left + window.scrollX}px`;
+            dropdown.style.top = `${rect.bottom + window.scrollY}px`;
+        };
+        
         window.onclick = function(event) {
             if (!event.target.matches('.dropbtn')) {
-                document.querySelectorAll(".dropdown-content").forEach(content => {
-                    content.classList.remove('show');
-                });
+                document.querySelectorAll(".dropdown-content").forEach(content => content.classList.remove('show'));
+            }
+            // CẢI TIẾN: Đóng dropdown hồ sơ khi click ra ngoài
+            const linksDropdown = document.getElementById('links-dropdown-container');
+            if (linksDropdown && !linksDropdown.contains(event.target) && !event.target.matches('[data-links]')) {
+                 linksDropdown.remove();
             }
         };
 
         window.fetchData = async () => {
             const tableBody = document.getElementById('taskListBody');
-            tableBody.innerHTML = `<tr><td colspan="10">Đang tải dữ liệu...</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="11">Đang tải dữ liệu...</td></tr>`;
             try {
                 const executedGrandchildPaths = new Set();
+                const hoSoLinkMap = new Map(); // CẢI TIẾN: Lưu trữ các link hồ sơ
+
                 const execQuery = query(collectionGroup(db, 'thực hiện'));
                 const execSnapshot = await getDocs(execQuery);
                 execSnapshot.forEach(docSnap => {
-                    if (docSnap.data().dvt && parseNumber(docSnap.data().dvt) !== 0) {
+                    const data = docSnap.data();
+                    if (data.dvt && parseNumber(data.dvt) !== 0) {
                         executedGrandchildPaths.add(docSnap.ref.parent.parent.path);
+                    }
+                    // CẢI TIẾN: Tổng hợp link hồ sơ và gom nhóm theo cấp độ
+                    if (data.hoSoLink) {
+                        const pathParts = docSnap.ref.path.split('/');
+                        const grandchildPath = pathParts.slice(0, 6).join('/');
+                        const childPath = pathParts.slice(0, 4).join('/');
+                        const parentPath = pathParts.slice(0, 2).join('/');
+                        [grandchildPath, childPath, parentPath].forEach(path => {
+                            if (!hoSoLinkMap.has(path)) hoSoLinkMap.set(path, new Set());
+                            hoSoLinkMap.get(path).add(data.hoSoLink);
+                        });
                     }
                 });
 
@@ -519,13 +594,22 @@
                     totalPlannedCost += parentData.chiPhi || 0;
                     totalExecutedCost += parentData.chiPhiThucHien || 0;
                     const parentPath = `công việc mẹ/${parentData.id}`;
+                    // CẢI TIẾN: Tạo nút "Có" cho công việc mẹ nếu có hồ sơ
+                    const parentLinks = hoSoLinkMap.get(parentPath);
+                    let parentHoSoHtml = '<td></td>';
+                    if (parentLinks && parentLinks.size > 0) {
+                        const linksJson = JSON.stringify(Array.from(parentLinks));
+                        parentHoSoHtml = `<td><button class="btn-info btn-action" data-links='${linksJson}' onclick="showLinks(event)">Có</button></td>`;
+                    }
+
                     html += `<tr class="task-parent">
                         <td></td><td>${parentData.tt}</td><td>${parentData.noiDung}</td><td></td><td></td>
                         <td class="text-right">${formatNumber(parentData.chiPhi)}</td>
                         <td class="text-right">${formatNumber(parentData.chiPhiThucHien)}</td>
                         <td class="text-right">${formatNumber(parentData.keHoachConLai)}</td>
                         <td></td>
-                        <td><div class="dropdown"><button onclick="toggleDropdown(event)" class="btn-secondary btn-action dropbtn">Thêm/sửa</button><div class="dropdown-content"><a href="#" onclick="openAddModal('${parentPath}', 'child')">Thêm công việc con</a><a href="#" onclick="handleEditClick('${parentPath}', 'parent')">Sửa thông tin</a></div></div></td>
+                        ${parentHoSoHtml}
+                        <td><div class="dropdown"><button onclick="toggleDropdown(event)" class="btn-secondary btn-action dropbtn">Thêm/sửa</button><div class="dropdown-content"><a href="#" onclick="openAddModal('${parentPath}', 'child')">Thêm CV con</a><a href="#" onclick="handleEditClick('${parentPath}', 'parent')">Sửa TT</a></div></div></td>
                     </tr>`;
 
                     const childSnapshot = await getDocs(query(collection(db, parentPath, "công việc con")));
@@ -533,6 +617,14 @@
                     for (const childData of children) {
                         if (!childData.isHidden) totalChildTasks++;
                         const childPath = `${parentPath}/công việc con/${childData.id}`;
+                         // CẢI TIẾN: Tạo nút "Có" cho công việc con nếu có hồ sơ
+                        const childLinks = hoSoLinkMap.get(childPath);
+                        let childHoSoHtml = '<td></td>';
+                        if (childLinks && childLinks.size > 0) {
+                            const linksJson = JSON.stringify(Array.from(childLinks));
+                            childHoSoHtml = `<td><button class="btn-info btn-action" data-links='${linksJson}' onclick="showLinks(event)">Có</button></td>`;
+                        }
+
                         if (!childData.isHidden) {
                             html += `<tr class="task-child">
                                 <td><input type="checkbox" class="child-checkbox" data-child-path="${childPath}" onchange="toggleGrandchildrenCheckboxes(this)"></td>
@@ -541,7 +633,8 @@
                                 <td class="text-right">${formatNumber(childData.chiPhiThucHien)}</td>
                                 <td class="text-right">${formatNumber(childData.keHoachConLai)}</td>
                                 <td>${childData.capDo || ''}</td>
-                                <td><div class="dropdown"><button onclick="toggleDropdown(event)" class="btn-secondary btn-action dropbtn">Thêm/sửa</button><div class="dropdown-content"><a href="#" onclick="openAddModal('${childPath}', 'grandchild')">Thêm công việc cháu</a><a href="#" onclick="handleEditClick('${childPath}', 'child')">Sửa thông tin</a></div></div></td>
+                                ${childHoSoHtml}
+                                <td><div class="dropdown"><button onclick="toggleDropdown(event)" class="btn-secondary btn-action dropbtn">Thêm/sửa</button><div class="dropdown-content"><a href="#" onclick="openAddModal('${childPath}', 'grandchild')">Thêm CV cháu</a><a href="#" onclick="handleEditClick('${childPath}', 'child')">Sửa TT</a></div></div></td>
                             </tr>`;
                         }
                         
@@ -552,6 +645,14 @@
                         for (const grandchildData of grandchildren) {
                             const grandchildPath = `${childPath}/công việc cháu/${grandchildData.id}`;
                             const noiDungStyle = executedGrandchildPaths.has(grandchildPath) ? 'style="color: #5B77A8;"' : '';
+                             // CẢI TIẾN: Tạo nút "Có" cho công việc cháu nếu có hồ sơ
+                            const grandchildLinks = hoSoLinkMap.get(grandchildPath);
+                            let grandchildHoSoHtml = '<td></td>';
+                            if (grandchildLinks && grandchildLinks.size > 0) {
+                                const linksJson = JSON.stringify(Array.from(grandchildLinks));
+                                grandchildHoSoHtml = `<td><button class="btn-info btn-action" data-links='${linksJson}' onclick="showLinks(event)">Có</button></td>`;
+                            }
+
                             html += `<tr>
                                 <td><input type="checkbox" class="grandchild-checkbox" data-parent-path="${childPath}" data-path="${grandchildPath}" onchange="toggleSelection(this)"></td>
                                 <td>${grandchildData.tt}</td><td ${noiDungStyle}>${grandchildData.noiDung}</td>
@@ -560,16 +661,17 @@
                                 <td class="text-right">${formatNumber(grandchildData.chiPhiThucHien)}</td>
                                 <td class="text-right">${formatNumber(grandchildData.keHoachConLai)}</td>
                                 <td>${grandchildData.capDo}</td>
+                                ${grandchildHoSoHtml}
                                 <td><button class="btn-secondary btn-action" onclick="handleEditClick('${grandchildPath}', 'grandchild')">Sửa</button></td>
                             </tr>`;
                         }
                     }
                 }
-                tableBody.innerHTML = html || `<tr><td colspan="10">Không có dữ liệu.</td></tr>`;
+                tableBody.innerHTML = html || `<tr><td colspan="11">Không có dữ liệu.</td></tr>`;
                 document.getElementById('summarySection').innerHTML = `<p><strong>Tổng số đầu việc lớn cần thực hiện:</strong> ${totalChildTasks}</p><p><strong>Tổng số đầu việc chi tiết cần thực hiện:</strong> ${totalGrandchildren}</p><p><strong>Tổng chi phí theo kế hoạch:</strong> ${formatNumber(totalPlannedCost)}</p><p><strong>Tổng chi phí đã thực hiện:</strong> ${formatNumber(totalExecutedCost)}</p>`;
                 selectedGrandchildren.clear();
                 statusDiv.innerText = '';
-            } catch (error) { console.error("Lỗi tải dữ liệu: ", error); tableBody.innerHTML = `<tr><td colspan="10">Lỗi tải dữ liệu: ${error.message}</td></tr>`; }
+            } catch (error) { console.error("Lỗi tải dữ liệu: ", error); tableBody.innerHTML = `<tr><td colspan="11">Lỗi tải dữ liệu: ${error.message}</td></tr>`; }
         };
 
         window.closeAllModals = () => {
