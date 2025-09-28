@@ -146,7 +146,7 @@
             font-size: 14px;
         }
         .dropdown-content a:hover {
-            background-color: #f1f1f1;
+            background-color: #f1f1f2;
         }
         .show {
             display: block;
@@ -197,7 +197,7 @@
         
         <div class="button-group" style="padding-bottom: 10px; border-bottom: 1px solid #eee;">
             <div>
-                <button class="btn-secondary" onclick="fetchData()">Tải lại dữ liệu</button>
+                <button class="btn-secondary" onclick="recalculateAllCostsAndReload()">Tải lại & Tính toán lại</button>
                 <button class="btn-primary" onclick="openDataManagementModal()">Quản lý Dữ liệu</button>
                 <button class="btn-success" onclick="exportToExcel()">Xuất ra Excel</button>
             </div>
@@ -240,6 +240,7 @@
             <h2 id="modalTitle"></h2>
             <div id="modalBody"></div>
             <div class="modal-footer">
+                <button id="modalDeleteButton" class="btn-danger" style="display: none; float: left;">Xóa</button>
                 <button id="modalSaveButton" class="btn-success">Lưu thay đổi</button>
             </div>
         </div>
@@ -253,6 +254,7 @@
             <div style="margin-top: 20px;">
                 <h3>Nhập dữ liệu từ file Excel</h3>
                 <input type="file" id="excelFile" accept=".xlsx, .xls">
+                <p><small><i>Chú ý: để chương trình nhận đúng dữ liệu, hãy định dạng các dữ liệu số trong file Excel ở định dạng General.</i></small></p>
                 <button class="btn-primary" onclick="importData()" style="margin-top: 10px;">Nhập dữ liệu</button>
             </div>
 
@@ -312,12 +314,48 @@
         const statusDiv = document.getElementById('status');
         let selectedGrandchildren = new Set();
         let executionGroups = new Map();
+        let noiDungMap = new Map();
         let tokenClient;
         let gapiReady = false;
 
         // --- CÁC HÀM TIỆN ÍCH ---
         const formatNumber = (num) => num?.toLocaleString('vi-VN') || '0';
-        const parseNumber = (str) => Number(String(str).replace(/\./g, '').replace(/,/g, '.')) || 0;
+        
+        // Hàm parseNumber gốc, dùng cho việc nhập liệu từ Excel và các trường hợp chung
+        const parseNumber = (str) => {
+            if (str === null || str === undefined) return 0;
+            let s = String(str).trim();
+            if (s === '') return 0;
+
+            const lastDot = s.lastIndexOf('.');
+            const lastComma = s.lastIndexOf(',');
+            
+            let numberStr;
+
+            // Logic này được giữ lại để tương thích với cách đọc dữ liệu từ Excel
+            if (lastComma > lastDot) {
+                // Xử lý định dạng "1.000,50" -> "1000.50"
+                numberStr = s.replace(/\./g, '').replace(',', '.');
+            } else {
+                // Xử lý định dạng "1,000.50" -> "1000.50" và các trường hợp khác
+                numberStr = s.replace(/,/g, '');
+            }
+            
+            const result = parseFloat(numberStr);
+            return isNaN(result) ? 0 : result;
+        };
+        
+        // Hàm mới, chuyên dùng để parse các giá trị đã được định dạng kiểu Việt Nam từ form
+        const parseFormattedNumber = (str) => {
+            if (str === null || str === undefined) return 0;
+            let s = String(str).trim();
+            if (s === '') return 0;
+            // Luôn loại bỏ dấu '.' (hàng nghìn) và thay dấu ',' (thập phân) bằng '.'
+            const numberStr = s.replace(/\./g, '').replace(',', '.');
+            const result = parseFloat(numberStr);
+            return isNaN(result) ? 0 : result;
+        };
+
         
         // --- KHỞI TẠO GOOGLE API CLIENT ---
         function initializeGoogleClients() {
@@ -362,8 +400,10 @@
                     const workbook = XLSX.read(new Uint8Array(event.target.result), { type: 'array' });
                     const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { raw: false });
                     
+                    const headers = jsonData.length > 0 ? Object.keys(jsonData[0]) : [];
+
                     statusDiv.innerText = "Đã đọc file. Đang xử lý...";
-                    const taskTree = buildTaskTree(jsonData);
+                    const taskTree = buildTaskTree(jsonData, headers);
                     calculateCosts(taskTree);
 
                     statusDiv.innerText = "Đang nhập dữ liệu vào Firestore...";
@@ -377,35 +417,56 @@
             reader.readAsArrayBuffer(fileInput.files[0]);
         };
 
-        const buildTaskTree = (jsonData) => {
+        const buildTaskTree = (jsonData, headers) => {
             const tree = []; let currentParent = null;
             const isRoman = /^[IVXLCDM]+$/i; const isNumber = /^\d+$/; const isSubNumber = /^\d+\.\d+$/;
+            
+            const findValue = (row, keys) => {
+                for (const key of keys) {
+                    if (headers.includes(key) && row[key] !== undefined) {
+                        return row[key];
+                    }
+                }
+                return undefined;
+            };
 
             jsonData.forEach((row) => {
                 const tt = String(row.TT || '').trim(); if (!tt) return;
 
-                const chiPhi = parseNumber(row['Chi phí'] || row['Chi phí kế hoạch 2025'] || '0');
-                const chiPhiThucHien = parseNumber(row['Chi phí thực hiện'] || '0');
-                const keHoachConLaiFromFile = row['Kế hoạch còn lại'];
-                const keHoachConLai = keHoachConLaiFromFile !== undefined ? parseNumber(keHoachConLaiFromFile) : (chiPhi - chiPhiThucHien);
+                const data = { tt };
 
-                const taskNode = {
-                    id: tt,
-                    data: {
-                        noiDung: row['Nội dung'] || row['NỘI DUNG CÔNG VIỆC'] || '',
-                        donVi: row['Đơn vị'] || '',
-                        soLuong: row['Số lượng'] || row['Số lượng vật tư'] || '',
-                        capDo: row['Cấp độ'] || '',
-                        tt: tt, chiPhi, chiPhiThucHien, keHoachConLai
-                    }
-                };
+                const noiDungValue = findValue(row, ['Nội dung', 'NỘI DUNG CÔNG VIỆC']);
+                if (noiDungValue !== undefined) data.noiDung = noiDungValue;
+
+                const donViValue = findValue(row, ['Đơn vị']);
+                if (donViValue !== undefined) data.donVi = donViValue;
+
+                const soLuongValue = findValue(row, ['Số lượng', 'Số lượng vật tư']);
+                if (soLuongValue !== undefined) data.soLuong = soLuongValue;
+
+                const capDoValue = findValue(row, ['Cấp độ']);
+                if (capDoValue !== undefined) data.capDo = capDoValue;
+                
+                const chiPhiValue = findValue(row, ['Chi phí', 'Chi phí kế hoạch 2025']);
+                if (chiPhiValue !== undefined) data.chiPhi = parseNumber(chiPhiValue);
+
+                const chiPhiThucHienValue = findValue(row, ['Chi phí thực hiện']);
+                if (chiPhiThucHienValue !== undefined) data.chiPhiThucHien = parseNumber(chiPhiThucHienValue);
+                
+                const keHoachConLaiValue = findValue(row, ['Kế hoạch còn lại']);
+                if (keHoachConLaiValue !== undefined) {
+                    data.keHoachConLai = parseNumber(keHoachConLaiValue);
+                } else if (data.chiPhi !== undefined && data.chiPhiThucHien !== undefined) {
+                    data.keHoachConLai = data.chiPhi - data.chiPhiThucHien;
+                }
+
+                const taskNode = { id: tt, data };
                 
                 if (isSubNumber.test(tt)) {
                     taskNode.executions = [];
                     let i = 1;
                     while(true) {
                         const ngayTHKey = `Ngày TH (${i})`;
-                        // BỔ SUNG: Thêm cột `Hồ sơ Link` vào điều kiện lặp và đọc dữ liệu
                         const hoSoLinkKey = `Hồ sơ Link (${i})`;
                         if (row[ngayTHKey] === undefined && row[`Số lượng (${i})`] === undefined && row[hoSoLinkKey] === undefined) break;
 
@@ -416,13 +477,10 @@
 
                         if (ngayThucHien || dvt > 0 || thanhTien > 0 || hoSoLink) {
                             taskNode.executions.push({
-                                ngayThucHien: ngayThucHien,
-                                dvt: dvt,
+                                ngayThucHien: ngayThucHien, dvt: dvt,
                                 donGia: parseNumber(row[`Đơn giá (${i})`]),
-                                thanhTien: thanhTien,
-                                timestamp: row[`Timestamp (${i})`] || null,
-                                lanThucHien: i,
-                                hoSoLink: hoSoLink || null
+                                thanhTien: thanhTien, timestamp: row[`Timestamp (${i})`] || null,
+                                lanThucHien: i, hoSoLink: hoSoLink || null
                             });
                         }
                         i++;
@@ -443,8 +501,7 @@
                     let childContainer = currentParent.children.find(c => c.id === childId);
                     if (!childContainer) {
                         childContainer = {
-                            id: childId,
-                            data: { tt: childId, noiDung: '(Công việc chung)', isHidden: true, chiPhi: 0, chiPhiThucHien: 0, keHoachConLai: 0 },
+                            id: childId, data: { tt: childId, noiDung: '(Công việc chung)', isHidden: true },
                             grandchildren: []
                         };
                         currentParent.children.push(childContainer);
@@ -458,32 +515,37 @@
 
         const calculateCosts = (tree) => {
             tree.forEach(parent => {
-                let parentChiPhi = 0;
-                let parentChiPhiThucHien = 0;
+                let parentChiPhi = 0; let parentChiPhiThucHien = 0;
                 (parent.children || []).forEach(child => {
-                    const childChiPhi = (child.grandchildren || []).reduce((sum, gc) => sum + gc.data.chiPhi, 0);
-                    const childChiPhiThucHien = (child.grandchildren || []).reduce((sum, gc) => sum + gc.data.chiPhiThucHien, 0);
-                    child.data.chiPhi = childChiPhi;
-                    child.data.chiPhiThucHien = childChiPhiThucHien;
-                    child.data.keHoachConLai = childChiPhi - childChiPhiThucHien;
+                    const childChiPhi = (child.grandchildren || []).reduce((sum, gc) => sum + (gc.data.chiPhi || 0), 0);
+                    const childChiPhiThucHien = (child.grandchildren || []).reduce((sum, gc) => sum + (gc.data.chiPhiThucHien || 0), 0);
+                    
+                    if(child.data) {
+                      child.data.chiPhi = childChiPhi;
+                      child.data.chiPhiThucHien = childChiPhiThucHien;
+                      child.data.keHoachConLai = childChiPhi - childChiPhiThucHien;
+                    }
+
                     parentChiPhi += childChiPhi;
                     parentChiPhiThucHien += childChiPhiThucHien;
                 });
-                parent.data.chiPhi = parentChiPhi;
-                parent.data.chiPhiThucHien = parentChiPhiThucHien;
-                parent.data.keHoachConLai = parentChiPhi - parentChiPhiThucHien;
+                if(parent.data) {
+                  parent.data.chiPhi = parentChiPhi;
+                  parent.data.chiPhiThucHien = parentChiPhiThucHien;
+                  parent.data.keHoachConLai = parentChiPhi - parentChiPhiThucHien;
+                }
             });
         };
 
         const writeTreeToFirestore = async (tree) => {
             const batch = writeBatch(db);
             tree.forEach(p => {
-                batch.set(doc(db, "công việc mẹ", p.id), p.data);
+                if (p.data && Object.keys(p.data).length > 1) batch.set(doc(db, "công việc mẹ", p.id), p.data, { merge: true });
                 (p.children || []).forEach(c => {
-                    batch.set(doc(db, "công việc mẹ", p.id, "công việc con", c.id), c.data);
+                    if (c.data && Object.keys(c.data).length > 1) batch.set(doc(db, "công việc mẹ", p.id, "công việc con", c.id), c.data, { merge: true });
                     (c.grandchildren || []).forEach(gc => {
                         const grandchildRef = doc(db, `công việc mẹ/${p.id}/công việc con/${c.id}/công việc cháu`, gc.id);
-                        batch.set(grandchildRef, gc.data);
+                        if (gc.data && Object.keys(gc.data).length > 1) batch.set(grandchildRef, gc.data, { merge: true });
                         if (gc.executions && gc.executions.length > 0) {
                             gc.executions.forEach(exec => {
                                 const execDocRef = doc(collection(grandchildRef, "thực hiện"), String(exec.lanThucHien));
@@ -605,7 +667,7 @@
                         <td class="text-right">${formatNumber(parentData.keHoachConLai)}</td>
                         <td></td>
                         ${parentHoSoHtml}
-                        <td><div class="dropdown"><button onclick="toggleDropdown(event)" class="btn-secondary btn-action dropbtn">Thêm/sửa</button><div class="dropdown-content"><a href="#" onclick="openAddModal('${parentPath}', 'child')">Thêm CV con</a><a href="#" onclick="handleEditClick('${parentPath}', 'parent')">Sửa TT</a></div></div></td>
+                        <td><div class="dropdown"><button onclick="toggleDropdown(event)" class="btn-secondary btn-action dropbtn">Thêm/sửa</button><div class="dropdown-content"><a href="#" onclick="openAddModal('${parentPath}', 'child')">Thêm Thiết bị mới</a><a href="#" onclick="handleEditClick('${parentPath}', 'parent')">Sửa Nội dung</a></div></div></td>
                     </tr>`;
 
                     const childSnapshot = await getDocs(query(collection(db, parentPath, "công việc con")));
@@ -629,7 +691,7 @@
                                 <td class="text-right">${formatNumber(childData.keHoachConLai)}</td>
                                 <td>${childData.capDo || ''}</td>
                                 ${childHoSoHtml}
-                                <td><div class="dropdown"><button onclick="toggleDropdown(event)" class="btn-secondary btn-action dropbtn">Thêm/sửa</button><div class="dropdown-content"><a href="#" onclick="openAddModal('${childPath}', 'grandchild')">Thêm CV cháu</a><a href="#" onclick="handleEditClick('${childPath}', 'child')">Sửa TT</a></div></div></td>
+                                <td><div class="dropdown"><button onclick="toggleDropdown(event)" class="btn-secondary btn-action dropbtn">Thêm/sửa</button><div class="dropdown-content"><a href="#" onclick="openAddModal('${childPath}', 'grandchild')">Thêm công việc chi tiết</a><a href="#" onclick="handleEditClick('${childPath}', 'child')">Sửa Nội dung</a></div></div></td>
                             </tr>`;
                         }
                         
@@ -662,11 +724,50 @@
                     }
                 }
                 tableBody.innerHTML = html || `<tr><td colspan="11">Không có dữ liệu.</td></tr>`;
-                document.getElementById('summarySection').innerHTML = `<p><strong>Tổng số đầu việc lớn cần thực hiện:</strong> ${totalChildTasks}</p><p><strong>Tổng số đầu việc chi tiết cần thực hiện:</strong> ${totalGrandchildren}</p><p><strong>Tổng chi phí theo kế hoạch:</strong> ${formatNumber(totalPlannedCost)}</p><p><strong>Tổng chi phí đã thực hiện:</strong> ${formatNumber(totalExecutedCost)}</p>`;
+                document.getElementById('summarySection').innerHTML = `<p><strong>Tổng số đầu việc thiết bị cần thực hiện:</strong> ${totalChildTasks}</p><p><strong>Tổng số đầu việc chi tiết cần thực hiện:</strong> ${totalGrandchildren}</p><p><strong>Tổng chi phí theo kế hoạch:</strong> ${formatNumber(totalPlannedCost)}</p><p><strong>Tổng chi phí đã thực hiện:</strong> ${formatNumber(totalExecutedCost)}</p>`;
                 selectedGrandchildren.clear();
                 statusDiv.innerText = '';
             } catch (error) { console.error("Lỗi tải dữ liệu: ", error); tableBody.innerHTML = `<tr><td colspan="11">Lỗi tải dữ liệu: ${error.message}</td></tr>`; }
         };
+
+        window.recalculateAllCostsAndReload = async () => {
+            if (!confirm("Bạn có muốn tính toán lại toàn bộ chi phí từ dữ liệu gốc không? Hành động này sẽ quét và cập nhật tất cả các mục công việc.")) {
+                return;
+            }
+            const button = document.querySelector('button[onclick="recalculateAllCostsAndReload()"]');
+            try {
+                statusDiv.className = 'success';
+                statusDiv.innerText = 'Đang tính toán lại toàn bộ dữ liệu... Vui lòng chờ.';
+                button.disabled = true;
+
+                const fieldsToRecalculate = ['chiPhi', 'chiPhiThucHien'];
+                const parentSnapshot = await getDocs(query(collection(db, "công việc mẹ")));
+
+                for (const parentDoc of parentSnapshot.docs) {
+                    const childSnapshot = await getDocs(query(collection(parentDoc.ref, "công việc con")));
+                    
+                    for (const childDoc of childSnapshot.docs) {
+                        const grandchildSnapshot = await getDocs(query(collection(childDoc.ref, "công việc cháu")));
+                        for (const grandchildDoc of grandchildSnapshot.docs) {
+                            await recalculateGrandchildExecutionCost(grandchildDoc.ref.path);
+                        }
+                        await recalculateSingleParentCost(childDoc.ref.path, 'công việc cháu', fieldsToRecalculate);
+                    }
+                    await recalculateSingleParentCost(parentDoc.ref.path, 'công việc con', fieldsToRecalculate);
+                }
+
+                statusDiv.innerText = 'Tính toán lại thành công! Đang tải lại dữ liệu mới...';
+                await fetchData();
+
+            } catch (error) {
+                console.error("Lỗi khi tính toán lại toàn bộ:", error);
+                statusDiv.className = 'error';
+                statusDiv.innerText = `Đã xảy ra lỗi: ${error.message}`;
+            } finally {
+                button.disabled = false;
+            }
+        };
+
 
         window.closeAllModals = () => {
             document.querySelectorAll('.modal').forEach(modal => { modal.style.display = 'none'; });
@@ -681,14 +782,25 @@
         };
 
         const createInputRow = (path, data, level) => {
-            const isParent = level === 'parent'; const isChild = level === 'child';
+            const isParent = level === 'parent';
+            const isChild = level === 'child';
             const isDisabled = (field) => {
                 if (field === 'tt') return true;
                 if ((isParent || isChild) && ['donVi', 'soLuong', 'chiPhi'].includes(field)) return true;
                 if (isParent && field === 'capDo') return true;
                 return false;
             };
-            return `<tr data-path="${path}"><td class="col-tt"><input type="text" value="${data.tt || ''}" ${isDisabled('tt') ? 'disabled' : ''}></td><td class="col-noidung"><input type="text" value="${data.noiDung || ''}" data-field="noiDung"></td><td class="col-donvi"><input type="text" value="${data.donVi || ''}" data-field="donVi" ${isDisabled('donVi') ? 'disabled' : ''}></td><td class="col-soluong"><input type="text" value="${data.soLuong || ''}" data-field="soLuong" ${isDisabled('soLuong') ? 'disabled' : ''}></td><td class="col-chiphi"><input type="text" value="${formatNumber(data.chiPhi || 0)}" data-field="chiPhi" oninput="this.value=formatNumber(parseNumber(this.value))" ${isDisabled('chiPhi') ? 'disabled' : ''}></td><td class="col-capdo"><input type="text" value="${data.capDo || ''}" data-field="capDo" ${isDisabled('capDo') ? 'disabled' : ''}></td></tr>`;
+            // Thêm sự kiện onfocus="this.select()" cho trường chi phí nếu là công việc cháu
+            const chiPhiEvent = level === 'grandchild' ? 'onfocus="this.select()"' : '';
+
+            return `<tr data-path="${path}">
+                        <td class="col-tt"><input type="text" value="${data.tt || ''}" ${isDisabled('tt') ? 'disabled' : ''}></td>
+                        <td class="col-noidung"><input type="text" value="${data.noiDung || ''}" data-field="noiDung"></td>
+                        <td class="col-donvi"><input type="text" value="${data.donVi || ''}" data-field="donVi" ${isDisabled('donVi') ? 'disabled' : ''}></td>
+                        <td class="col-soluong"><input type="text" value="${data.soLuong || ''}" data-field="soLuong" ${isDisabled('soLuong') ? 'disabled' : ''}></td>
+                        <td class="col-chiphi"><input type="text" value="${formatNumber(data.chiPhi || 0)}" data-field="chiPhi" oninput="this.value=formatNumber(parseNumber(this.value))" ${chiPhiEvent} ${isDisabled('chiPhi') ? 'disabled' : ''}></td>
+                        <td class="col-capdo"><input type="text" value="${data.capDo || ''}" data-field="capDo" ${isDisabled('capDo') ? 'disabled' : ''}></td>
+                    </tr>`;
         };
 
         window.handleEditClick = async (docPath, level) => {
@@ -713,6 +825,8 @@
             table += '</tbody></table>';
             document.getElementById('modalBody').innerHTML = table;
             document.getElementById('modalSaveButton').onclick = saveTasks;
+            document.getElementById('modalSaveButton').style.display = 'block';
+            document.getElementById('modalDeleteButton').style.display = 'none';
             document.getElementById('dataModal').style.display = 'block';
         };
         
@@ -736,6 +850,8 @@
             table += '</tbody></table>';
             document.getElementById('modalBody').innerHTML = table;
             document.getElementById('modalSaveButton').onclick = () => addNewTask(parentPath, level, newTT);
+            document.getElementById('modalSaveButton').style.display = 'block';
+            document.getElementById('modalDeleteButton').style.display = 'none';
             document.getElementById('dataModal').style.display = 'block';
         };
 
@@ -749,10 +865,12 @@
                     uniqueParentChildPaths.add(JSON.stringify({ child: childPath, parent: parentPath }));
                 }
             });
+            const fieldsToRecalculate = ['chiPhi', 'chiPhiThucHien'];
+
             for (const pathStr of uniqueParentChildPaths) {
                 const { child, parent } = JSON.parse(pathStr);
-                await recalculateSingleParentCost(child, 'công việc cháu', ['chiPhiThucHien']);
-                await recalculateSingleParentCost(parent, 'công việc con', ['chiPhiThucHien']);
+                await recalculateSingleParentCost(child, 'công việc cháu', fieldsToRecalculate);
+                await recalculateSingleParentCost(parent, 'công việc con', fieldsToRecalculate);
             }
         };
 
@@ -770,7 +888,8 @@
                     const updatedData = {};
                     row.querySelectorAll('input[data-field]').forEach(input => {
                         const field = input.dataset.field;
-                        updatedData[field] = (field === 'chiPhi') ? parseNumber(input.value) : input.value;
+                        // Sử dụng parseFormattedNumber cho trường 'chiPhi' vì nó đã được định dạng
+                        updatedData[field] = (field === 'chiPhi') ? parseFormattedNumber(input.value) : input.value;
                     });
                     if (path.includes('cháu')) {
                         const chiPhi = updatedData.chiPhi || 0;
@@ -795,10 +914,10 @@
 
         window.addNewTask = async (parentPath, level, newTT) => {
             const row = document.querySelector("#dataModal .modal-table tbody tr");
-            const newData = { tt: newTT, isHidden: false, chiPhiThucHien: 0 };
+            const newData = { tt: newTT, isHidden: false, chiPhi: 0, chiPhiThucHien: 0 };
             row.querySelectorAll('input[data-field]').forEach(input => {
                 const field = input.dataset.field;
-                newData[field] = (field === 'chiPhi') ? parseNumber(input.value) : input.value;
+                newData[field] = (field === 'chiPhi') ? parseFormattedNumber(input.value) : input.value;
             });
             newData.keHoachConLai = newData.chiPhi || 0;
             if (!newData.noiDung) { alert("Nội dung công việc không được để trống!"); return; }
@@ -814,16 +933,16 @@
         const recalculateSingleParentCost = async (parentPath, subCollectionName, fieldsToSum) => {
             const snapshot = await getDocs(query(collection(db, parentPath, subCollectionName)));
             const dataToUpdate = {};
-            fieldsToSum.forEach(field => {
-                dataToUpdate[field] = snapshot.docs.reduce((sum, doc) => sum + (doc.data()[field] || 0), 0);
+            fieldsToSum.forEach(field => dataToUpdate[field] = 0);
+            
+            snapshot.docs.forEach(doc => {
+                 fieldsToSum.forEach(field => {
+                    dataToUpdate[field] += (doc.data()[field] || 0);
+                });
             });
+
             const parentDocRef = doc(db, parentPath);
-            const parentDocSnap = await getDoc(parentDocRef);
-            if (!parentDocSnap.exists()) return;
-            const parentData = parentDocSnap.data();
-            const chiPhi = parentData.chiPhi;
-            const chiPhiThucHien = dataToUpdate.chiPhiThucHien;
-            dataToUpdate.keHoachConLai = (chiPhi || 0) - (chiPhiThucHien || 0);
+            dataToUpdate.keHoachConLai = (dataToUpdate.chiPhi || 0) - (dataToUpdate.chiPhiThucHien || 0);
             await updateDoc(parentDocRef, dataToUpdate);
         };
        
@@ -855,6 +974,7 @@
             document.getElementById('modalBody').innerHTML = modalBodyHTML;
             document.getElementById('modalSaveButton').onclick = saveMultiExecutionData;
             document.getElementById('modalSaveButton').style.display = 'block';
+            document.getElementById('modalDeleteButton').style.display = 'none';
             document.getElementById('dataModal').style.display = 'block';
         };
 
@@ -877,7 +997,8 @@
                     const grandchildData = grandchildDocSnap.data();
                     const initialChiPhi = grandchildData.chiPhi || 0;
                     const soLuong = parseNumber(row.querySelector('input[data-field="dvt"]').value);
-                    const thanhTien = parseNumber(row.querySelector('input[data-field="thanhTien"]').value);
+                    // Sử dụng parseFormattedNumber cho trường Thành tiền đã được định dạng
+                    const thanhTien = parseFormattedNumber(row.querySelector('input[data-field="thanhTien"]').value);
                     if (thanhTien <= 0 && (initialChiPhi !== 0 || soLuong <= 0)) { continue; }
                     pathsToRecalculate.push(grandchildPath);
                     const executionCollectionRef = collection(grandchildDocRef, 'thực hiện');
@@ -931,13 +1052,15 @@
                 if (!group[parentChildPath]) { group[parentChildPath] = []; }
                 group[parentChildPath].push(executionData);
             });
-            const noiDungMap = new Map();
+            
+            noiDungMap.clear();
             const pathsToFetch = [...uniqueGrandchildPaths, ...uniqueChildPaths];
             const fetchPromises = Array.from(new Set(pathsToFetch)).map(path => getDoc(doc(db, path)));
             const allDocs = await Promise.all(fetchPromises);
             allDocs.forEach(docSnap => {
                 if (docSnap.exists()) { noiDungMap.set(docSnap.ref.path, docSnap.data().noiDung); }
             });
+
             statusDiv.innerText = "";
             let table = `<table class="modal-table"><thead><tr><th style="width: 5%;">STT</th><th style="width: 10%;">Ngày T.Hiện</th><th>Trích yếu nội dung công việc</th><th style="width: 15%; text-align:right;">Tổng chi phí</th><th style="width: 8%;">Số CV</th><th style="width: 15%;">Hành động</th></tr></thead><tbody>`;
             if (querySnapshot.empty) {
@@ -975,6 +1098,7 @@
             table += '</tbody></table>';
             document.getElementById('modalBody').innerHTML = table;
             document.getElementById('modalSaveButton').style.display = 'none';
+            document.getElementById('modalDeleteButton').style.display = 'none';
             document.getElementById('dataModal').style.display = 'block';
         };
         
@@ -993,8 +1117,15 @@
             }
             table += '</tbody></table>';
             document.getElementById('modalBody').innerHTML = table;
-            document.getElementById('modalSaveButton').style.display = 'block';
-            document.getElementById('modalSaveButton').onclick = () => saveExecutionEdits();
+            
+            const saveButton = document.getElementById('modalSaveButton');
+            saveButton.style.display = 'block';
+            saveButton.onclick = () => saveExecutionEdits();
+
+            const deleteButton = document.getElementById('modalDeleteButton');
+            deleteButton.style.display = 'block';
+            deleteButton.onclick = () => handleDeleteExecution(timestampKey);
+            
             document.getElementById('dataModal').style.display = 'block';
         };
 
@@ -1008,6 +1139,87 @@
                 await updateDoc(grandchildDocRef, { chiPhiThucHien: newChiPhiThucHien, keHoachConLai: chiPhi - newChiPhiThucHien });
             }
         };
+        
+        window.exportSingleExecutionToExcel = async (timestampKey) => {
+            try {
+                const groupObject = executionGroups.get(timestampKey);
+                if (!groupObject) {
+                    throw new Error("Không tìm thấy dữ liệu thực hiện.");
+                }
+                const group = Object.values(groupObject).flat();
+                const ngayThucHien = group[0]?.ngayThucHien || 'UnknownDate';
+
+                const rows = [['STT', 'Nội dung công việc', 'Số lượng', 'Đơn giá', 'Thành tiền']];
+                let counter = 1;
+                for (const exec of group) {
+                    const noiDung = noiDungMap.get(exec.parentGrandchildPath) || 'Không tìm thấy nội dung';
+                    rows.push([
+                        counter++,
+                        noiDung,
+                        exec.dvt,
+                        exec.donGia,
+                        exec.thanhTien
+                    ]);
+                }
+
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(rows);
+                ws['!cols'] = [{ wch: 5 }, { wch: 60 }, { wch: 12 }, { wch: 15 }, { wch: 15 }];
+                XLSX.utils.book_append_sheet(wb, ws, 'Chi tiết thực hiện');
+                XLSX.writeFile(wb, `ChiTietThucHien_${ngayThucHien}.xlsx`);
+                statusDiv.className = 'success';
+                statusDiv.innerText = "Xuất Excel thành công. Chuẩn bị xóa...";
+            } catch (error) {
+                console.error("Lỗi khi xuất Excel:", error);
+                statusDiv.className = 'error';
+                statusDiv.innerText = `Lỗi khi xuất Excel: ${error.message}`;
+                throw error; // Ngăn chặn quá trình xóa nếu xuất file lỗi
+            }
+        };
+
+        window.handleDeleteExecution = async (timestampKey) => {
+            if (!confirm("Bạn có chắc chắn muốn xóa lần thực hiện này không? Hành động này không thể hoàn tác.")) {
+                return;
+            }
+            const exportBeforeDelete = confirm("Bạn có muốn xuất chi tiết lần thực hiện này ra Excel trước khi xóa không?");
+            
+            try {
+                if (exportBeforeDelete) {
+                    await exportSingleExecutionToExcel(timestampKey);
+                }
+
+                statusDiv.className = 'success';
+                statusDiv.innerText = "Đang xóa dữ liệu...";
+
+                const group = Object.values(executionGroups.get(timestampKey)).flat();
+                const batch = writeBatch(db);
+                const pathsToRecalculate = new Set();
+
+                group.forEach(exec => {
+                    batch.delete(doc(db, exec.path));
+                    pathsToRecalculate.add(exec.parentGrandchildPath);
+                });
+
+                await batch.commit();
+                
+                statusDiv.innerText = "Đã xóa. Đang cập nhật lại chi phí...";
+
+                const recalcPromises = Array.from(pathsToRecalculate).map(path => recalculateGrandchildExecutionCost(path));
+                await Promise.all(recalcPromises);
+                
+                await recalculateCostsForParents(Array.from(pathsToRecalculate));
+                
+                closeAllModals();
+                await fetchData();
+                statusDiv.innerText = "Đã xóa thành công lần thực hiện.";
+
+            } catch (error) {
+                 console.error("Lỗi khi xóa thực hiện:", error);
+                 statusDiv.className = 'error';
+                 statusDiv.innerText = `Lỗi khi xóa: ${error.message}`;
+            }
+        };
+
 
         window.saveExecutionEdits = async () => {
             const saveButton = document.getElementById('modalSaveButton');
@@ -1020,7 +1232,12 @@
                     const execPath = row.dataset.execPath;
                     const parentGrandchildPath = execPath.substring(0, execPath.lastIndexOf('/thực hiện/'));
                     pathsToRecalculate.add(parentGrandchildPath);
-                    const updatedData = { dvt: parseNumber(row.querySelector('input[data-field="dvt"]').value), donGia: parseNumber(row.querySelector('input[data-field="donGia"]').value), thanhTien: parseNumber(row.querySelector('input[data-field="thanhTien"]').value) };
+                    const updatedData = { 
+                        dvt: parseNumber(row.querySelector('input[data-field="dvt"]').value), 
+                        donGia: parseNumber(row.querySelector('input[data-field="donGia"]').value), 
+                        // Sử dụng parseFormattedNumber cho trường Thành tiền đã được định dạng
+                        thanhTien: parseFormattedNumber(row.querySelector('input[data-field="thanhTien"]').value) 
+                    };
                     batch.update(doc(db, execPath), updatedData);
                 }
                 await batch.commit();
@@ -1220,7 +1437,6 @@
                 const baseHeaders = ['TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Chi phí', 'Chi phí thực hiện', 'Kế hoạch còn lại', 'Cấp độ'];
                 const executionHeaders = [];
                 for (let i = 1; i <= maxExecutions; i++) {
-                    // BỔ SUNG: Thêm cột `Hồ sơ Link` vào file Excel xuất ra
                     executionHeaders.push(`Ngày TH (${i})`, `Số lượng (${i})`, `Đơn giá (${i})`, `Thành tiền (${i})`, `Timestamp (${i})`, `Hồ sơ Link (${i})`);
                 }
                 const fullHeaders = [...baseHeaders, ...executionHeaders];
@@ -1236,22 +1452,20 @@
                     const childSnapshot = await getDocs(query(collection(db, `công việc mẹ/${parentData.id}/công việc con`)));
                     const children = childSnapshot.docs.map(d => ({id: d.id, ...d.data()}));
                     for (const childData of children) {
-                        if(childData.isHidden) continue;
                         boldRows.add(rows.length); 
                         const childRowData = [ childData.tt, childData.noiDung, childData.donVi, childData.soLuong, childData.chiPhi, childData.chiPhiThucHien, childData.keHoachConLai, childData.capDo ];
                         childRowData.push(...Array(maxExecutions * 6).fill('')); 
                         rows.push(childRowData);
                         const grandchildSnapshot = await getDocs(query(collection(db, `công việc mẹ/${parentData.id}/công việc con/${childData.id}/công việc cháu`)));
-                        const grandchildren = grandchildSnapshot.docs.map(d => ({path: d.ref.path, ...d.data()})).sort((a,b) => naturalSort(a,b));
+                        const grandchildren = grandchildSnapshot.docs.map(d => ({id: d.id, path: d.ref.path, ...d.data()})).sort((a,b) => naturalSort(a,b));
                         for (const grandchildData of grandchildren) {
                             const grandchildRowData = [ grandchildData.tt, grandchildData.noiDung, grandchildData.donVi, grandchildData.soLuong, grandchildData.chiPhi, grandchildData.chiPhiThucHien, grandchildData.keHoachConLai, grandchildData.capDo ];
                             const executions = executionsMap.get(grandchildData.path) || [];
                             executions.forEach(exec => {
                                 const execTimestamp = exec.timestamp && typeof exec.timestamp.toMillis === 'function' ? new Date(exec.timestamp.toMillis()).toLocaleString('vi-VN') : (exec.timestamp || '');
-                                // BỔ SUNG: Thêm dữ liệu `hoSoLink` vào hàng
                                 grandchildRowData.push(exec.ngayThucHien, exec.dvt, exec.donGia, exec.thanhTien, execTimestamp, exec.hoSoLink || '');
                             });
-                            const paddingCount = (maxExecutions - executions.length) * 6; // Cập nhật số cột padding
+                            const paddingCount = (maxExecutions - executions.length) * 6;
                             if (paddingCount > 0) { grandchildRowData.push(...Array(paddingCount).fill('')); }
                             rows.push(grandchildRowData);
                         }
@@ -1274,7 +1488,6 @@
                 }
                 const colWidths = [ { wch: 8 }, { wch: 60 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 } ];
                 for (let i = 0; i < maxExecutions; i++) {
-                    // BỔ SUNG: Thêm độ rộng cho cột `Hồ sơ Link`
                     colWidths.push({ wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 22 }, { wch: 40 });
                 }
                 ws['!cols'] = colWidths;
