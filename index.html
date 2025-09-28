@@ -921,7 +921,7 @@
             // Thêm ghi chú nếu đang thêm công việc chi tiết
             let modalBodyHTML = '';
             if (level === 'grandchild') {
-                modalBodyHTML += '<div class="modal-note">Lưu ý: Khi sửa giá trị chi phí, hãy nhập dải số liền, không có ký tự phân tách hàng nghìn. Ví dụ nhập: 3621000</div>';
+                modalBodyHTML += '<div class="modal-note">Lưu ý: Khi nhập giá trị chi phí, hãy nhập dải số liền, không có ký tự phân tách hàng nghìn. Ví dụ nhập: 3621000</div>';
             }
             modalBodyHTML += table;
             
@@ -1167,7 +1167,7 @@
                         <td class="text-right">${formatNumber(totalCost)}</td><td>${grandchildCount}</td>
                         <td>
                             <button class="btn-secondary btn-action" onclick="openExecutionEditModal(${keyParam})">Sửa</button>
-                            <button class="btn-info btn-action" onclick="handleProfileUploadClick(${keyParam})">Hồ sơ</button>
+                            <button class="btn-info btn-action" onclick="handleProfileUploadClick(${keyParam})">Nhập hồ sơ</button>
                         </td>
                     </tr>`;
                 }
