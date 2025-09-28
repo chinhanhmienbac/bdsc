@@ -648,7 +648,8 @@
                 const execSnapshot = await getDocs(execQuery);
                 execSnapshot.forEach(docSnap => {
                     const data = docSnap.data();
-                    if (data.dvt && parseNumber(data.dvt) !== 0) {
+                    // Thay đổi điều kiện: chỉ cần có dvt > 0 hoặc có hoSoLink
+                    if ((data.dvt && parseNumber(data.dvt) !== 0) || data.hoSoLink) {
                         executedGrandchildPaths.add(docSnap.ref.parent.parent.path);
                     }
                     if (data.hoSoLink) {
@@ -737,8 +738,12 @@
                                 grandchildHoSoHtml = `<td><button class="btn-info btn-action" data-links='${linksJson}' onclick="showLinks(event)">Có</button></td>`;
                             }
 
-                            // Kiểm tra nếu công việc cháu đã được thực hiện
-                            if (executedGrandchildPaths.has(grandchildPath)) {
+                            // Kiểm tra nếu công việc cháu đã được thực hiện theo nguyên tắc mới
+                            // Điều kiện: chiPhiThucHien > 0 HOẶC có hoSoLink
+                            const isExecuted = (grandchildData.chiPhiThucHien && grandchildData.chiPhiThucHien > 0) || 
+                                              (grandchildLinks && grandchildLinks.size > 0);
+                            
+                            if (isExecuted) {
                                 totalExecutedGrandchildren++;
                             }
 
@@ -883,7 +888,7 @@
             // Thêm ghi chú vào modal body nếu cần
             let modalBodyHTML = '';
             if (showNote) {
-                modalBodyHTML += '<div class="modal-note">Lưu ý: Khi sửa chi phí, hãy nhập giá trị chi phí là dải số liền, không có ký tự phân tách hàng nghìn. Ví dụ nhập: 25012000</div>';
+                modalBodyHTML += '<div class="modal-note">Lưu ý: Khi sửa giá trị chi phí, hãy nhập dải số liền, không có ký tự phân tách hàng nghìn. Ví dụ nhập: 2513000</div>';
             }
             modalBodyHTML += table;
             
@@ -895,7 +900,7 @@
         };
         
         window.openAddModal = async (parentPath, level) => {
-            document.getElementById('modalTitle').innerText = level === 'child' ? 'Thêm công việc con' : 'Thêm công việc cháu';
+            document.getElementById('modalTitle').innerText = level === 'child' ? 'Thêm thiết bị vào bảng' : 'Thêm công việc chi tiết';
             const subCollectionName = level === 'child' ? 'công việc con' : 'công việc cháu';
             const snapshot = await getDocs(query(collection(db, parentPath, subCollectionName)));
             const existingIds = snapshot.docs.map(d => d.id);
@@ -916,7 +921,7 @@
             // Thêm ghi chú nếu đang thêm công việc chi tiết
             let modalBodyHTML = '';
             if (level === 'grandchild') {
-                modalBodyHTML += '<div class="modal-note">Lưu ý: Nhập giá trị chi phí là dải số liền, không có ký tự phân tách hàng nghìn.</div>';
+                modalBodyHTML += '<div class="modal-note">Lưu ý: Khi sửa giá trị chi phí, hãy nhập dải số liền, không có ký tự phân tách hàng nghìn. Ví dụ nhập: 3621000</div>';
             }
             modalBodyHTML += table;
             
