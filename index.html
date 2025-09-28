@@ -7,12 +7,35 @@
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            margin: 20px; background-color: #f4f4f9; line-height: 1.6;
+            margin: 0; background-color: #f4f4f9; line-height: 1.6;
         }
         #container {
             max-width: 1400px; margin: auto; background-color: white;
             padding: 25px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: none; /* Ẩn nội dung chính ban đầu */
         }
+        #login-container {
+            max-width: 400px; margin: 100px auto; padding: 30px; background-color: white;
+            border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center;
+        }
+        #login-container h2 { margin-top: 0; color: #333; }
+        #login-container input {
+            width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc;
+            border-radius: 4px; box-sizing: border-box; font-size: 16px;
+        }
+        #login-container button { width: 100%; padding: 12px; font-size: 16px; }
+        #login-error { color: #dc3545; margin-top: 15px; font-weight: bold; }
+
+        #auth-controls {
+            position: absolute; top: 20px; right: 20px; font-size: 14px;
+            color: #555; background-color: #f8f9fa; padding: 8px 12px;
+            border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        #auth-controls button {
+            background: none; border: none; color: #007bff; text-decoration: underline;
+            cursor: pointer; font-size: 14px; padding-left: 10px;
+        }
+        
         h1, h2 { color: #333; }
         h3 { color: #555; font-weight: normal; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         .button-group {
@@ -204,8 +227,30 @@
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
+    
+    <div id="login-container">
+        <img src="PVGLPG.gif" alt="Logo" style="width: 120px; height: auto; margin-bottom: 20px;">
+        <h2>Đăng nhập Hệ thống</h2>
+        <form id="login-form">
+            <input type="text" id="email" 
+                   value="n*****@pvgaslpg*****" 
+                   data-real-email="namdinh@pvgaslpg.com.vn" 
+                   readonly 
+                   style="background-color: #e9ecef; cursor: not-allowed; text-align: center; color: #495057;">
+            
+            <input type="password" id="password" placeholder="Mật khẩu" required autofocus>
+
+            <button type="submit" class="btn-primary">Đăng nhập</button>
+            <p id="login-error" style="display: none;"></p>
+        </form>
+    </div>
 
     <div id="container">
+        <div id="auth-controls" style="display: none;">
+            <span id="user-email"></span>
+            <button id="logout-button">Đăng xuất</button>
+        </div>
+
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
             <img src="PVGLPG.gif" alt="Logo" style="width: 100px; height: auto;">
             <h1 style="color: #008037; font-weight: bold; text-transform: uppercase; text-align: center; flex-grow: 1;">
@@ -303,11 +348,11 @@
         </div>
     </div>
 
-
     <button id="scrollToTopBtn" title="Lên đầu trang">&uarr;</button>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, getDocs, getDoc, updateDoc, deleteDoc, writeBatch, query, serverTimestamp, collectionGroup } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
         // --- CẤU HÌNH FIREBASE ---
@@ -321,6 +366,7 @@
             measurementId: "G-GQY6N2ZFLD"
         };
         const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
         const db = getFirestore(app);
 
         // --- CẤU HÌNH GOOGLE DRIVE API ---
@@ -336,6 +382,81 @@
         let noiDungMap = new Map();
         let tokenClient;
         let gapiReady = false;
+
+        // --- UI ELEMENTS ---
+        const loginContainer = document.getElementById('login-container');
+        const mainContainer = document.getElementById('container');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const authControls = document.getElementById('auth-controls');
+        const userEmailSpan = document.getElementById('user-email');
+        const logoutButton = document.getElementById('logout-button');
+
+        // --- AUTHENTICATION LOGIC ---
+        
+        // Listener theo dõi trạng thái đăng nhập
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                // Người dùng đã đăng nhập
+                loginContainer.style.display = 'none';
+                mainContainer.style.display = 'block';
+                authControls.style.display = 'block';
+                userEmailSpan.textContent = user.email;
+
+                // Tải dữ liệu chính của ứng dụng
+                fetchData();
+                initializeGoogleClients();
+            } else {
+                // Người dùng đã đăng xuất hoặc chưa đăng nhập
+                loginContainer.style.display = 'block';
+                mainContainer.style.display = 'none';
+                authControls.style.display = 'none';
+                document.getElementById('taskListBody').innerHTML = ''; // Xóa dữ liệu cũ
+            }
+        });
+
+        // Xử lý sự kiện submit form đăng nhập
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // THAY ĐỔI: Lấy email thật từ `data-real-email` thay vì từ `value` của input
+            const email = document.getElementById('email').dataset.realEmail;
+            const password = document.getElementById('password').value;
+            const loginButton = loginForm.querySelector('button');
+
+            loginError.style.display = 'none';
+            loginButton.disabled = true;
+            loginButton.textContent = 'Đang xử lý...';
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                // `onAuthStateChanged` sẽ tự động xử lý việc hiển thị giao diện
+            } catch (error) {
+                console.error("Lỗi đăng nhập:", error);
+                let errorMessage = "Đã xảy ra lỗi. Vui lòng thử lại.";
+                // Cập nhật mã lỗi cho phiên bản Firebase mới
+                if (error.code === 'auth/invalid-credential') {
+                    errorMessage = "Mật khẩu không chính xác.";
+                }
+                loginError.textContent = errorMessage;
+                loginError.style.display = 'block';
+            } finally {
+                loginButton.disabled = false;
+                loginButton.textContent = 'Đăng nhập';
+            }
+        });
+
+        // Xử lý sự kiện đăng xuất
+        logoutButton.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                // `onAuthStateChanged` sẽ tự động xử lý việc ẩn giao diện
+            } catch (error) {
+                console.error("Lỗi đăng xuất:", error);
+                alert("Đăng xuất thất bại. Vui lòng thử lại.");
+            }
+        });
+
 
         // --- CÁC HÀM TIỆN ÍCH ---
         const formatNumber = (num) => num?.toLocaleString('vi-VN') || '0';
@@ -388,6 +509,11 @@
                 callback: () => {},
             });
         }
+
+        // =========================================================
+        // PHẦN CÒN LẠI CỦA MÃ JAVASCRIPT GIỮ NGUYÊN NHƯ BAN ĐẦU
+        // (Không cần thay đổi các hàm fetchData, importData, v.v...)
+        // =========================================================
 
         function ensureGapiAuthenticated() {
             return new Promise((resolve, reject) => {
@@ -1577,9 +1703,7 @@
             }
         };
 
-        fetchData();
-        initializeGoogleClients();
-
+        // --- SCROLL TO TOP ---
         const scrollToTopBtn = document.getElementById("scrollToTopBtn");
         window.onscroll = () => {
             if (document.body.scrollTop > 100 || document.documentElement.scrollTop > 100) {
