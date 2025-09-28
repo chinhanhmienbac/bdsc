@@ -66,6 +66,12 @@
             padding: 15px;
             border-radius: 5px;
             margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        .summary-column {
+            width: 48%;
         }
         #summarySection p {
             margin: 5px 0;
@@ -73,6 +79,10 @@
         }
         #summarySection p strong {
             color: #333;
+        }
+        .percentage {
+            color: #007bff;
+            font-weight: bold;
         }
 
         .modal {
@@ -177,6 +187,15 @@
         .links-dropdown a:hover {
             background-color: #f1f1f1;
             text-decoration: underline;
+        }
+
+        .modal-note {
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 10px 15px;
+            margin: 15px 0;
+            font-size: 14px;
+            color: #495057;
         }
 
     </style>
@@ -646,6 +665,9 @@
 
                 let html = '';
                 let totalChildTasks = 0, totalGrandchildren = 0, totalPlannedCost = 0, totalExecutedCost = 0;
+                // Thêm biến mới để thống kê
+                let totalExecutedChildTasks = 0, totalExecutedGrandchildren = 0;
+                
                 const parentSnapshot = await getDocs(query(collection(db, "công việc mẹ")));
                 const parents = parentSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
@@ -673,7 +695,13 @@
                     const childSnapshot = await getDocs(query(collection(db, parentPath, "công việc con")));
                     const children = childSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                     for (const childData of children) {
-                        if (!childData.isHidden) totalChildTasks++;
+                        if (!childData.isHidden) {
+                            totalChildTasks++;
+                            // Kiểm tra nếu công việc con đã được thực hiện (chiPhiThucHien > 0)
+                            if (childData.chiPhiThucHien && childData.chiPhiThucHien > 0) {
+                                totalExecutedChildTasks++;
+                            }
+                        }
                         const childPath = `${parentPath}/công việc con/${childData.id}`;
                         const childLinks = hoSoLinkMap.get(childPath);
                         let childHoSoHtml = '<td></td>';
@@ -709,6 +737,11 @@
                                 grandchildHoSoHtml = `<td><button class="btn-info btn-action" data-links='${linksJson}' onclick="showLinks(event)">Có</button></td>`;
                             }
 
+                            // Kiểm tra nếu công việc cháu đã được thực hiện
+                            if (executedGrandchildPaths.has(grandchildPath)) {
+                                totalExecutedGrandchildren++;
+                            }
+
                             html += `<tr>
                                 <td><input type="checkbox" class="grandchild-checkbox" data-parent-path="${childPath}" data-path="${grandchildPath}" onchange="toggleSelection(this)"></td>
                                 <td>${grandchildData.tt}</td><td ${noiDungStyle}>${grandchildData.noiDung}</td>
@@ -724,7 +757,26 @@
                     }
                 }
                 tableBody.innerHTML = html || `<tr><td colspan="11">Không có dữ liệu.</td></tr>`;
-                document.getElementById('summarySection').innerHTML = `<p><strong>Tổng số đầu việc thiết bị cần thực hiện:</strong> ${totalChildTasks}</p><p><strong>Tổng số đầu việc chi tiết cần thực hiện:</strong> ${totalGrandchildren}</p><p><strong>Tổng chi phí theo kế hoạch:</strong> ${formatNumber(totalPlannedCost)}</p><p><strong>Tổng chi phí đã thực hiện:</strong> ${formatNumber(totalExecutedCost)}</p>`;
+                
+                // Tính toán tỷ lệ phần trăm
+                const childPercentage = totalChildTasks > 0 ? Math.round((totalExecutedChildTasks / totalChildTasks) * 100) : 0;
+                const grandchildPercentage = totalGrandchildren > 0 ? Math.round((totalExecutedGrandchildren / totalGrandchildren) * 100) : 0;
+                const costPercentage = totalPlannedCost > 0 ? Math.round((totalExecutedCost / totalPlannedCost) * 100) : 0;
+                
+                // Cập nhật phần thống kê với layout 2 cột
+                document.getElementById('summarySection').innerHTML = `
+                    <div class="summary-column">
+                        <p><strong>Tổng số đầu việc thiết bị cần thực hiện:</strong> ${totalChildTasks}</p>
+                        <p><strong>Tổng số đầu việc chi tiết cần thực hiện:</strong> ${totalGrandchildren}</p>
+                        <p><strong>Tổng chi phí theo kế hoạch:</strong> ${formatNumber(totalPlannedCost)}</p>
+                    </div>
+                    <div class="summary-column">
+                        <p><strong>Tổng số đầu việc thiết bị đã thực hiện:</strong> ${totalExecutedChildTasks} <span class="percentage">(${childPercentage}%)</span></p>
+                        <p><strong>Tổng số đầu việc chi tiết đã được thực hiện:</strong> ${totalExecutedGrandchildren} <span class="percentage">(${grandchildPercentage}%)</span></p>
+                        <p><strong>Tổng chi phí đã thực hiện:</strong> ${formatNumber(totalExecutedCost)} <span class="percentage">(${costPercentage}%)</span></p>
+                    </div>
+                `;
+                
                 selectedGrandchildren.clear();
                 statusDiv.innerText = '';
             } catch (error) { console.error("Lỗi tải dữ liệu: ", error); tableBody.innerHTML = `<tr><td colspan="11">Lỗi tải dữ liệu: ${error.message}</td></tr>`; }
@@ -812,6 +864,10 @@
                 title = `Sửa ${pathsToEdit.length} công việc đã chọn`;
             }
             document.getElementById('modalTitle').innerText = title;
+            
+            // Thêm ghi chú nếu đang chỉnh sửa công việc chi tiết (grandchild)
+            const showNote = pathsToEdit.some(path => path.includes('cháu'));
+            
             const headers = ['TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Chi phí', 'Cấp độ'];
             const classes = ['col-tt', 'col-noidung', 'col-donvi', 'col-soluong', 'col-chiphi', 'col-capdo'];
             let table = createModalTable(headers, classes);
@@ -823,7 +879,15 @@
                 }
             }
             table += '</tbody></table>';
-            document.getElementById('modalBody').innerHTML = table;
+            
+            // Thêm ghi chú vào modal body nếu cần
+            let modalBodyHTML = '';
+            if (showNote) {
+                modalBodyHTML += '<div class="modal-note">Lưu ý: Khi sửa chi phí, hãy nhập giá trị chi phí là dải số liền, không có ký tự phân tách hàng nghìn. Ví dụ nhập: 25012000</div>';
+            }
+            modalBodyHTML += table;
+            
+            document.getElementById('modalBody').innerHTML = modalBodyHTML;
             document.getElementById('modalSaveButton').onclick = saveTasks;
             document.getElementById('modalSaveButton').style.display = 'block';
             document.getElementById('modalDeleteButton').style.display = 'none';
@@ -848,7 +912,15 @@
             let table = createModalTable(headers, classes);
             table += createInputRow(parentPath, { tt: newTT }, level);
             table += '</tbody></table>';
-            document.getElementById('modalBody').innerHTML = table;
+            
+            // Thêm ghi chú nếu đang thêm công việc chi tiết
+            let modalBodyHTML = '';
+            if (level === 'grandchild') {
+                modalBodyHTML += '<div class="modal-note">Lưu ý: Nhập giá trị chi phí là dải số liền, không có ký tự phân tách hàng nghìn.</div>';
+            }
+            modalBodyHTML += table;
+            
+            document.getElementById('modalBody').innerHTML = modalBodyHTML;
             document.getElementById('modalSaveButton').onclick = () => addNewTask(parentPath, level, newTT);
             document.getElementById('modalSaveButton').style.display = 'block';
             document.getElementById('modalDeleteButton').style.display = 'none';
