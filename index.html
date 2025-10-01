@@ -228,7 +228,7 @@
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
             <h2>Danh sách công việc</h2>
-            <div>
+             <div>
                 <label for="yearSelect" style="margin-right: 10px; font-weight: bold;">Năm:</label>
                 <select id="yearSelect" onchange="changeYear(this.value)">
                 </select>
@@ -803,7 +803,7 @@
                 let html = '';
                 let totalChildTasks = 0, totalPlannedCost = 0, totalExecutedCost = 0;
                 let totalExecutedChildTasks = 0, totalExecutedGrandchildren = 0;
-                let totalGrandchildren = 0; // Đặt lại biến đếm ở đây
+                let totalGrandchildren = 0;
                 
                 const parentSnapshot = await getDocs(query(collection(db, getParentCollectionName())));
                 const parents = parentSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -859,7 +859,6 @@
                         grandchildren.sort(naturalSort);
                         
                         for (const grandchildData of grandchildren) {
-                            // THAY ĐỔI: Chỉ đếm công việc cháu có soLuong > 0
                             if (grandchildData.soLuong && parseNumber(grandchildData.soLuong) > 0) {
                                 totalGrandchildren++;
                             }
@@ -1001,12 +1000,19 @@
             }
         };
 
-        const createModalTable = (headers, colClasses) => {
+        // SỬA LỖI & CẢI TIẾN: Hàm tạo bảng được nâng cấp để xử lý các đối tượng header phức tạp hơn.
+        const createModalTable = (headers) => {
             let table = '<table class="modal-table"><thead><tr>';
-            headers.forEach((h, i) => table += `<th${colClasses[i] ? ` class="${colClasses[i]}"` : ''}>${h}</th>`);
+            headers.forEach(h => {
+                const style = h.width ? ` style="width: ${h.width};"` : '';
+                const className = h.class ? ` class="${h.class}"` : '';
+                const text = typeof h === 'object' ? h.text : h;
+                table += `<th${style}${className}>${text}</th>`;
+            });
             table += '</tr></thead><tbody>';
             return table;
         };
+
 
         const createInputRow = (path, data, level) => {
             const isParent = level === 'parent';
@@ -1049,9 +1055,12 @@
             document.getElementById('modalTitle').innerHTML = `<h2>${title}</h2>`;
             
             const showNote = pathsToEdit.some(path => path.includes('cháu'));
-            const headers = ['TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Chi phí', 'Cấp độ'];
-            const classes = ['col-tt', 'col-noidung', 'col-donvi', 'col-soluong', 'col-chiphi', 'col-capdo'];
-            let table = createModalTable(headers, classes);
+            const headers = [
+                { text: 'TT', class: 'col-tt'}, { text: 'Nội dung', class: 'col-noidung' },
+                { text: 'Đơn vị', class: 'col-donvi' }, { text: 'Số lượng', class: 'col-soluong' },
+                { text: 'Chi phí', class: 'col-chiphi' }, { text: 'Cấp độ', class: 'col-capdo' }
+            ];
+            let table = createModalTable(headers);
             for (const path of pathsToEdit) {
                 const docSnap = await getDoc(doc(db, path));
                 if (docSnap.exists()) {
@@ -1085,9 +1094,12 @@
                 const maxSubId = existingIds.reduce((max, id) => Math.max(max, parseInt(id.split('.')[1] || 0)), 0);
                 newTT = `${parentTT}.${maxSubId + 1}`;
             }
-            const headers = ['TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Chi phí', 'Cấp độ'];
-            const classes = ['col-tt', 'col-noidung', 'col-donvi', 'col-soluong', 'col-chiphi', 'col-capdo'];
-            let table = createModalTable(headers, classes);
+            const headers = [
+                { text: 'TT', class: 'col-tt'}, { text: 'Nội dung', class: 'col-noidung' },
+                { text: 'Đơn vị', class: 'col-donvi' }, { text: 'Số lượng', class: 'col-soluong' },
+                { text: 'Chi phí', class: 'col-chiphi' }, { text: 'Cấp độ', class: 'col-capdo' }
+            ];
+            let table = createModalTable(headers);
             table += createInputRow(parentPath, { tt: newTT }, level);
             table += '</tbody></table>';
             
@@ -1222,10 +1234,11 @@
         };
 
         const setupInputNavigation = (tableSelector) => {
-            const inputs = document.querySelectorAll(`${tableSelector} input[type="number"], ${tableSelector} input[type="text"][data-field]`);
+            const inputs = document.querySelectorAll(`${tableSelector} input[type="number"]`);
             inputs.forEach(input => {
                 input.addEventListener('keydown', (e) => {
                     const cell = e.target.closest('td');
+                    if (!cell) return;
                     const row = cell.closest('tr');
                     const cellIndex = Array.from(row.children).indexOf(cell);
                     const allRows = Array.from(row.parentElement.children);
@@ -1246,27 +1259,29 @@
                             targetRow = allRows[rowIndex + 1];
                             if (targetRow) {
                                 targetCell = targetRow.children[cellIndex];
-                                targetInput = targetCell?.querySelector('input');
+                                targetInput = targetCell?.querySelector('input[type="number"]');
                                 focusOnTarget();
+                            } else { // Nếu là hàng cuối cùng, có thể cho phép hành vi mặc định (ví dụ: submit form)
+                                e.preventDefault();
                             }
                             break;
                         case 'ArrowUp':
                             targetRow = allRows[rowIndex - 1];
                             if (targetRow) {
                                 targetCell = targetRow.children[cellIndex];
-                                targetInput = targetCell?.querySelector('input');
+                                targetInput = targetCell?.querySelector('input[type="number"]');
                                 focusOnTarget();
                             }
                             break;
                         case 'ArrowLeft':
                              targetCell = row.children[cellIndex - 1];
-                             targetInput = targetCell?.querySelector('input');
-                             focusOnTarget();
+                             targetInput = targetCell?.querySelector('input[type="number"]');
+                             if(targetInput) focusOnTarget();
                              break;
                         case 'ArrowRight':
                              targetCell = row.children[cellIndex + 1];
-                             targetInput = targetCell?.querySelector('input');
-                             focusOnTarget();
+                             targetInput = targetCell?.querySelector('input[type="number"]');
+                             if(targetInput) focusOnTarget();
                              break;
                     }
                 });
@@ -1277,10 +1292,13 @@
             const selectedPaths = Array.from(selectedGrandchildren);
             if (selectedPaths.length === 0) { alert("Vui lòng chọn ít nhất một công việc để thực hiện."); return; }
             document.getElementById('modalTitle').innerHTML = `<h2>Thực hiện ${selectedPaths.length} công việc</h2>`;
-            const headers = ['Tiểu mục', 'Nội dung', 'Số lượng', 'Đơn giá', 'Thành tiền'];
-            const classes = ['col-tt', 'col-noidung', 'col-dvt', 'col-dongia', 'col-thanhtien'];
+            const headers = [
+                {text: 'Tiểu mục', class: 'col-tt'}, {text: 'Nội dung', class: 'col-noidung'}, 
+                {text: 'Số lượng', class: 'col-dvt'}, {text: 'Đơn giá', class: 'col-dongia'}, 
+                {text: 'Thành tiền', class: 'col-thanhtien'}
+            ];
             let modalBodyHTML = `<div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;"><label for="executionDate" style="font-weight: bold;">Ngày thực hiện:</label><input type="date" id="executionDate" style="padding: 5px; border: 1px solid #ccc; border-radius: 4px;" value="${new Date().toISOString().split('T')[0]}"></div>`;
-            let table = createModalTable(headers, classes);
+            let table = createModalTable(headers);
             for (const path of selectedPaths) {
                 const docSnap = await getDoc(doc(db, path));
                 if (docSnap.exists()) {
@@ -1296,7 +1314,7 @@
             }
             table += '</tbody></table>';
             modalBodyHTML += table;
-            modalBodyHTML += `<div class="modal-note">Mẹo: Sử dụng phím Enter hoặc các phím mũi tên (↑, ↓, ←, →) để di chuyển nhanh giữa các ô nhập liệu.</div>`;
+            modalBodyHTML += `<div class="modal-note">Mẹo: Sử dụng phím Enter hoặc các phím mũi tên (↑, ↓) để di chuyển nhanh giữa các ô nhập liệu.</div>`;
 
             const footerLeftHTML = `<div style="display: flex; flex-direction: column; align-items: flex-start;">
                                       <div style="display: flex; gap: 10px;">
@@ -1352,7 +1370,7 @@
                             if (excelRow['Số lượng'] !== undefined) soLuongInput.value = excelRow['Số lượng'];
                             if (excelRow['Đơn giá'] !== undefined) donGiaInput.value = excelRow['Đơn giá'];
                             
-                            calculateThanhTien(soLuongInput); // Cập nhật thành tiền
+                            calculateThanhTien(soLuongInput);
                         }
                     });
                      statusDiv.className = 'success'; statusDiv.innerText = `Đã nhập dữ liệu từ file Excel vào biểu mẫu.`;
@@ -1563,13 +1581,21 @@
             const keyParam = typeof timestampKey === 'number' ? timestampKey : `'${timestampKey}'`;
             document.getElementById('modalTitle').innerHTML = `<h2>Sửa lần thực hiện ngày ${group[0].ngayThucHien}</h2>`;
 
-            const headers = ['Tiểu mục', 'Công việc chi tiết', 'Số lượng', 'Đơn giá', 'Thành tiền'];
+            const headers = [
+                { text: 'Mục', width: '4%' }, { text: 'Thiết bị', width: '25%' },
+                { text: 'Tiểu mục', width: '4%' }, { text: 'Công việc chi tiết', width: '35%' },
+                { text: 'Số lượng', width: '6%' }, { text: 'Đơn giá', width: '13%' }, { text: 'Thành tiền', width: '13%' }
+            ];
             let table = createModalTable(headers);
 
             for (const execution of group) {
+                const childSnap = await getDoc(doc(db, execution.parentChildPath));
                 const grandchildSnap = await getDoc(doc(db, execution.parentGrandchildPath));
+                const childData = childSnap.exists() ? childSnap.data() : { tt: 'N/A', noiDung: 'Không tìm thấy' };
                 const grandchildData = grandchildSnap.exists() ? grandchildSnap.data() : { tt: 'N/A', noiDung: 'Không tìm thấy' };
                 table += `<tr data-exec-path="${execution.path}" data-tt="${grandchildData.tt}">
+                            <td><input type="text" value="${childData.tt}" disabled></td>
+                            <td><input type="text" value="${childData.noiDung}" disabled></td>
                             <td><input type="text" value="${grandchildData.tt}" disabled></td>
                             <td><input type="text" value="${grandchildData.noiDung}" disabled></td>
                             <td><input type="number" data-field="dvt" value="${execution.dvt}" oninput="calculateThanhTien(this)"></td>
@@ -1579,7 +1605,7 @@
             }
             table += '</tbody></table>';
 
-            const modalBodyFooter = `<div class="modal-note">Mẹo: Sử dụng phím Enter hoặc các phím mũi tên (↑, ↓, ←, →) để di chuyển nhanh giữa các ô nhập liệu.</div>`;
+            const modalBodyFooter = `<div class="modal-note">Mẹo: Sử dụng phím Enter hoặc các phím mũi tên (↑, ↓) để di chuyển nhanh giữa các ô nhập liệu.</div>`;
             document.getElementById('modalBody').innerHTML = table + modalBodyFooter;
             
             const footerLeftHTML = `<div style="display: flex; flex-direction: column; align-items: flex-start;">
@@ -1750,6 +1776,11 @@
                 await batch.commit();
                 const recalcPromises = Array.from(pathsToRecalculate).map(path => recalculateGrandchildExecutionCost(path));
                 await Promise.all(recalcPromises);
+                
+                for (const childPath of childPathsToUpdate) {
+                    await checkAndUpdateDaThucHien(childPath);
+                }
+                
                 await recalculateCostsForParents(Array.from(pathsToRecalculate));
                 closeAllModals();
                 await fetchData();
