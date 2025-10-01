@@ -294,7 +294,7 @@
                 <p style="color: #dc3545;"><strong>Cảnh báo:</strong> Hành động này không thể hoàn tác.</p>
                 <button class="btn-danger" onclick="openDeleteAllDataModal()">Xoá tất cả</button>
             </div>
-
+            
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ccc;">
                 <h3>Mở khóa sửa đổi</h3>
                 <button id="unlockButton" class="btn-warning" onclick="promptForUnlock()">Mở khóa cho phép sửa đổi</button>
@@ -347,7 +347,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, getDocs, getDoc, updateDoc, deleteDoc, writeBatch, query, serverTimestamp, collectionGroup, limit } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, getDocs, getDoc, updateDoc, deleteDoc, writeBatch, query, serverTimestamp, collectionGroup, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
         // --- CẤU HÌNH FIREBASE ---
         const firebaseConfig = {
@@ -376,7 +376,7 @@
         let noiDungMap = new Map();
         let tokenClient;
         let gapiReady = false;
-        let isEditModeEnabled = false; // THAY ĐỔI: Biến toàn cục quản lý trạng thái mở khóa
+        let isEditModeEnabled = false; 
         let currentYear = new Date().getFullYear();
 
         // --- CÁC HÀM QUẢN LÝ TRẠNG THÁI SỬA ĐỔI ---
@@ -393,9 +393,14 @@
             }
         };
 
-        window.toggleEditMode = (isChecked) => {
-            isEditModeEnabled = isChecked;
-            updateButtonStates();
+        window.toggleEditMode = async (isChecked) => {
+            try {
+                const settingsDocRef = doc(db, 'settings', 'global');
+                await setDoc(settingsDocRef, { isEditModeEnabled: isChecked }, { merge: true });
+            } catch (error) {
+                console.error("Lỗi khi cập nhật trạng thái mở khóa:", error);
+                alert("Đã có lỗi xảy ra khi lưu trạng thái. Vui lòng thử lại.");
+            }
         };
 
         function updateButtonStates() {
@@ -467,6 +472,14 @@
             if (user) {
                 loginContainer.style.display = 'none';
                 mainContainer.style.display = 'block';
+
+                // THAY ĐỔI: Lắng nghe trạng thái mở khóa từ Firestore
+                const settingsDocRef = doc(db, 'settings', 'global');
+                onSnapshot(settingsDocRef, (docSnap) => {
+                    isEditModeEnabled = docSnap.exists() && docSnap.data().isEditModeEnabled === true;
+                    updateButtonStates();
+                });
+
                 initializeYearDropdown();
                 fetchData();
                 initializeGoogleClients();
@@ -1056,6 +1069,7 @@
             table += '</tr></thead><tbody>';
             return table;
         };
+
 
         const createInputRow = (path, data, level) => {
             const isParent = level === 'parent';
