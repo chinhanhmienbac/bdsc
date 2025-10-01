@@ -294,6 +294,15 @@
                 <p style="color: #dc3545;"><strong>Cảnh báo:</strong> Hành động này không thể hoàn tác.</p>
                 <button class="btn-danger" onclick="openDeleteAllDataModal()">Xoá tất cả</button>
             </div>
+
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ccc;">
+                <h3>Mở khóa sửa đổi</h3>
+                <button id="unlockButton" class="btn-warning" onclick="promptForUnlock()">Mở khóa cho phép sửa đổi</button>
+                <div id="editModeToggle" style="display: none; margin-top: 10px; text-align: left;">
+                    <input type="checkbox" id="editModeCheckbox" onchange="toggleEditMode(this.checked)" style="width: auto;">
+                    <label for="editModeCheckbox">Cho phép sửa đổi, thêm, xóa dữ liệu</label>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -367,8 +376,37 @@
         let noiDungMap = new Map();
         let tokenClient;
         let gapiReady = false;
-        
+        let isEditModeEnabled = false; // THAY ĐỔI: Biến toàn cục quản lý trạng thái mở khóa
         let currentYear = new Date().getFullYear();
+
+        // --- CÁC HÀM QUẢN LÝ TRẠNG THÁI SỬA ĐỔI ---
+
+        window.promptForUnlock = () => {
+            const password = prompt("Vui lòng nhập mật khẩu quản trị:");
+            if (password === '13579') {
+                document.getElementById('unlockButton').style.display = 'none';
+                const toggleDiv = document.getElementById('editModeToggle');
+                toggleDiv.style.display = 'block';
+                document.getElementById('editModeCheckbox').checked = isEditModeEnabled;
+            } else if (password !== null) {
+                alert("Mật khẩu không chính xác.");
+            }
+        };
+
+        window.toggleEditMode = (isChecked) => {
+            isEditModeEnabled = isChecked;
+            updateButtonStates();
+        };
+
+        function updateButtonStates() {
+            const deleteSelectedButton = document.getElementById('deleteSelectedBtn');
+            deleteSelectedButton.disabled = !isEditModeEnabled || selectedGrandchildren.size === 0;
+
+            const actionButtons = document.querySelectorAll('#taskList .dropbtn, #taskList .btn-edit-grandchild');
+            actionButtons.forEach(btn => {
+                btn.disabled = !isEditModeEnabled;
+            });
+        }
 
         function getParentCollectionName() {
             return `công việc mẹ ${currentYear}`;
@@ -831,7 +869,6 @@
                     const children = childSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                     for (const childData of children) {
                         totalChildTasks++;
-                        
                         if (childData.daThucHien === true) {
                             totalExecutedChildTasks++;
                         }
@@ -881,7 +918,7 @@
                                 <td class="text-right">${formatNumber(grandchildData.chiPhiThucHien)}</td>
                                 <td class="text-right">${formatNumber(grandchildData.keHoachConLai)}</td>
                                 <td>${grandchildData.capDo}</td>${grandchildHoSoHtml}
-                                <td><button class="btn-secondary btn-action" onclick="handleEditClick('${grandchildPath}', 'grandchild')">Sửa</button></td>
+                                <td><button class="btn-secondary btn-action btn-edit-grandchild" onclick="handleEditClick('${grandchildPath}', 'grandchild')">Sửa</button></td>
                             </tr>`;
                         }
                     }
@@ -902,7 +939,7 @@
                         <p><strong>Tổng chi phí đã thực hiện:</strong> ${formatNumber(totalExecutedCost)} <span class="percentage">(${costPercentage}%)</span></p>
                     </div>`;
                 selectedGrandchildren.clear();
-                document.getElementById('deleteSelectedBtn').disabled = true;
+                updateButtonStates();
                 statusDiv.innerText = '';
             } catch (error) { console.error("Lỗi tải dữ liệu: ", error); tableBody.innerHTML = `<tr><td colspan="11">Lỗi tải dữ liệu: ${error.message}</td></tr>`; }
         };
@@ -940,7 +977,15 @@
         };
 
 
-        window.closeAllModals = () => document.querySelectorAll('.modal').forEach(modal => modal.style.display = 'none');
+        window.closeAllModals = () => {
+            document.querySelectorAll('.modal').forEach(modal => modal.style.display = 'none');
+            const toggleDiv = document.getElementById('editModeToggle');
+            if (toggleDiv) {
+                toggleDiv.style.display = 'none';
+                document.getElementById('unlockButton').style.display = 'block';
+            }
+        };
+
         window.openDataManagementModal = () => document.getElementById('dataManagementModal').style.display = 'block';
 
         window.openDeleteAllDataModal = () => {
@@ -1000,7 +1045,6 @@
             }
         };
 
-        // SỬA LỖI & CẢI TIẾN: Hàm tạo bảng được nâng cấp để xử lý các đối tượng header phức tạp hơn.
         const createModalTable = (headers) => {
             let table = '<table class="modal-table"><thead><tr>';
             headers.forEach(h => {
@@ -1012,7 +1056,6 @@
             table += '</tr></thead><tbody>';
             return table;
         };
-
 
         const createInputRow = (path, data, level) => {
             const isParent = level === 'parent';
@@ -1035,16 +1078,6 @@
         };
 
         window.handleEditClick = async (docPath, level) => {
-            if (level === 'grandchild') {
-                const password = prompt("Vui lòng nhập mật khẩu để sửa công việc chi tiết:");
-                if (password !== '24680') {
-                    if (password !== null) {
-                        alert("Mật khẩu không chính xác.");
-                    }
-                    return;
-                }
-            }
-
             const isGrandchild = level === 'grandchild';
             let pathsToEdit = [docPath];
             let title = 'Sửa thông tin công việc';
@@ -1245,11 +1278,14 @@
                     const rowIndex = allRows.indexOf(row);
                     let targetRow, targetCell, targetInput;
 
-                    const focusOnTarget = () => {
-                        if (targetInput) {
-                            e.preventDefault();
-                            targetInput.focus();
-                            targetInput.select();
+                    const focusOnTarget = (selector) => {
+                        if (targetCell) {
+                           targetInput = targetCell.querySelector(selector);
+                           if (targetInput) {
+                                e.preventDefault();
+                                targetInput.focus();
+                                targetInput.select();
+                           }
                         }
                     };
 
@@ -1259,9 +1295,8 @@
                             targetRow = allRows[rowIndex + 1];
                             if (targetRow) {
                                 targetCell = targetRow.children[cellIndex];
-                                targetInput = targetCell?.querySelector('input[type="number"]');
-                                focusOnTarget();
-                            } else { // Nếu là hàng cuối cùng, có thể cho phép hành vi mặc định (ví dụ: submit form)
+                                focusOnTarget('input[type="number"]');
+                            } else { 
                                 e.preventDefault();
                             }
                             break;
@@ -1269,19 +1304,16 @@
                             targetRow = allRows[rowIndex - 1];
                             if (targetRow) {
                                 targetCell = targetRow.children[cellIndex];
-                                targetInput = targetCell?.querySelector('input[type="number"]');
-                                focusOnTarget();
+                                focusOnTarget('input[type="number"]');
                             }
                             break;
                         case 'ArrowLeft':
                              targetCell = row.children[cellIndex - 1];
-                             targetInput = targetCell?.querySelector('input[type="number"]');
-                             if(targetInput) focusOnTarget();
+                             focusOnTarget('input[type="number"]');
                              break;
                         case 'ArrowRight':
                              targetCell = row.children[cellIndex + 1];
-                             targetInput = targetCell?.querySelector('input[type="number"]');
-                             if(targetInput) focusOnTarget();
+                             focusOnTarget('input[type="number"]');
                              break;
                     }
                 });
@@ -1429,6 +1461,11 @@
 
                 await batch.commit();
                 await recalculateCostsForParents(pathsToRecalculate);
+                
+                for (const childPath of childPathsToUpdate) {
+                    await checkAndUpdateDaThucHien(childPath);
+                }
+
                 closeAllModals();
                 await fetchData();
                 statusDiv.innerText = `Đã lưu các mục thực hiện thành công.`;
@@ -1860,9 +1897,7 @@
             if (checkbox.checked) selectedGrandchildren.add(grandchildPath); 
             else selectedGrandchildren.delete(grandchildPath);
             updateParentCheckboxState(checkbox.dataset.parentPath);
-            const isDisabled = selectedGrandchildren.size === 0;
-            document.getElementById('multiExecuteBtn').disabled = isDisabled;
-            document.getElementById('deleteSelectedBtn').disabled = isDisabled;
+            updateButtonStates();
         };
         
         const updateParentCheckboxState = (parentPath) => {
@@ -1922,12 +1957,6 @@
             } catch (error) {
                 statusDiv.className = 'error'; statusDiv.innerText = `Lỗi khi kiểm tra công việc: ${error.message}`; return;
             }
-
-            const password = prompt("Hành động này không thể hoàn tác. Vui lòng nhập mật khẩu để xác nhận xoá:");
-            if (password === null) return; 
-            if (password !== '97531') {
-                alert('Mật khẩu không chính xác. Thao tác đã bị huỷ.'); return;
-            }
             if (!confirm(`Bạn có chắc chắn muốn xoá vĩnh viễn ${selectedGrandchildren.size} công việc đã chọn không?`)) return;
             
             const deleteButton = document.getElementById('deleteSelectedBtn');
@@ -1946,7 +1975,7 @@
                 console.error("Lỗi khi xoá công việc:", error);
                 statusDiv.className = 'error'; statusDiv.innerText = `Lỗi khi xoá: ${error.message}`;
             } finally {
-                deleteButton.disabled = selectedGrandchildren.size === 0;
+                updateButtonStates();
             }
         };
 
