@@ -140,7 +140,6 @@
             margin: 15px 0; font-size: 14px; color: #495057;
         }
 
-        /* Style cho dropdown năm */
         #yearSelect {
             padding: 8px 12px;
             border: 1px solid #ccc;
@@ -156,7 +155,6 @@
             box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
         }
 
-        /* Style cho modal xác nhận xóa toàn bộ */
         .delete-confirm-modal {
             max-width: 500px;
         }
@@ -225,15 +223,18 @@
                 <button id="deleteSelectedBtn" class="btn-danger" onclick="deleteSelectedTasks()" disabled>Xoá công việc đã chọn</button>
                 <button class="btn-success" onclick="exportToExcel()">Xuất ra Excel</button>
             </div>
-            <div>
-                <label for="yearSelect" style="margin-right: 10px; font-weight: bold;">Năm:</label>
-                <select id="yearSelect" onchange="changeYear(this.value)" style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
-                    </select>
-            </div>
         </div>
         <div id="status"></div>
 
-        <h2>Danh sách công việc</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+            <h2>Danh sách công việc</h2>
+             <div>
+                <label for="yearSelect" style="margin-right: 10px; font-weight: bold;">Năm:</label>
+                <select id="yearSelect" onchange="changeYear(this.value)">
+                    </select>
+            </div>
+        </div>
+
         <div class="button-group" style="margin-bottom: 15px; justify-content: flex-start;">
              <div>
                 <button id="multiExecuteBtn" class="btn-info" onclick="openMultiExecutionModal()" disabled>Thực hiện công việc đã chọn</button>
@@ -328,9 +329,12 @@
     </div>
 
     <button id="scrollToTopBtn" title="Lên đầu trang">&uarr;</button>
+    
+    <div style="text-align: center; padding: 20px; color: #888; font-size: 12px;">
+      Contact: hai.nm@pvgaslpg.com.vn
+    </div>
 
     <script type="module">
-        // THAY ĐỔI: Bổ sung EmailAuthProvider và reauthenticateWithCredential
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, getDocs, getDoc, updateDoc, deleteDoc, writeBatch, query, serverTimestamp, collectionGroup, limit } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
@@ -828,9 +832,10 @@
                     const childSnapshot = await getDocs(query(collection(db, parentPath, "công việc con")));
                     const children = childSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                     for (const childData of children) {
-                        // SỬA ĐỔI: Loại bỏ điều kiện !childData.isHidden
                         totalChildTasks++;
-                        if (childData.chiPhiThucHien && childData.chiPhiThucHien > 0) {
+                        
+                        // THAY ĐỔI: Tính totalExecutedChildTasks dựa trên trường daThucHien
+                        if (childData.daThucHien === true) {
                             totalExecutedChildTasks++;
                         }
                         
@@ -931,6 +936,7 @@
                 button.disabled = false;
             }
         };
+
 
         window.closeAllModals = () => document.querySelectorAll('.modal').forEach(modal => modal.style.display = 'none');
         window.openDataManagementModal = () => document.getElementById('dataManagementModal').style.display = 'block';
@@ -1102,6 +1108,21 @@
             }
         };
 
+        // THAY ĐỔI: Hàm helper mới để cập nhật trạng thái daThucHien
+        async function checkAndUpdateDaThucHien(childPath) {
+            let hasExecutions = false;
+            const grandchildSnapshot = await getDocs(query(collection(db, childPath, "công việc cháu")));
+            for (const grandchildDoc of grandchildSnapshot.docs) {
+                const execSnapshot = await getDocs(query(collection(grandchildDoc.ref, "thực hiện"), limit(1)));
+                if (!execSnapshot.empty) {
+                    hasExecutions = true;
+                    break; 
+                }
+            }
+            await updateDoc(doc(db, childPath), { daThucHien: hasExecutions });
+        }
+
+
         const saveTasks = async () => {
             const saveButton = document.getElementById('modalSaveButton');
             try {
@@ -1212,11 +1233,17 @@
                 statusDiv.className = 'success'; statusDiv.innerText = "Đang lưu dữ liệu thực hiện...";
                 const commonTimestamp = serverTimestamp();
                 const pathsToRecalculate = [];
+                const childPathsToUpdate = new Set(); // THAY ĐỔI: Theo dõi các công việc con cần cập nhật
+
                 for (const row of rows) {
                     const grandchildPath = row.dataset.path;
                     const grandchildDocRef = doc(db, grandchildPath);
                     const grandchildDocSnap = await getDoc(grandchildDocRef);
                     if (!grandchildDocSnap.exists()) continue;
+
+                    const childPath = grandchildDocRef.parent.parent.path; // Lấy đường dẫn công việc con
+                    childPathsToUpdate.add(childPath);
+
                     const grandchildData = grandchildDocSnap.data();
                     const initialChiPhi = grandchildData.chiPhi || 0;
                     const soLuong = parseNumber(row.querySelector('input[data-field="dvt"]').value);
@@ -1232,6 +1259,12 @@
                     const newThucHien = currentThucHien + thanhTien;
                     batch.update(grandchildDocRef, { chiPhiThucHien: newThucHien, keHoachConLai: grandchildData.chiPhi - newThucHien });
                 }
+
+                // THAY ĐỔI: Cập nhật trường daThucHien cho các công việc con liên quan
+                childPathsToUpdate.forEach(path => {
+                    batch.update(doc(db, path), { daThucHien: true });
+                });
+
                 await batch.commit();
                 await recalculateCostsForParents(pathsToRecalculate);
                 closeAllModals();
@@ -1477,11 +1510,23 @@
                 const group = Object.values(executionGroups.get(timestampKey)).flat();
                 const batch = writeBatch(db);
                 const pathsToRecalculate = new Set(group.map(exec => exec.parentGrandchildPath));
+                
+                // THAY ĐỔI: Theo dõi các công việc con bị ảnh hưởng để cập nhật lại daThucHien
+                const childPathsToCheck = new Set(group.map(exec => exec.parentChildPath));
+
                 group.forEach(exec => batch.delete(doc(db, exec.path)));
                 await batch.commit();
-                statusDiv.innerText = "Đã xóa. Đang cập nhật lại chi phí...";
+
+                statusDiv.innerText = "Đã xóa. Đang cập nhật lại chi phí và trạng thái...";
+                
+                // Cập nhật lại chi phí và sau đó là trạng thái daThucHien
                 const recalcPromises = Array.from(pathsToRecalculate).map(path => recalculateGrandchildExecutionCost(path));
                 await Promise.all(recalcPromises);
+                
+                for (const childPath of childPathsToCheck) {
+                    await checkAndUpdateDaThucHien(childPath);
+                }
+
                 await recalculateCostsForParents(Array.from(pathsToRecalculate));
                 closeAllModals();
                 await fetchData();
@@ -1500,10 +1545,16 @@
                 const batch = writeBatch(db);
                 const rows = document.querySelectorAll("#dataModal .modal-table tbody tr");
                 const pathsToRecalculate = new Set();
+                const childPathsToUpdate = new Set(); // THAY ĐỔI: Theo dõi công việc con cần cập nhật
+
                 for (const row of rows) {
                     const execPath = row.dataset.execPath;
                     const parentGrandchildPath = execPath.substring(0, execPath.lastIndexOf('/thực hiện/'));
+                    const childPath = parentGrandchildPath.substring(0, parentGrandchildPath.lastIndexOf('/công việc cháu/'));
+                    
                     pathsToRecalculate.add(parentGrandchildPath);
+                    childPathsToUpdate.add(childPath); // Thêm vào danh sách cần cập nhật
+
                     const updatedData = { 
                         dvt: parseNumber(row.querySelector('input[data-field="dvt"]').value), 
                         donGia: parseNumber(row.querySelector('input[data-field="donGia"]').value), 
@@ -1511,6 +1562,12 @@
                     };
                     batch.update(doc(db, execPath), updatedData);
                 }
+
+                // THAY ĐỔI: Cập nhật trường daThucHien
+                childPathsToUpdate.forEach(path => {
+                    batch.update(doc(db, path), { daThucHien: true });
+                });
+
                 await batch.commit();
                 const recalcPromises = Array.from(pathsToRecalculate).map(path => recalculateGrandchildExecutionCost(path));
                 await Promise.all(recalcPromises);
@@ -1778,5 +1835,3 @@
 
 </body>
 </html>
-}
-Đâu là những cải tiến và sửa lỗi trong phiên bản này của trang web so với phiên bản trước đó?
