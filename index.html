@@ -376,7 +376,7 @@
         let noiDungMap = new Map();
         let tokenClient;
         let gapiReady = false;
-        let isEditModeEnabled = false; 
+        let editModeStatusByYear = {}; // THAY ĐỔI: Lưu trạng thái mở khóa theo từng năm
         let currentYear = new Date().getFullYear();
 
         // --- CÁC HÀM QUẢN LÝ TRẠNG THÁI SỬA ĐỔI ---
@@ -387,7 +387,8 @@
                 document.getElementById('unlockButton').style.display = 'none';
                 const toggleDiv = document.getElementById('editModeToggle');
                 toggleDiv.style.display = 'block';
-                document.getElementById('editModeCheckbox').checked = isEditModeEnabled;
+                // THAY ĐỔI: Cập nhật trạng thái checkbox dựa trên năm hiện tại
+                document.getElementById('editModeCheckbox').checked = editModeStatusByYear[currentYear] === true;
             } else if (password !== null) {
                 alert("Mật khẩu không chính xác.");
             }
@@ -396,7 +397,10 @@
         window.toggleEditMode = async (isChecked) => {
             try {
                 const settingsDocRef = doc(db, 'settings', 'global');
-                await setDoc(settingsDocRef, { isEditModeEnabled: isChecked }, { merge: true });
+                // THAY ĐỔI: Sử dụng dot notation để cập nhật trạng thái cho năm hiện tại trong map
+                const fieldPath = `editModeStatus.${currentYear}`;
+                await setDoc(settingsDocRef, { editModeStatus: { [currentYear]: isChecked } }, { merge: true });
+                // Listener onSnapshot sẽ tự động cập nhật UI
             } catch (error) {
                 console.error("Lỗi khi cập nhật trạng thái mở khóa:", error);
                 alert("Đã có lỗi xảy ra khi lưu trạng thái. Vui lòng thử lại.");
@@ -404,12 +408,15 @@
         };
 
         function updateButtonStates() {
+            // THAY ĐỔI: Kiểm tra trạng thái mở khóa của năm hiện tại
+            const isCurrentYearEditable = editModeStatusByYear[currentYear] === true;
+
             const deleteSelectedButton = document.getElementById('deleteSelectedBtn');
-            deleteSelectedButton.disabled = !isEditModeEnabled || selectedGrandchildren.size === 0;
+            deleteSelectedButton.disabled = !isCurrentYearEditable || selectedGrandchildren.size === 0;
 
             const actionButtons = document.querySelectorAll('#taskList .dropbtn, #taskList .btn-edit-grandchild');
             actionButtons.forEach(btn => {
-                btn.disabled = !isEditModeEnabled;
+                btn.disabled = !isCurrentYearEditable;
             });
         }
 
@@ -444,6 +451,7 @@
         window.changeYear = (year) => {
             currentYear = parseInt(year);
             fetchData();
+            updateButtonStates(); // THAY ĐỔI: Cập nhật lại trạng thái nút khi đổi năm
         };
 
         async function ensureYearCollectionExists(year) {
@@ -473,10 +481,13 @@
                 loginContainer.style.display = 'none';
                 mainContainer.style.display = 'block';
 
-                // THAY ĐỔI: Lắng nghe trạng thái mở khóa từ Firestore
                 const settingsDocRef = doc(db, 'settings', 'global');
                 onSnapshot(settingsDocRef, (docSnap) => {
-                    isEditModeEnabled = docSnap.exists() && docSnap.data().isEditModeEnabled === true;
+                    if (docSnap.exists()) {
+                        editModeStatusByYear = docSnap.data().editModeStatus || {};
+                    } else {
+                        editModeStatusByYear = {};
+                    }
                     updateButtonStates();
                 });
 
