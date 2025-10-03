@@ -376,7 +376,7 @@
         let noiDungMap = new Map();
         let tokenClient;
         let gapiReady = false;
-        let editModeStatusByYear = {}; // THAY ĐỔI: Lưu trạng thái mở khóa theo từng năm
+        let editModeStatusByYear = {}; 
         let currentYear = new Date().getFullYear();
 
         // --- CÁC HÀM QUẢN LÝ TRẠNG THÁI SỬA ĐỔI ---
@@ -387,7 +387,6 @@
                 document.getElementById('unlockButton').style.display = 'none';
                 const toggleDiv = document.getElementById('editModeToggle');
                 toggleDiv.style.display = 'block';
-                // THAY ĐỔI: Cập nhật trạng thái checkbox dựa trên năm hiện tại
                 document.getElementById('editModeCheckbox').checked = editModeStatusByYear[currentYear] === true;
             } else if (password !== null) {
                 alert("Mật khẩu không chính xác.");
@@ -397,10 +396,8 @@
         window.toggleEditMode = async (isChecked) => {
             try {
                 const settingsDocRef = doc(db, 'settings', 'global');
-                // THAY ĐỔI: Sử dụng dot notation để cập nhật trạng thái cho năm hiện tại trong map
                 const fieldPath = `editModeStatus.${currentYear}`;
                 await setDoc(settingsDocRef, { editModeStatus: { [currentYear]: isChecked } }, { merge: true });
-                // Listener onSnapshot sẽ tự động cập nhật UI
             } catch (error) {
                 console.error("Lỗi khi cập nhật trạng thái mở khóa:", error);
                 alert("Đã có lỗi xảy ra khi lưu trạng thái. Vui lòng thử lại.");
@@ -408,8 +405,11 @@
         };
 
         function updateButtonStates() {
-            // THAY ĐỔI: Kiểm tra trạng thái mở khóa của năm hiện tại
             const isCurrentYearEditable = editModeStatusByYear[currentYear] === true;
+
+            // SỬA LỖI: Bổ sung logic cho nút "Thực hiện công việc đã chọn"
+            const multiExecuteButton = document.getElementById('multiExecuteBtn');
+            multiExecuteButton.disabled = selectedGrandchildren.size === 0;
 
             const deleteSelectedButton = document.getElementById('deleteSelectedBtn');
             deleteSelectedButton.disabled = !isCurrentYearEditable || selectedGrandchildren.size === 0;
@@ -451,7 +451,7 @@
         window.changeYear = (year) => {
             currentYear = parseInt(year);
             fetchData();
-            updateButtonStates(); // THAY ĐỔI: Cập nhật lại trạng thái nút khi đổi năm
+            updateButtonStates(); 
         };
 
         async function ensureYearCollectionExists(year) {
@@ -891,6 +891,9 @@
 
                     const childSnapshot = await getDocs(query(collection(db, parentPath, "công việc con")));
                     const children = childSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                    
+                    children.sort((a, b) => parseInt(a.id, 10) - parseInt(b.id, 10));
+
                     for (const childData of children) {
                         totalChildTasks++;
                         if (childData.daThucHien === true) {
