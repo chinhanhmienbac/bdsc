@@ -407,7 +407,6 @@
         function updateButtonStates() {
             const isCurrentYearEditable = editModeStatusByYear[currentYear] === true;
 
-            // SỬA LỖI: Bổ sung logic cho nút "Thực hiện công việc đã chọn"
             const multiExecuteButton = document.getElementById('multiExecuteBtn');
             multiExecuteButton.disabled = selectedGrandchildren.size === 0;
 
@@ -586,7 +585,11 @@
                 try {
                     statusDiv.className = 'success'; statusDiv.innerText = "Đang đọc file...";
                     const workbook = XLSX.read(new Uint8Array(event.target.result), { type: 'array' });
-                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { raw: false });
+                    // THAY ĐỔI: Thêm defval: '' để xử lý ô trống
+                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { 
+                        raw: false,
+                        defval: ''
+                    });
                     const headers = jsonData.length > 0 ? Object.keys(jsonData[0]) : [];
                     statusDiv.innerText = "Đã đọc file. Đang xử lý...";
                     
