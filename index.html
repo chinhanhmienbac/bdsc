@@ -168,6 +168,7 @@
             box-sizing: border-box;
         }
 
+        /* THAY ĐỔI: CSS cho giao diện modal trên mobile */
         @media screen and (max-width: 768px) {
             .responsive-modal-table thead { display: none; }
             .responsive-modal-table, .responsive-modal-table tbody, .responsive-modal-table tr, .responsive-modal-table td {
@@ -183,6 +184,17 @@
             .responsive-modal-table td:before {
                 content: attr(data-label); position: absolute; left: 10px; width: 45%;
                 padding-right: 10px; font-weight: bold; text-align: left;
+            }
+            
+            /* CSS riêng cho modal tra cứu */
+            .search-modal-mobile td {
+                font-size: 12px;
+            }
+            .search-modal-mobile .btn-edit-exec {
+                display: none; /* Ẩn nút sửa trên mobile */
+            }
+            .search-modal-mobile .btn-profile-exec {
+                width: 100%; /* Cho nút hồ sơ chiếm toàn bộ chiều rộng */
             }
         }
     </style>
@@ -406,7 +418,7 @@
 
         function updateButtonStates() {
             const isCurrentYearEditable = editModeStatusByYear[currentYear] === true;
-
+            
             const multiExecuteButton = document.getElementById('multiExecuteBtn');
             multiExecuteButton.disabled = selectedGrandchildren.size === 0;
 
@@ -585,7 +597,6 @@
                 try {
                     statusDiv.className = 'success'; statusDiv.innerText = "Đang đọc file...";
                     const workbook = XLSX.read(new Uint8Array(event.target.result), { type: 'array' });
-                    // THAY ĐỔI: Thêm defval: '' để xử lý ô trống
                     const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { 
                         raw: false,
                         defval: ''
@@ -609,17 +620,6 @@
             const tree = []; let currentParent = null;
             const isRoman = /^[IVXLCDM]+$/i; const isNumber = /^\d+$/; const isSubNumber = /^\d+\.\d+$/;
             
-            const availableColumns = {
-                tt: headers.includes('TT'),
-                noiDung: headers.includes('Nội dung') || headers.includes('NỘI DUNG CÔNG VIỆC'),
-                donVi: headers.includes('Đơn vị'),
-                soLuong: headers.includes('Số lượng') || headers.includes('Số lượng vật tư'),
-                capDo: headers.includes('Cấp độ'),
-                chiPhi: headers.includes('Chi phí') || headers.includes('Chi phí kế hoạch 2025'),
-                chiPhiThucHien: headers.includes('Chi phí thực hiện'),
-                keHoachConLai: headers.includes('Kế hoạch còn lại')
-            };
-
             const findValue = (row, keys) => {
                 for (const key of keys) {
                     if (headers.includes(key) && row[key] !== undefined && row[key] !== null && row[key] !== '') {
@@ -630,49 +630,25 @@
             };
 
             jsonData.forEach((row) => {
-                const tt = availableColumns.tt ? String(row.TT || '').trim() : '';
+                const tt = String(row.TT || '').trim();
                 if (!tt) return;
                 
                 const data = { tt };
                 
-                if (availableColumns.noiDung) {
-                    const noiDungValue = findValue(row, ['Nội dung', 'NỘI DUNG CÔNG VIỆC']);
-                    if (noiDungValue !== undefined) data.noiDung = noiDungValue;
-                }
+                const noiDungValue = findValue(row, ['Nội dung', 'NỘI DUNG CÔNG VIỆC']);
+                if (noiDungValue !== undefined) data.noiDung = noiDungValue;
                 
-                if (availableColumns.donVi) {
-                    const donViValue = findValue(row, ['Đơn vị']);
-                    if (donViValue !== undefined) data.donVi = donViValue;
-                }
+                const donViValue = findValue(row, ['Đơn vị']);
+                if (donViValue !== undefined) data.donVi = donViValue;
                 
-                if (availableColumns.soLuong) {
-                    const soLuongValue = findValue(row, ['Số lượng', 'Số lượng vật tư']);
-                    if (soLuongValue !== undefined) data.soLuong = soLuongValue;
-                }
+                const soLuongValue = findValue(row, ['Số lượng', 'Số lượng vật tư']);
+                if (soLuongValue !== undefined) data.soLuong = soLuongValue;
                 
-                if (availableColumns.capDo) {
-                    const capDoValue = findValue(row, ['Cấp độ']);
-                    if (capDoValue !== undefined) data.capDo = capDoValue;
-                }
+                const capDoValue = findValue(row, ['Cấp độ']);
+                if (capDoValue !== undefined) data.capDo = capDoValue;
                 
-                if (availableColumns.chiPhi) {
-                    const chiPhiValue = findValue(row, ['Chi phí', 'Chi phí kế hoạch 2025']);
-                    if (chiPhiValue !== undefined) data.chiPhi = parseNumber(chiPhiValue);
-                }
-                
-                if (availableColumns.chiPhiThucHien) {
-                    const chiPhiThucHienValue = findValue(row, ['Chi phí thực hiện']);
-                    if (chiPhiThucHienValue !== undefined) data.chiPhiThucHien = parseNumber(chiPhiThucHienValue);
-                }
-                
-                if (availableColumns.keHoachConLai) {
-                    const keHoachConLaiValue = findValue(row, ['Kế hoạch còn lại']);
-                    if (keHoachConLaiValue !== undefined) {
-                        data.keHoachConLai = parseNumber(keHoachConLaiValue);
-                    } else if (data.chiPhi !== undefined && data.chiPhiThucHien !== undefined) {
-                        data.keHoachConLai = data.chiPhi - data.chiPhiThucHien;
-                    }
-                }
+                const chiPhiValue = findValue(row, ['Chi phí', 'Chi phí kế hoạch 2025']);
+                if (chiPhiValue !== undefined) data.chiPhi = parseNumber(chiPhiValue);
                 
                 const taskNode = { id: tt, data };
                 
@@ -1552,7 +1528,7 @@
                                 <button class="btn-success" onclick="exportAllExecutionsToExcel()" style="margin-right: 20px;">Xuất toàn bộ ra Excel</button>
                                </div>`;
             document.getElementById('modalTitle').innerHTML = modalHeader;
-            let table = `<table class="modal-table responsive-modal-table"><thead><tr><th style="width: 5%;">STT</th><th style="width: 10%;">Ngày T.Hiện</th><th>Trích yếu</th><th style="width: 15%; text-align:right;">Tổng chi phí</th><th style="width: 8%;">Số CV</th><th style="width: 15%;">Hành động</th></tr></thead><tbody>`;
+            let table = `<table class="modal-table responsive-modal-table search-modal-mobile"><thead><tr><th style="width: 5%;">STT</th><th style="width: 10%;">Ngày T.Hiện</th><th>Trích yếu</th><th style="width: 15%; text-align:right;">Tổng chi phí</th><th style="width: 8%;">Số CV</th><th style="width: 15%;">Hành động</th></tr></thead><tbody>`;
             if (querySnapshot.empty) {
                  table += `<tr><td colspan="6">Không tìm thấy lần thực hiện nào.</td></tr>`;
             } else {
@@ -1597,8 +1573,8 @@
                         <td data-label="Tổng chi phí" class="text-right">${formatNumber(totalCost)}</td>
                         <td data-label="Số CV">${grandchildCount}</td>
                         <td data-label="Hành động">
-                            <button class="btn-secondary btn-action" onclick="openExecutionEditModal(${keyParam})">Sửa</button>
-                            <button class="${profileButtonClass} btn-action" onclick="handleProfileUploadClick(${keyParam})">${profileButtonText}</button>
+                            <button class="btn-secondary btn-action btn-edit-exec" onclick="openExecutionEditModal(${keyParam})">Sửa</button>
+                            <button class="${profileButtonClass} btn-action btn-profile-exec" onclick="handleProfileUploadClick(${keyParam})">${profileButtonText}</button>
                         </td>
                     </tr>`;
                 }
@@ -2049,6 +2025,10 @@
                     rows.push(parentRowData);
                     const childSnapshot = await getDocs(query(collection(db, `${getParentCollectionName()}/${parentData.id}/công việc con`)));
                     const children = childSnapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                    
+                    // THAY ĐỔI: Sắp xếp các công việc con theo thứ tự số khi xuất Excel
+                    children.sort((a, b) => parseInt(a.id, 10) - parseInt(b.id, 10));
+
                     for (const childData of children) {
                         boldRows.add(rows.length); 
                         const childRowData = [ childData.tt, childData.noiDung, childData.donVi, childData.soLuong, childData.chiPhi, childData.chiPhiThucHien, childData.keHoachConLai, childData.capDo ];
