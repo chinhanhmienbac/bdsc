@@ -12,20 +12,7 @@
         #container {
             max-width: 1400px; margin: auto; background-color: white;
             padding: 25px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            display: none; /* Ẩn nội dung chính ban đầu */
         }
-        #login-container {
-            max-width: 400px; margin: 100px auto; padding: 30px; background-color: white;
-            border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center;
-        }
-        #login-container h2 { margin-top: 0; color: #333; }
-        #login-container input {
-            width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc;
-            border-radius: 4px; box-sizing: border-box; font-size: 16px;
-        }
-        #login-container button { width: 100%; padding: 12px; font-size: 16px; }
-        #login-error { color: #dc3545; margin-top: 15px; font-weight: bold; }
-        
         h1, h2 { color: #333; }
         h3 { color: #555; font-weight: normal; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         .button-group {
@@ -87,6 +74,10 @@
             display: none; position: fixed; z-index: 1000; left: 0; top: 0;
             width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5);
             animation: fadeIn 0.3s;
+        }
+        /* Sửa lỗi modal bị đè */
+        #authModal, #deleteAllDataModal, #uploadPdfModal {
+            z-index: 1001;
         }
         @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
         .modal-content {
@@ -168,7 +159,6 @@
             box-sizing: border-box;
         }
 
-        /* THAY ĐỔI: CSS cho giao diện modal trên mobile */
         @media screen and (max-width: 768px) {
             .responsive-modal-table thead { display: none; }
             .responsive-modal-table, .responsive-modal-table tbody, .responsive-modal-table tr, .responsive-modal-table td {
@@ -185,17 +175,6 @@
                 content: attr(data-label); position: absolute; left: 10px; width: 45%;
                 padding-right: 10px; font-weight: bold; text-align: left;
             }
-            
-            /* CSS riêng cho modal tra cứu */
-            .search-modal-mobile td {
-                font-size: 12px;
-            }
-            .search-modal-mobile .btn-edit-exec {
-                display: none; /* Ẩn nút sửa trên mobile */
-            }
-            .search-modal-mobile .btn-profile-exec {
-                width: 100%; /* Cho nút hồ sơ chiếm toàn bộ chiều rộng */
-            }
         }
     </style>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -204,19 +183,23 @@
 </head>
 <body>
     
-    <div id="login-container">
-        <img src="PVGLPG.gif" alt="Logo" style="width: 120px; height: auto; margin-bottom: 20px;">
-        <h2>Đăng nhập Hệ thống</h2>
-        <form id="login-form">
-            <input type="text" id="email" 
-                   value="n*****@pvgaslpg*****" 
-                   data-real-email="namdinh@pvgaslpg.com.vn" 
-                   readonly 
-                   style="background-color: #e9ecef; cursor: not-allowed; text-align: center; color: #495057;">
-            <input type="password" id="password" placeholder="Mật khẩu" required autofocus>
-            <button type="submit" class="btn-primary">Đăng nhập</button>
-            <p id="login-error" style="display: none;"></p>
-        </form>
+    <div id="authModal" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width: 400px; margin: 100px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center;">
+            <span class="close-button" onclick="closeAllModals()">&times;</span>
+            <img src="PVGLPG.gif" alt="Logo" style="width: 120px; height: auto; margin-bottom: 20px;">
+            <h2 style="margin-top: 0; color: #333;">Xác thực CSDL</h2>
+            <p>Vui lòng đăng nhập để có quyền sửa đổi dữ liệu.</p>
+            <form id="login-form">
+                <input type="text" id="email" 
+                       value="n*****@pvgaslpg*****" 
+                       data-real-email="namdinh@pvgaslpg.com.vn" 
+                       readonly 
+                       style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; background-color: #e9ecef; cursor: not-allowed; text-align: center; color: #495057;">
+                <input type="password" id="password" placeholder="Mật khẩu" required autofocus style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px;">
+                <button type="submit" class="btn-primary" style="width: 100%; padding: 12px; font-size: 16px;">Đăng nhập</button>
+                <p id="login-error" style="display: none; color: #dc3545; margin-top: 15px; font-weight: bold;"></p>
+            </form>
+        </div>
     </div>
 
     <div id="container">
@@ -239,7 +222,7 @@
         <div id="status"></div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
-            <h2>Danh sách công việc</h2>
+            <h2>Danh mục BDSC tại ..........................</h2>
              <div>
                 <label for="yearSelect" style="margin-right: 10px; font-weight: bold;">Năm:</label>
                 <select id="yearSelect" onchange="changeYear(this.value)">
@@ -294,6 +277,17 @@
             <span class="close-button" onclick="closeAllModals()">&times;</span>
             <h2>Quản lý Dữ liệu</h2>
             
+            <div id="authSection" style="padding-bottom: 20px; border-bottom: 1px solid #ccc; margin-bottom: 20px;">
+                <h3>Xác thực Cơ sở dữ liệu</h3>
+                <p>Bạn cần xác thực để sử dụng các chức năng quản lý và chỉnh sửa dữ liệu.</p>
+                <button class="btn-primary" onclick="openAuthModal()">Xác thực CSDL</button>
+            </div>
+            <div id="logoutSection" style="display: none; padding-bottom: 20px; border-bottom: 1px solid #ccc; margin-bottom: 20px;">
+                 <h3>Đã xác thực</h3>
+                 <p>Bạn đã đăng nhập. Bây giờ bạn có thể sử dụng các chức năng quản lý.</p>
+                 <button class="btn-danger" onclick="logout()">Đăng xuất</button>
+            </div>
+
             <div style="margin-top: 20px;">
                 <h3>Nhập dữ liệu từ file Excel</h3>
                 <input type="file" id="excelFile" accept=".xlsx, .xls">
@@ -358,23 +352,28 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, getDocs, getDoc, updateDoc, deleteDoc, writeBatch, query, serverTimestamp, collectionGroup, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
         // --- CẤU HÌNH FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyDltV6zgLaOHZANarD4I87ckl0jBWY8leU",
-            authDomain: "dulieubanhang-d6156.firebaseapp.com",
-            projectId: "dulieubanhang-d6156",
-            storageBucket: "dulieubanhang-d6156.firebasestorage.app",
-            messagingSenderId: "588583798336",
-            appId: "1:5885837983798336:web:5705f7d8803a3a7c93c1a5",
-            measurementId: "G-GQY6N2ZFLD"
+  authDomain: "dulieubanhang-d6156.firebaseapp.com",
+  projectId: "dulieubanhang-d6156",
+  storageBucket: "dulieubanhang-d6156.firebasestorage.app",
+  messagingSenderId: "588583798336",
+  appId: "1:588583798336:web:5705f7d8803a3a7c93c1a5",
+  measurementId: "G-GQY6N2ZFLD"
         };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // --- TỰ ĐỘNG ĐĂNG XUẤT KHI TẢI TRANG ĐỂ BẢO MẬT ---
+        signOut(auth).catch((error) => {
+            console.error('Error signing out on page load:', error);
+        });
+        
         // --- CẤU HÌNH GOOGLE DRIVE API ---
         const CLIENT_ID = "588583798336-o4gjnfqaupmmdp8mi38o9m8r4n0bbghs.apps.googleusercontent.com";
         const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
@@ -390,8 +389,41 @@
         let gapiReady = false;
         let editModeStatusByYear = {}; 
         let currentYear = new Date().getFullYear();
+        let isAuthenticated = false;
 
-        // --- CÁC HÀM QUẢN LÝ TRẠNG THÁI SỬA ĐỔI ---
+        // --- UI ELEMENTS ---
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        
+        // --- *** START FUNCTION DEFINITIONS FOR HTML ONCLICK *** ---
+        // These are defined first to ensure they are available to the HTML,
+        // preventing "is not defined" errors if other parts of the script fail to load.
+        
+        window.openAuthModal = () => {
+            document.getElementById('authModal').style.display = 'block';
+            document.getElementById('password').value = '';
+            document.getElementById('password').focus();
+        };
+        
+        window.closeAllModals = () => {
+            document.querySelectorAll('.modal').forEach(modal => modal.style.display = 'none');
+            const toggleDiv = document.getElementById('editModeToggle');
+            if (toggleDiv) {
+                toggleDiv.style.display = 'none';
+                document.getElementById('unlockButton').style.display = 'block';
+            }
+        };
+
+        window.logout = async () => {
+            try {
+                await signOut(auth);
+                alert("Đăng xuất thành công.");
+                window.closeAllModals();
+            } catch (error) {
+                console.error("Lỗi đăng xuất:", error);
+                alert("Đã xảy ra lỗi khi đăng xuất.");
+            }
+        };
 
         window.promptForUnlock = () => {
             const password = prompt("Vui lòng nhập mật khẩu quản trị:");
@@ -408,7 +440,6 @@
         window.toggleEditMode = async (isChecked) => {
             try {
                 const settingsDocRef = doc(db, 'settings', 'global');
-                const fieldPath = `editModeStatus.${currentYear}`;
                 await setDoc(settingsDocRef, { editModeStatus: { [currentYear]: isChecked } }, { merge: true });
             } catch (error) {
                 console.error("Lỗi khi cập nhật trạng thái mở khóa:", error);
@@ -416,19 +447,162 @@
             }
         };
 
-        function updateButtonStates() {
-            const isCurrentYearEditable = editModeStatusByYear[currentYear] === true;
-            
-            const multiExecuteButton = document.getElementById('multiExecuteBtn');
-            multiExecuteButton.disabled = selectedGrandchildren.size === 0;
+        window.changeYear = (year) => {
+            currentYear = parseInt(year);
+            fetchData();
+            updateUIAfterAuthChange(); 
+        };
 
-            const deleteSelectedButton = document.getElementById('deleteSelectedBtn');
-            deleteSelectedButton.disabled = !isCurrentYearEditable || selectedGrandchildren.size === 0;
-
-            const actionButtons = document.querySelectorAll('#taskList .dropbtn, #taskList .btn-edit-grandchild');
-            actionButtons.forEach(btn => {
-                btn.disabled = !isCurrentYearEditable;
+        window.toggleDropdown = (event) => {
+            event.stopPropagation();
+            document.querySelectorAll(".dropdown-content").forEach(content => {
+                if (content !== event.target.nextElementSibling) content.classList.remove('show');
             });
+            event.target.nextElementSibling.classList.toggle("show");
+        };
+
+        window.showLinks = (event) => {
+            event.stopPropagation();
+            const existingDropdown = document.getElementById('links-dropdown-container');
+            if (existingDropdown) existingDropdown.remove();
+            const button = event.target;
+            const links = JSON.parse(button.dataset.links);
+            if (!links || links.length === 0) return;
+            const dropdown = document.createElement('div');
+            dropdown.id = 'links-dropdown-container';
+            dropdown.className = 'links-dropdown';
+            links.forEach(link => {
+                const a = document.createElement('a');
+                a.href = link;
+                a.textContent = link.length > 50 ? link.substring(0, 50) + '...' : link;
+                a.target = '_blank';
+                a.title = link;
+                dropdown.appendChild(a);
+            });
+            document.body.appendChild(dropdown);
+            const rect = button.getBoundingClientRect();
+            dropdown.style.left = `${rect.left + window.scrollX}px`;
+            dropdown.style.top = `${rect.bottom + window.scrollY}px`;
+        };
+
+        window.onclick = function(event) {
+            if (!event.target.matches('.dropbtn')) {
+                document.querySelectorAll(".dropdown-content").forEach(content => content.classList.remove('show'));
+            }
+            const linksDropdown = document.getElementById('links-dropdown-container');
+            if (linksDropdown && !linksDropdown.contains(event.target) && !event.target.matches('[data-links]')) {
+                 linksDropdown.remove();
+            }
+        };
+        
+        window.openDataManagementModal = () => document.getElementById('dataManagementModal').style.display = 'block';
+        window.openDeleteAllDataModal = () => {
+            document.getElementById('deleteAllDataModal').style.display = 'block';
+            document.getElementById('deleteConfirmEmail').value = '';
+            document.getElementById('deleteConfirmPassword').value = '';
+        };
+        
+        window.toggleSelection = (checkbox) => {
+            const grandchildPath = checkbox.dataset.path;
+            if (checkbox.checked) selectedGrandchildren.add(grandchildPath); 
+            else selectedGrandchildren.delete(grandchildPath);
+            updateParentCheckboxState(checkbox.dataset.parentPath);
+            updateUIAfterAuthChange();
+        };
+
+        window.toggleGrandchildrenCheckboxes = (childCheckbox) => {
+            const childPath = childCheckbox.dataset.childPath;
+            const isChecked = childCheckbox.checked;
+            childCheckbox.indeterminate = false;
+            const grandchildrenCheckboxes = document.querySelectorAll(`.grandchild-checkbox[data-parent-path="${childPath}"]`);
+            grandchildrenCheckboxes.forEach(cb => {
+                if (cb.checked !== isChecked) {
+                    cb.checked = isChecked;
+                    cb.dispatchEvent(new Event('change'));
+                }
+            });
+        };
+
+        window.toggleAllCheckboxes = (masterCheckbox) => {
+            const isChecked = masterCheckbox.checked;
+            document.querySelectorAll('.child-checkbox, .grandchild-checkbox').forEach(cb => {
+                cb.indeterminate = false;
+                if (cb.checked !== isChecked) {
+                    cb.checked = isChecked;
+                    cb.dispatchEvent(new Event('change'));
+                }
+            });
+        };
+        // --- *** END FUNCTION DEFINITIONS FOR HTML ONCLICK *** ---
+
+
+        // --- AUTHENTICATION LOGIC ---
+        onAuthStateChanged(auth, user => {
+            isAuthenticated = !!user;
+            const settingsDocRef = doc(db, 'settings', 'global');
+            onSnapshot(settingsDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    editModeStatusByYear = docSnap.data().editModeStatus || {};
+                } else {
+                    editModeStatusByYear = {};
+                }
+                updateUIAfterAuthChange();
+            });
+            updateUIAfterAuthChange();
+        });
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').dataset.realEmail;
+            const password = document.getElementById('password').value;
+            const loginButton = loginForm.querySelector('button');
+            loginError.style.display = 'none';
+            loginButton.disabled = true;
+            loginButton.textContent = 'Đang xử lý...';
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                window.closeAllModals();
+            } catch (error) {
+                console.error("Lỗi đăng nhập:", error);
+                let errorMessage = "Đã xảy ra lỗi. Vui lòng thử lại.";
+                if (error.code === 'auth/invalid-credential') errorMessage = "Mật khẩu không chính xác.";
+                loginError.textContent = errorMessage;
+                loginError.style.display = 'block';
+            } finally {
+                loginButton.disabled = false;
+                loginButton.textContent = 'Đăng nhập';
+            }
+        });
+
+        // --- CORE APP LOGIC ---
+
+        function updateUIAfterAuthChange() {
+            const isCurrentYearEditable = editModeStatusByYear[currentYear] === true;
+            const canPerformStructuralChanges = isAuthenticated && isCurrentYearEditable;
+            const canPerformExecution = isAuthenticated;
+
+            // Update auth/logout buttons in Data Management modal
+            const authSection = document.getElementById('authSection');
+            const logoutSection = document.getElementById('logoutSection');
+            if (authSection) authSection.style.display = isAuthenticated ? 'none' : 'block';
+            if (logoutSection) logoutSection.style.display = isAuthenticated ? 'block' : 'none';
+
+            // --- Buttons that require login + edit mode (structural changes) ---
+            document.getElementById('deleteSelectedBtn').disabled = !canPerformStructuralChanges || selectedGrandchildren.size === 0;
+            const dataManagementModal = document.getElementById('dataManagementModal');
+            if (dataManagementModal) {
+                 dataManagementModal.querySelector('.btn-primary[onclick="importData()"]').disabled = !canPerformStructuralChanges;
+                 dataManagementModal.querySelector('.btn-danger[onclick="openDeleteAllDataModal()"]').disabled = !canPerformStructuralChanges;
+            }
+            // Action buttons in the table for adding/editing tasks
+            document.querySelectorAll('#taskList .dropbtn, #taskList .btn-edit-grandchild').forEach(btn => {
+                btn.disabled = !canPerformStructuralChanges;
+            });
+
+            // --- Buttons that only require login ---
+            document.getElementById('multiExecuteBtn').disabled = !canPerformExecution || selectedGrandchildren.size === 0;
+            const unlockButton = document.getElementById('unlockButton');
+            if (unlockButton) unlockButton.disabled = !canPerformExecution;
         }
 
         function getParentCollectionName() {
@@ -459,12 +633,6 @@
             yearSelect.value = currentYearValue;
         }
 
-        window.changeYear = (year) => {
-            currentYear = parseInt(year);
-            fetchData();
-            updateButtonStates(); 
-        };
-
         async function ensureYearCollectionExists(year) {
             const collectionName = `công việc mẹ ${year}`;
             try {
@@ -478,62 +646,7 @@
                 console.log(`Collection cho năm ${year} chưa tồn tại, sẽ được tạo khi có dữ liệu`);
             }
         }
-
-        // --- UI ELEMENTS ---
-        const loginContainer = document.getElementById('login-container');
-        const mainContainer = document.getElementById('container');
-        const loginForm = document.getElementById('login-form');
-        const loginError = document.getElementById('login-error');
-
-        // --- AUTHENTICATION LOGIC ---
         
-        onAuthStateChanged(auth, user => {
-            if (user) {
-                loginContainer.style.display = 'none';
-                mainContainer.style.display = 'block';
-
-                const settingsDocRef = doc(db, 'settings', 'global');
-                onSnapshot(settingsDocRef, (docSnap) => {
-                    if (docSnap.exists()) {
-                        editModeStatusByYear = docSnap.data().editModeStatus || {};
-                    } else {
-                        editModeStatusByYear = {};
-                    }
-                    updateButtonStates();
-                });
-
-                initializeYearDropdown();
-                fetchData();
-                initializeGoogleClients();
-            } else {
-                loginContainer.style.display = 'block';
-                mainContainer.style.display = 'none';
-                document.getElementById('taskListBody').innerHTML = '';
-            }
-        });
-
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('email').dataset.realEmail;
-            const password = document.getElementById('password').value;
-            const loginButton = loginForm.querySelector('button');
-            loginError.style.display = 'none';
-            loginButton.disabled = true;
-            loginButton.textContent = 'Đang xử lý...';
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-            } catch (error) {
-                console.error("Lỗi đăng nhập:", error);
-                let errorMessage = "Đã xảy ra lỗi. Vui lòng thử lại.";
-                if (error.code === 'auth/invalid-credential') errorMessage = "Mật khẩu không chính xác.";
-                loginError.textContent = errorMessage;
-                loginError.style.display = 'block';
-            } finally {
-                loginButton.disabled = false;
-                loginButton.textContent = 'Đăng nhập';
-            }
-        });
-
         // --- CÁC HÀM TIỆN ÍCH ---
         const formatNumber = (num) => num?.toLocaleString('vi-VN') || '0';
         
@@ -597,10 +710,7 @@
                 try {
                     statusDiv.className = 'success'; statusDiv.innerText = "Đang đọc file...";
                     const workbook = XLSX.read(new Uint8Array(event.target.result), { type: 'array' });
-                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { 
-                        raw: false,
-                        defval: ''
-                    });
+                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { raw: false });
                     const headers = jsonData.length > 0 ? Object.keys(jsonData[0]) : [];
                     statusDiv.innerText = "Đã đọc file. Đang xử lý...";
                     
@@ -609,7 +719,7 @@
                     statusDiv.innerText = "Đang nhập dữ liệu vào Firestore...";
                     await writeTreeToFirestore(taskTree);
                     statusDiv.innerText = "Nhập dữ liệu thành công! Đang tải lại danh sách...";
-                    closeAllModals();
+                    window.closeAllModals();
                     await fetchData();
                 } catch (error) { console.error("Lỗi khi nhập: ", error); statusDiv.className = 'error'; statusDiv.innerText = `Lỗi: ${error.message}`; }
             };
@@ -620,6 +730,17 @@
             const tree = []; let currentParent = null;
             const isRoman = /^[IVXLCDM]+$/i; const isNumber = /^\d+$/; const isSubNumber = /^\d+\.\d+$/;
             
+            const availableColumns = {
+                tt: headers.includes('TT'),
+                noiDung: headers.includes('Nội dung') || headers.includes('NỘI DUNG CÔNG VIỆC'),
+                donVi: headers.includes('Đơn vị'),
+                soLuong: headers.includes('Số lượng') || headers.includes('Số lượng vật tư'),
+                capDo: headers.includes('Cấp độ'),
+                chiPhi: headers.includes('Chi phí') || headers.includes('Chi phí kế hoạch 2025'),
+                chiPhiThucHien: headers.includes('Chi phí thực hiện'),
+                keHoachConLai: headers.includes('Kế hoạch còn lại')
+            };
+
             const findValue = (row, keys) => {
                 for (const key of keys) {
                     if (headers.includes(key) && row[key] !== undefined && row[key] !== null && row[key] !== '') {
@@ -630,25 +751,49 @@
             };
 
             jsonData.forEach((row) => {
-                const tt = String(row.TT || '').trim();
+                const tt = availableColumns.tt ? String(row.TT || '').trim() : '';
                 if (!tt) return;
                 
                 const data = { tt };
                 
-                const noiDungValue = findValue(row, ['Nội dung', 'NỘI DUNG CÔNG VIỆC']);
-                if (noiDungValue !== undefined) data.noiDung = noiDungValue;
+                if (availableColumns.noiDung) {
+                    const noiDungValue = findValue(row, ['Nội dung', 'NỘI DUNG CÔNG VIỆC']);
+                    if (noiDungValue !== undefined) data.noiDung = noiDungValue;
+                }
                 
-                const donViValue = findValue(row, ['Đơn vị']);
-                if (donViValue !== undefined) data.donVi = donViValue;
+                if (availableColumns.donVi) {
+                    const donViValue = findValue(row, ['Đơn vị']);
+                    if (donViValue !== undefined) data.donVi = donViValue;
+                }
                 
-                const soLuongValue = findValue(row, ['Số lượng', 'Số lượng vật tư']);
-                if (soLuongValue !== undefined) data.soLuong = soLuongValue;
+                if (availableColumns.soLuong) {
+                    const soLuongValue = findValue(row, ['Số lượng', 'Số lượng vật tư']);
+                    if (soLuongValue !== undefined) data.soLuong = soLuongValue;
+                }
                 
-                const capDoValue = findValue(row, ['Cấp độ']);
-                if (capDoValue !== undefined) data.capDo = capDoValue;
+                if (availableColumns.capDo) {
+                    const capDoValue = findValue(row, ['Cấp độ']);
+                    if (capDoValue !== undefined) data.capDo = capDoValue;
+                }
                 
-                const chiPhiValue = findValue(row, ['Chi phí', 'Chi phí kế hoạch 2025']);
-                if (chiPhiValue !== undefined) data.chiPhi = parseNumber(chiPhiValue);
+                if (availableColumns.chiPhi) {
+                    const chiPhiValue = findValue(row, ['Chi phí', 'Chi phí kế hoạch 2025']);
+                    if (chiPhiValue !== undefined) data.chiPhi = parseNumber(chiPhiValue);
+                }
+                
+                if (availableColumns.chiPhiThucHien) {
+                    const chiPhiThucHienValue = findValue(row, ['Chi phí thực hiện']);
+                    if (chiPhiThucHienValue !== undefined) data.chiPhiThucHien = parseNumber(chiPhiThucHienValue);
+                }
+                
+                if (availableColumns.keHoachConLai) {
+                    const keHoachConLaiValue = findValue(row, ['Kế hoạch còn lại']);
+                    if (keHoachConLaiValue !== undefined) {
+                        data.keHoachConLai = parseNumber(keHoachConLaiValue);
+                    } else if (data.chiPhi !== undefined && data.chiPhiThucHien !== undefined) {
+                        data.keHoachConLai = data.chiPhi - data.chiPhiThucHien;
+                    }
+                }
                 
                 const taskNode = { id: tt, data };
                 
@@ -768,48 +913,6 @@
                 if (valA !== valB) return valA - valB;
             }
             return 0;
-        };
-        
-        window.toggleDropdown = (event) => {
-            event.stopPropagation();
-            document.querySelectorAll(".dropdown-content").forEach(content => {
-                if (content !== event.target.nextElementSibling) content.classList.remove('show');
-            });
-            event.target.nextElementSibling.classList.toggle("show");
-        };
-
-        window.showLinks = (event) => {
-            event.stopPropagation();
-            const existingDropdown = document.getElementById('links-dropdown-container');
-            if (existingDropdown) existingDropdown.remove();
-            const button = event.target;
-            const links = JSON.parse(button.dataset.links);
-            if (!links || links.length === 0) return;
-            const dropdown = document.createElement('div');
-            dropdown.id = 'links-dropdown-container';
-            dropdown.className = 'links-dropdown';
-            links.forEach(link => {
-                const a = document.createElement('a');
-                a.href = link;
-                a.textContent = link.length > 50 ? link.substring(0, 50) + '...' : link;
-                a.target = '_blank';
-                a.title = link;
-                dropdown.appendChild(a);
-            });
-            document.body.appendChild(dropdown);
-            const rect = button.getBoundingClientRect();
-            dropdown.style.left = `${rect.left + window.scrollX}px`;
-            dropdown.style.top = `${rect.bottom + window.scrollY}px`;
-        };
-        
-        window.onclick = function(event) {
-            if (!event.target.matches('.dropbtn')) {
-                document.querySelectorAll(".dropdown-content").forEach(content => content.classList.remove('show'));
-            }
-            const linksDropdown = document.getElementById('links-dropdown-container');
-            if (linksDropdown && !linksDropdown.contains(event.target) && !event.target.matches('[data-links]')) {
-                 linksDropdown.remove();
-            }
         };
 
         window.fetchData = async () => {
@@ -945,7 +1048,7 @@
                         <p><strong>Tổng chi phí đã thực hiện:</strong> ${formatNumber(totalExecutedCost)} <span class="percentage">(${costPercentage}%)</span></p>
                     </div>`;
                 selectedGrandchildren.clear();
-                updateButtonStates();
+                updateUIAfterAuthChange();
                 statusDiv.innerText = '';
             } catch (error) { console.error("Lỗi tải dữ liệu: ", error); tableBody.innerHTML = `<tr><td colspan="11">Lỗi tải dữ liệu: ${error.message}</td></tr>`; }
         };
@@ -980,24 +1083,6 @@
             } finally {
                 button.disabled = false;
             }
-        };
-
-
-        window.closeAllModals = () => {
-            document.querySelectorAll('.modal').forEach(modal => modal.style.display = 'none');
-            const toggleDiv = document.getElementById('editModeToggle');
-            if (toggleDiv) {
-                toggleDiv.style.display = 'none';
-                document.getElementById('unlockButton').style.display = 'block';
-            }
-        };
-
-        window.openDataManagementModal = () => document.getElementById('dataManagementModal').style.display = 'block';
-
-        window.openDeleteAllDataModal = () => {
-            document.getElementById('deleteAllDataModal').style.display = 'block';
-            document.getElementById('deleteConfirmEmail').value = '';
-            document.getElementById('deleteConfirmPassword').value = '';
         };
 
         window.confirmDeleteAllData = async () => {
@@ -1035,7 +1120,7 @@
                     await deleteDoc(parentDoc.ref);
                 }
                 statusDiv.innerText = "Đã xoá thành công.";
-                closeAllModals();
+                window.closeAllModals();
                 await fetchData();
             } catch (error) {
                 console.error("Lỗi khi xoá: ", error);
@@ -1224,7 +1309,7 @@
                 }
                 await batch.commit();
                 await recalculateCostsForParents(pathsToRecalculate);
-                closeAllModals();
+                window.closeAllModals();
                 await fetchData();
                 statusDiv.className = 'success'; statusDiv.innerText = `Đã cập nhật ${rows.length} công việc.`;
             } catch (error) {
@@ -1248,7 +1333,7 @@
             const newDocPath = `${parentPath}/${subCollectionName}/${newTT}`;
             await setDoc(doc(db, newDocPath), newData);
             await recalculateCostsForParents([newDocPath]);
-            closeAllModals();
+            window.closeAllModals();
             await fetchData();
             statusDiv.className = 'success'; statusDiv.innerText = 'Thêm công việc thành công!';
         };
@@ -1473,7 +1558,7 @@
                     await checkAndUpdateDaThucHien(childPath);
                 }
 
-                closeAllModals();
+                window.closeAllModals();
                 await fetchData();
                 statusDiv.innerText = `Đã lưu các mục thực hiện thành công.`;
             } catch (error) {
@@ -1528,7 +1613,7 @@
                                 <button class="btn-success" onclick="exportAllExecutionsToExcel()" style="margin-right: 20px;">Xuất toàn bộ ra Excel</button>
                                </div>`;
             document.getElementById('modalTitle').innerHTML = modalHeader;
-            let table = `<table class="modal-table responsive-modal-table search-modal-mobile"><thead><tr><th style="width: 5%;">STT</th><th style="width: 10%;">Ngày T.Hiện</th><th>Trích yếu</th><th style="width: 15%; text-align:right;">Tổng chi phí</th><th style="width: 8%;">Số CV</th><th style="width: 15%;">Hành động</th></tr></thead><tbody>`;
+            let table = `<table class="modal-table responsive-modal-table"><thead><tr><th style="width: 5%;">STT</th><th style="width: 10%;">Ngày T.Hiện</th><th>Trích yếu</th><th style="width: 15%; text-align:right;">Tổng chi phí</th><th style="width: 8%;">Số CV</th><th style="width: 15%;">Hành động</th></tr></thead><tbody>`;
             if (querySnapshot.empty) {
                  table += `<tr><td colspan="6">Không tìm thấy lần thực hiện nào.</td></tr>`;
             } else {
@@ -1573,8 +1658,8 @@
                         <td data-label="Tổng chi phí" class="text-right">${formatNumber(totalCost)}</td>
                         <td data-label="Số CV">${grandchildCount}</td>
                         <td data-label="Hành động">
-                            <button class="btn-secondary btn-action btn-edit-exec" onclick="openExecutionEditModal(${keyParam})">Sửa</button>
-                            <button class="${profileButtonClass} btn-action btn-profile-exec" onclick="handleProfileUploadClick(${keyParam})">${profileButtonText}</button>
+                            <button class="btn-secondary btn-action" onclick="openExecutionEditModal(${keyParam})">Sửa</button>
+                            <button class="${profileButtonClass} btn-action" onclick="handleProfileUploadClick(${keyParam})">${profileButtonText}</button>
                         </td>
                     </tr>`;
                 }
@@ -1778,7 +1863,7 @@
                 }
 
                 await recalculateCostsForParents(Array.from(pathsToRecalculate));
-                closeAllModals();
+                window.closeAllModals();
                 await fetchData();
                 statusDiv.innerText = "Đã xóa thành công lần thực hiện.";
             } catch (error) {
@@ -1826,7 +1911,7 @@
                 }
                 
                 await recalculateCostsForParents(Array.from(pathsToRecalculate));
-                closeAllModals();
+                window.closeAllModals();
                 await fetchData();
                 statusDiv.className = 'success'; statusDiv.innerText = "Đã cập nhật thành công lần thực hiện.";
             } catch (error) {
@@ -1838,6 +1923,10 @@
         };
 
         window.handleProfileUploadClick = async (timestampKey) => {
+            if (!isAuthenticated) {
+                alert("Vui lòng xác thực trước khi tải lên hồ sơ.");
+                return;
+            }
             if (!gapiReady) { alert("Dịch vụ Google chưa sẵn sàng, vui lòng thử lại sau giây lát."); return; }
             try {
                 await ensureGapiAuthenticated();
@@ -1886,7 +1975,7 @@
                     
                     await batch.commit();
                 }
-                closeAllModals();
+                window.closeAllModals();
                 await fetchData();
                 statusDiv.innerText = `Tải lên và cập nhật hồ sơ thành công!`;
             } catch (error) {
@@ -1898,14 +1987,6 @@
                 uploadButton.textContent = 'Tải Lên';
             }
         }
-
-        window.toggleSelection = (checkbox) => {
-            const grandchildPath = checkbox.dataset.path;
-            if (checkbox.checked) selectedGrandchildren.add(grandchildPath); 
-            else selectedGrandchildren.delete(grandchildPath);
-            updateParentCheckboxState(checkbox.dataset.parentPath);
-            updateButtonStates();
-        };
         
         const updateParentCheckboxState = (parentPath) => {
              const parentCheckbox = document.querySelector(`.child-checkbox[data-child-path="${parentPath}"]`);
@@ -1923,30 +2004,6 @@
              }
         };
 
-        window.toggleGrandchildrenCheckboxes = (childCheckbox) => {
-            const childPath = childCheckbox.dataset.childPath;
-            const isChecked = childCheckbox.checked;
-            childCheckbox.indeterminate = false;
-            const grandchildrenCheckboxes = document.querySelectorAll(`.grandchild-checkbox[data-parent-path="${childPath}"]`);
-            grandchildrenCheckboxes.forEach(cb => {
-                if (cb.checked !== isChecked) {
-                    cb.checked = isChecked;
-                    cb.dispatchEvent(new Event('change'));
-                }
-            });
-        };
-
-        window.toggleAllCheckboxes = (masterCheckbox) => {
-            const isChecked = masterCheckbox.checked;
-            document.querySelectorAll('.child-checkbox, .grandchild-checkbox').forEach(cb => {
-                cb.indeterminate = false;
-                if (cb.checked !== isChecked) {
-                    cb.checked = isChecked;
-                    cb.dispatchEvent(new Event('change'));
-                }
-            });
-        };
-        
         window.deleteSelectedTasks = async () => {
             if (selectedGrandchildren.size === 0) {
                 alert("Vui lòng chọn ít nhất một công việc để xoá."); return;
@@ -1982,7 +2039,7 @@
                 console.error("Lỗi khi xoá công việc:", error);
                 statusDiv.className = 'error'; statusDiv.innerText = `Lỗi khi xoá: ${error.message}`;
             } finally {
-                updateButtonStates();
+                updateUIAfterAuthChange();
             }
         };
 
@@ -2025,10 +2082,6 @@
                     rows.push(parentRowData);
                     const childSnapshot = await getDocs(query(collection(db, `${getParentCollectionName()}/${parentData.id}/công việc con`)));
                     const children = childSnapshot.docs.map(d => ({id: d.id, ...d.data()}));
-                    
-                    // THAY ĐỔI: Sắp xếp các công việc con theo thứ tự số khi xuất Excel
-                    children.sort((a, b) => parseInt(a.id, 10) - parseInt(b.id, 10));
-
                     for (const childData of children) {
                         boldRows.add(rows.length); 
                         const childRowData = [ childData.tt, childData.noiDung, childData.donVi, childData.soLuong, childData.chiPhi, childData.chiPhiThucHien, childData.keHoachConLai, childData.capDo ];
@@ -2087,6 +2140,11 @@
             }
         };
         scrollToTopBtn.onclick = () => { window.scrollTo({top: 0, behavior: 'smooth'}); };
+
+        // --- INITIAL PAGE LOAD SEQUENCE ---
+        initializeYearDropdown();
+        fetchData();
+        initializeGoogleClients();
 
     </script>
 
