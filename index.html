@@ -236,6 +236,9 @@
             }
             .search-modal-mobile .btn-profile-exec {
                 width: 100%;
+                padding: 10px 0; /* Add vertical padding */
+                font-size: 16px;  /* Increase font size */
+                margin-top: 5px; /* Add some space above */
             }
         }
     </style>
@@ -1039,9 +1042,11 @@
                     }
                 }
                 tableBody.innerHTML = html || `<tr><td colspan="14">Không có dữ liệu cho năm ${currentYear}.</td></tr>`;
+                
                 const childPercentage = totalChildTasks > 0 ? Math.round((totalExecutedChildTasks / totalChildTasks) * 100) : 0;
                 const grandchildPercentage = totalGrandchildren > 0 ? Math.round((totalExecutedGrandchildren / totalGrandchildren) * 100) : 0;
                 const costPercentage = totalPlannedCost > 0 ? Math.round((totalExecutedCost / totalPlannedCost) * 100) : 0;
+                
                 document.getElementById('summarySection').innerHTML = `
                     <div class="summary-column">
                         <p><strong>Tổng số đầu việc thiết bị:</strong> ${totalChildTasks}</p>
@@ -1053,6 +1058,23 @@
                         <p><strong>Số đầu việc chi tiết đã thực hiện:</strong> ${totalExecutedGrandchildren} <span class="percentage">(${grandchildPercentage}%)</span></p>
                         <p><strong>Tổng chi phí đã thực hiện:</strong> ${formatNumber(totalExecutedCost)} <span class="percentage">(${costPercentage}%)</span></p>
                     </div>`;
+
+                // Save summary data to Firestore
+                try {
+                    const summaryData = {
+                        totalExecutedGrandchildren,
+                        totalGrandchildren,
+                        totalExecutedCost,
+                        totalPlannedCost,
+                        totalChildTasks,
+                        totalExecutedChildTasks
+                    };
+                    const summaryDocRef = doc(db, 'summary_data', String(currentYear));
+                    await setDoc(summaryDocRef, summaryData);
+                } catch (error) {
+                    console.error("Lỗi khi lưu dữ liệu tóm tắt:", error);
+                }
+
                 selectedGrandchildren.clear();
                 updateButtonStates();
                 statusDiv.innerText = '';
