@@ -12,7 +12,20 @@
         #container {
             max-width: 1400px; margin: auto; background-color: white;
             padding: 25px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: none; /* Ẩn nội dung chính ban đầu */
         }
+        #login-container {
+            max-width: 400px; margin: 100px auto; padding: 30px; background-color: white;
+            border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center;
+        }
+        #login-container h2 { margin-top: 0; color: #333; }
+        #login-container input {
+            width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc;
+            border-radius: 4px; box-sizing: border-box; font-size: 16px;
+        }
+        #login-container button { width: 100%; padding: 12px; font-size: 16px; }
+        #login-error { color: #dc3545; margin-top: 15px; font-weight: bold; }
+        
         h1, h2 { color: #333; }
         h3 { color: #555; font-weight: normal; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         .button-group {
@@ -75,10 +88,6 @@
             width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5);
             animation: fadeIn 0.3s;
         }
-        /* Sửa lỗi modal bị đè */
-        #authModal, #deleteAllDataModal, #uploadPdfModal {
-            z-index: 1001;
-        }
         @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
         .modal-content {
             background-color: #fefefe; margin: 5% auto; padding: 25px;
@@ -92,10 +101,38 @@
         .modal-table input { width: 95%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
         .modal-table input:disabled { background-color: #e9ecef; cursor: not-allowed;}
         
-        .col-tt { width: 4%; }
-        .col-noidung { width: 30%; }
-        .col-donvi, .col-soluong, .col-capdo, .col-dvt, .col-dongia { width: 9%; }
-        .col-chiphi, .col-thanhtien { width: 12%; }
+        /* ---- UNIFIED COLUMN WIDTHS ---- */
+        .col-noidung { width: 25%; }
+
+        .col-tt,
+        .col-donvi,
+        .col-soluong,
+        .col-tansuat-th,
+        .col-capdo,
+        .col-hoso {
+            width: 3%;
+        }
+
+        /* Other Columns (un-changed from original) */
+        .col-chiphi, .col-thanhtien { width: 9%; }
+        .col-thoidiem, .col-tansuat, .col-dvth { width: 7%; }
+        .col-dvt, .col-dongia { width: 6%; }
+
+        /* Generic Modal Table Column Widths (will be overridden by inline styles if present) */
+        /* TT / Mục */
+        .modal-table th:nth-child(1), .modal-table td:nth-child(1) { width: 3%; } 
+        /* Nội dung / Thiết bị */
+        .modal-table th:nth-child(2), .modal-table td:nth-child(2) { width: 25%; }
+        /* Đơn vị */
+        .modal-table th:nth-child(3), .modal-table td:nth-child(3) { width: 3%; } 
+        /* Số lượng */
+        .modal-table th:nth-child(4), .modal-table td:nth-child(4) { width: 3%; }
+        /* Tần suất TH (in Sửa info modal) */
+        .modal-table th:nth-child(6), .modal-table td:nth-child(6) { width: 3%; } 
+        /* Cấp độ (in Sửa info modal) */
+        .modal-table th:nth-child(9), .modal-table td:nth-child(9) { width: 3%; }
+        /* ---- END UNIFIED WIDTHS ---- */
+
         .modal-footer { text-align: right; margin-top: 20px; }
         .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
         
@@ -158,6 +195,21 @@
             border-radius: 4px;
             box-sizing: border-box;
         }
+        
+        .planning-mode .col-chiphi-thuchien,
+        .planning-mode .col-hoso {
+            display: none;
+        }
+        .col-thoidiem-th,
+        .col-tansuat-th,
+        .col-dv-thuchien {
+            display: none;
+        }
+        .planning-mode .col-thoidiem-th,
+        .planning-mode .col-tansuat-th,
+        .planning-mode .col-dv-thuchien {
+            display: table-cell;
+        }
 
         @media screen and (max-width: 768px) {
             .responsive-modal-table thead { display: none; }
@@ -175,6 +227,16 @@
                 content: attr(data-label); position: absolute; left: 10px; width: 45%;
                 padding-right: 10px; font-weight: bold; text-align: left;
             }
+            
+            .search-modal-mobile td {
+                font-size: 12px;
+            }
+            .search-modal-mobile .btn-edit-exec {
+                display: none;
+            }
+            .search-modal-mobile .btn-profile-exec {
+                width: 100%;
+            }
         }
     </style>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -183,23 +245,19 @@
 </head>
 <body>
     
-    <div id="authModal" class="modal" style="display:none;">
-        <div class="modal-content" style="max-width: 400px; margin: 100px auto; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center;">
-            <span class="close-button" onclick="closeAllModals()">&times;</span>
-            <img src="PVGLPG.gif" alt="Logo" style="width: 120px; height: auto; margin-bottom: 20px;">
-            <h2 style="margin-top: 0; color: #333;">Xác thực CSDL</h2>
-            <p>Vui lòng đăng nhập để có quyền sửa đổi dữ liệu.</p>
-            <form id="login-form">
-                <input type="text" id="email" 
-                       value="n*****@pvgaslpg*****" 
-                       data-real-email="namdinh@pvgaslpg.com.vn" 
-                       readonly 
-                       style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; background-color: #e9ecef; cursor: not-allowed; text-align: center; color: #495057;">
-                <input type="password" id="password" placeholder="Mật khẩu" required autofocus style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px;">
-                <button type="submit" class="btn-primary" style="width: 100%; padding: 12px; font-size: 16px;">Đăng nhập</button>
-                <p id="login-error" style="display: none; color: #dc3545; margin-top: 15px; font-weight: bold;"></p>
-            </form>
-        </div>
+    <div id="login-container">
+        <img src="PVGLPG.gif" alt="Logo" style="width: 120px; height: auto; margin-bottom: 20px;">
+        <h2>Đăng nhập Hệ thống</h2>
+        <form id="login-form">
+            <input type="text" id="email" 
+                   value="n*****@pvgaslpg*****" 
+                   data-real-email="namdinh@pvgaslpg.com.vn" 
+                   readonly 
+                   style="background-color: #e9ecef; cursor: not-allowed; text-align: center; color: #495057;">
+            <input type="password" id="password" placeholder="Mật khẩu" required autofocus>
+            <button type="submit" class="btn-primary">Đăng nhập</button>
+            <p id="login-error" style="display: none;"></p>
+        </form>
     </div>
 
     <div id="container">
@@ -222,7 +280,7 @@
         <div id="status"></div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
-            <h2>Danh mục BDSC tại ..........................</h2>
+            <h2>Danh sách công việc</h2>
              <div>
                 <label for="yearSelect" style="margin-right: 10px; font-weight: bold;">Năm:</label>
                 <select id="yearSelect" onchange="changeYear(this.value)">
@@ -230,10 +288,14 @@
             </div>
         </div>
 
-        <div class="button-group" style="margin-bottom: 15px; justify-content: flex-start;">
+        <div class="button-group" style="margin-bottom: 15px; justify-content: space-between;">
              <div>
                 <button id="multiExecuteBtn" class="btn-info" onclick="openMultiExecutionModal()" disabled>Thực hiện công việc đã chọn</button>
                 <button id="searchExecutionBtn" class="btn-primary" onclick="openSearchModal()">Tra cứu thực hiện</button>
+             </div>
+             <div style="display: flex; align-items: center;">
+                <label for="planningModeToggle" style="margin-right: 10px; font-weight: bold;">Mở cột ẩn để làm kế hoạch</label>
+                <input type="checkbox" id="planningModeToggle" onchange="togglePlanningColumns(this.checked)">
              </div>
         </div>
 
@@ -243,15 +305,18 @@
             <thead>
                 <tr>
                     <th style="width: 3%;"><input type="checkbox" onchange="toggleAllCheckboxes(this)"></th>
-                    <th style="width: 4%;">TT</th>
-                    <th style="width: 34%;">Nội dung</th>
-                    <th style="width: 7%;">Đơn vị</th>
-                    <th style="width: 7%;">Số lượng</th>
-                    <th class="text-right" style="width: 10%;">Chi phí</th>
-                    <th class="text-right" style="width: 10%;">Chi phí thực hiện</th>
-                    <th class="text-right" style="width: 10%;">Kế hoạch còn lại</th>
-                    <th style="width: 3%;">Cấp độ</th>
-                    <th style="width: 5%;">Hồ sơ</th>
+                    <th class="col-tt" style="width: 3%;">TT</th>
+                    <th class="col-noidung">Nội dung</th>
+                    <th class="col-donvi">Đơn vị</th>
+                    <th class="col-soluong">Số lượng</th>
+                    <th class="col-thoidiem-th">Thời điểm TH</th>
+                    <th class="col-tansuat-th">Tần suất TH</th>
+                    <th class="col-dv-thuchien">ĐV th.hiện</th>
+                    <th class="text-right col-chiphi">Chi phí</th>
+                    <th class="text-right col-chiphi-thuchien" style="width: 9%;">Chi phí thực hiện</th>
+                    <th class="text-right" style="width: 9%;">Kế hoạch còn lại</th>
+                    <th class="col-capdo">Cấp độ</th>
+                    <th class="col-hoso" style="width: 3%;">Hồ sơ</th>
                     <th style="width: 7%;">Hành động</th>
                 </tr>
             </thead>
@@ -277,17 +342,6 @@
             <span class="close-button" onclick="closeAllModals()">&times;</span>
             <h2>Quản lý Dữ liệu</h2>
             
-            <div id="authSection" style="padding-bottom: 20px; border-bottom: 1px solid #ccc; margin-bottom: 20px;">
-                <h3>Xác thực Cơ sở dữ liệu</h3>
-                <p>Bạn cần xác thực để sử dụng các chức năng quản lý và chỉnh sửa dữ liệu.</p>
-                <button class="btn-primary" onclick="openAuthModal()">Xác thực CSDL</button>
-            </div>
-            <div id="logoutSection" style="display: none; padding-bottom: 20px; border-bottom: 1px solid #ccc; margin-bottom: 20px;">
-                 <h3>Đã xác thực</h3>
-                 <p>Bạn đã đăng nhập. Bây giờ bạn có thể sử dụng các chức năng quản lý.</p>
-                 <button class="btn-danger" onclick="logout()">Đăng xuất</button>
-            </div>
-
             <div style="margin-top: 20px;">
                 <h3>Nhập dữ liệu từ file Excel</h3>
                 <input type="file" id="excelFile" accept=".xlsx, .xls">
@@ -352,28 +406,23 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, getDocs, getDoc, updateDoc, deleteDoc, writeBatch, query, serverTimestamp, collectionGroup, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
         // --- CẤU HÌNH FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyDltV6zgLaOHZANarD4I87ckl0jBWY8leU",
-  authDomain: "dulieubanhang-d6156.firebaseapp.com",
-  projectId: "dulieubanhang-d6156",
-  storageBucket: "dulieubanhang-d6156.firebasestorage.app",
-  messagingSenderId: "588583798336",
-  appId: "1:588583798336:web:5705f7d8803a3a7c93c1a5",
-  measurementId: "G-GQY6N2ZFLD"
+            authDomain: "dulieubanhang-d6156.firebaseapp.com",
+            projectId: "dulieubanhang-d6156",
+            storageBucket: "dulieubanhang-d6156.firebasestorage.app",
+            messagingSenderId: "588583798336",
+            appId: "1:588583798336:web:5705f7d8803a3a7c93c1a5",
+            measurementId: "G-GQY6N2ZFLD"
         };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- TỰ ĐỘNG ĐĂNG XUẤT KHI TẢI TRANG ĐỂ BẢO MẬT ---
-        signOut(auth).catch((error) => {
-            console.error('Error signing out on page load:', error);
-        });
-        
         // --- CẤU HÌNH GOOGLE DRIVE API ---
         const CLIENT_ID = "588583798336-o4gjnfqaupmmdp8mi38o9m8r4n0bbghs.apps.googleusercontent.com";
         const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
@@ -389,41 +438,9 @@
         let gapiReady = false;
         let editModeStatusByYear = {}; 
         let currentYear = new Date().getFullYear();
-        let isAuthenticated = false;
+        let planningModeByYear = {};
 
-        // --- UI ELEMENTS ---
-        const loginForm = document.getElementById('login-form');
-        const loginError = document.getElementById('login-error');
-        
-        // --- *** START FUNCTION DEFINITIONS FOR HTML ONCLICK *** ---
-        // These are defined first to ensure they are available to the HTML,
-        // preventing "is not defined" errors if other parts of the script fail to load.
-        
-        window.openAuthModal = () => {
-            document.getElementById('authModal').style.display = 'block';
-            document.getElementById('password').value = '';
-            document.getElementById('password').focus();
-        };
-        
-        window.closeAllModals = () => {
-            document.querySelectorAll('.modal').forEach(modal => modal.style.display = 'none');
-            const toggleDiv = document.getElementById('editModeToggle');
-            if (toggleDiv) {
-                toggleDiv.style.display = 'none';
-                document.getElementById('unlockButton').style.display = 'block';
-            }
-        };
-
-        window.logout = async () => {
-            try {
-                await signOut(auth);
-                alert("Đăng xuất thành công.");
-                window.closeAllModals();
-            } catch (error) {
-                console.error("Lỗi đăng xuất:", error);
-                alert("Đã xảy ra lỗi khi đăng xuất.");
-            }
-        };
+        // --- CÁC HÀM QUẢN LÝ TRẠNG THÁI SỬA ĐỔI ---
 
         window.promptForUnlock = () => {
             const password = prompt("Vui lòng nhập mật khẩu quản trị:");
@@ -440,6 +457,7 @@
         window.toggleEditMode = async (isChecked) => {
             try {
                 const settingsDocRef = doc(db, 'settings', 'global');
+                const fieldPath = `editModeStatus.${currentYear}`;
                 await setDoc(settingsDocRef, { editModeStatus: { [currentYear]: isChecked } }, { merge: true });
             } catch (error) {
                 console.error("Lỗi khi cập nhật trạng thái mở khóa:", error);
@@ -447,163 +465,30 @@
             }
         };
 
-        window.changeYear = (year) => {
-            currentYear = parseInt(year);
-            fetchData();
-            updateUIAfterAuthChange(); 
-        };
-
-        window.toggleDropdown = (event) => {
-            event.stopPropagation();
-            document.querySelectorAll(".dropdown-content").forEach(content => {
-                if (content !== event.target.nextElementSibling) content.classList.remove('show');
-            });
-            event.target.nextElementSibling.classList.toggle("show");
-        };
-
-        window.showLinks = (event) => {
-            event.stopPropagation();
-            const existingDropdown = document.getElementById('links-dropdown-container');
-            if (existingDropdown) existingDropdown.remove();
-            const button = event.target;
-            const links = JSON.parse(button.dataset.links);
-            if (!links || links.length === 0) return;
-            const dropdown = document.createElement('div');
-            dropdown.id = 'links-dropdown-container';
-            dropdown.className = 'links-dropdown';
-            links.forEach(link => {
-                const a = document.createElement('a');
-                a.href = link;
-                a.textContent = link.length > 50 ? link.substring(0, 50) + '...' : link;
-                a.target = '_blank';
-                a.title = link;
-                dropdown.appendChild(a);
-            });
-            document.body.appendChild(dropdown);
-            const rect = button.getBoundingClientRect();
-            dropdown.style.left = `${rect.left + window.scrollX}px`;
-            dropdown.style.top = `${rect.bottom + window.scrollY}px`;
-        };
-
-        window.onclick = function(event) {
-            if (!event.target.matches('.dropbtn')) {
-                document.querySelectorAll(".dropdown-content").forEach(content => content.classList.remove('show'));
-            }
-            const linksDropdown = document.getElementById('links-dropdown-container');
-            if (linksDropdown && !linksDropdown.contains(event.target) && !event.target.matches('[data-links]')) {
-                 linksDropdown.remove();
-            }
-        };
-        
-        window.openDataManagementModal = () => document.getElementById('dataManagementModal').style.display = 'block';
-        window.openDeleteAllDataModal = () => {
-            document.getElementById('deleteAllDataModal').style.display = 'block';
-            document.getElementById('deleteConfirmEmail').value = '';
-            document.getElementById('deleteConfirmPassword').value = '';
-        };
-        
-        window.toggleSelection = (checkbox) => {
-            const grandchildPath = checkbox.dataset.path;
-            if (checkbox.checked) selectedGrandchildren.add(grandchildPath); 
-            else selectedGrandchildren.delete(grandchildPath);
-            updateParentCheckboxState(checkbox.dataset.parentPath);
-            updateUIAfterAuthChange();
-        };
-
-        window.toggleGrandchildrenCheckboxes = (childCheckbox) => {
-            const childPath = childCheckbox.dataset.childPath;
-            const isChecked = childCheckbox.checked;
-            childCheckbox.indeterminate = false;
-            const grandchildrenCheckboxes = document.querySelectorAll(`.grandchild-checkbox[data-parent-path="${childPath}"]`);
-            grandchildrenCheckboxes.forEach(cb => {
-                if (cb.checked !== isChecked) {
-                    cb.checked = isChecked;
-                    cb.dispatchEvent(new Event('change'));
-                }
-            });
-        };
-
-        window.toggleAllCheckboxes = (masterCheckbox) => {
-            const isChecked = masterCheckbox.checked;
-            document.querySelectorAll('.child-checkbox, .grandchild-checkbox').forEach(cb => {
-                cb.indeterminate = false;
-                if (cb.checked !== isChecked) {
-                    cb.checked = isChecked;
-                    cb.dispatchEvent(new Event('change'));
-                }
-            });
-        };
-        // --- *** END FUNCTION DEFINITIONS FOR HTML ONCLICK *** ---
-
-
-        // --- AUTHENTICATION LOGIC ---
-        onAuthStateChanged(auth, user => {
-            isAuthenticated = !!user;
-            const settingsDocRef = doc(db, 'settings', 'global');
-            onSnapshot(settingsDocRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    editModeStatusByYear = docSnap.data().editModeStatus || {};
-                } else {
-                    editModeStatusByYear = {};
-                }
-                updateUIAfterAuthChange();
-            });
-            updateUIAfterAuthChange();
-        });
-
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('email').dataset.realEmail;
-            const password = document.getElementById('password').value;
-            const loginButton = loginForm.querySelector('button');
-            loginError.style.display = 'none';
-            loginButton.disabled = true;
-            loginButton.textContent = 'Đang xử lý...';
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-                window.closeAllModals();
-            } catch (error) {
-                console.error("Lỗi đăng nhập:", error);
-                let errorMessage = "Đã xảy ra lỗi. Vui lòng thử lại.";
-                if (error.code === 'auth/invalid-credential') errorMessage = "Mật khẩu không chính xác.";
-                loginError.textContent = errorMessage;
-                loginError.style.display = 'block';
-            } finally {
-                loginButton.disabled = false;
-                loginButton.textContent = 'Đăng nhập';
-            }
-        });
-
-        // --- CORE APP LOGIC ---
-
-        function updateUIAfterAuthChange() {
+        function updateButtonStates() {
             const isCurrentYearEditable = editModeStatusByYear[currentYear] === true;
-            const canPerformStructuralChanges = isAuthenticated && isCurrentYearEditable;
-            const canPerformExecution = isAuthenticated;
+            
+            const multiExecuteButton = document.getElementById('multiExecuteBtn');
+            multiExecuteButton.disabled = selectedGrandchildren.size === 0;
 
-            // Update auth/logout buttons in Data Management modal
-            const authSection = document.getElementById('authSection');
-            const logoutSection = document.getElementById('logoutSection');
-            if (authSection) authSection.style.display = isAuthenticated ? 'none' : 'block';
-            if (logoutSection) logoutSection.style.display = isAuthenticated ? 'block' : 'none';
+            const deleteSelectedButton = document.getElementById('deleteSelectedBtn');
+            deleteSelectedButton.disabled = !isCurrentYearEditable || selectedGrandchildren.size === 0;
 
-            // --- Buttons that require login + edit mode (structural changes) ---
-            document.getElementById('deleteSelectedBtn').disabled = !canPerformStructuralChanges || selectedGrandchildren.size === 0;
-            const dataManagementModal = document.getElementById('dataManagementModal');
-            if (dataManagementModal) {
-                 dataManagementModal.querySelector('.btn-primary[onclick="importData()"]').disabled = !canPerformStructuralChanges;
-                 dataManagementModal.querySelector('.btn-danger[onclick="openDeleteAllDataModal()"]').disabled = !canPerformStructuralChanges;
-            }
-            // Action buttons in the table for adding/editing tasks
-            document.querySelectorAll('#taskList .dropbtn, #taskList .btn-edit-grandchild').forEach(btn => {
-                btn.disabled = !canPerformStructuralChanges;
+            const actionButtons = document.querySelectorAll('#taskList .dropbtn, #taskList .btn-edit-grandchild');
+            actionButtons.forEach(btn => {
+                btn.disabled = !isCurrentYearEditable;
             });
-
-            // --- Buttons that only require login ---
-            document.getElementById('multiExecuteBtn').disabled = !canPerformExecution || selectedGrandchildren.size === 0;
-            const unlockButton = document.getElementById('unlockButton');
-            if (unlockButton) unlockButton.disabled = !canPerformExecution;
         }
+
+        window.togglePlanningColumns = (isChecked) => {
+            const taskList = document.getElementById('taskList');
+            planningModeByYear[currentYear] = isChecked;
+            if (isChecked) {
+                taskList.classList.add('planning-mode');
+            } else {
+                taskList.classList.remove('planning-mode');
+            }
+        };
 
         function getParentCollectionName() {
             return `công việc mẹ ${currentYear}`;
@@ -633,6 +518,15 @@
             yearSelect.value = currentYearValue;
         }
 
+        window.changeYear = (year) => {
+            currentYear = parseInt(year);
+            fetchData();
+            updateButtonStates();
+            const isPlanningMode = planningModeByYear[currentYear] || false;
+            document.getElementById('planningModeToggle').checked = isPlanningMode;
+            togglePlanningColumns(isPlanningMode);
+        };
+
         async function ensureYearCollectionExists(year) {
             const collectionName = `công việc mẹ ${year}`;
             try {
@@ -646,7 +540,62 @@
                 console.log(`Collection cho năm ${year} chưa tồn tại, sẽ được tạo khi có dữ liệu`);
             }
         }
+
+        // --- UI ELEMENTS ---
+        const loginContainer = document.getElementById('login-container');
+        const mainContainer = document.getElementById('container');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+
+        // --- AUTHENTICATION LOGIC ---
         
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                loginContainer.style.display = 'none';
+                mainContainer.style.display = 'block';
+
+                const settingsDocRef = doc(db, 'settings', 'global');
+                onSnapshot(settingsDocRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        editModeStatusByYear = docSnap.data().editModeStatus || {};
+                    } else {
+                        editModeStatusByYear = {};
+                    }
+                    updateButtonStates();
+                });
+
+                initializeYearDropdown();
+                fetchData();
+                initializeGoogleClients();
+            } else {
+                loginContainer.style.display = 'block';
+                mainContainer.style.display = 'none';
+                document.getElementById('taskListBody').innerHTML = '';
+            }
+        });
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').dataset.realEmail;
+            const password = document.getElementById('password').value;
+            const loginButton = loginForm.querySelector('button');
+            loginError.style.display = 'none';
+            loginButton.disabled = true;
+            loginButton.textContent = 'Đang xử lý...';
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                console.error("Lỗi đăng nhập:", error);
+                let errorMessage = "Đã xảy ra lỗi. Vui lòng thử lại.";
+                if (error.code === 'auth/invalid-credential') errorMessage = "Mật khẩu không chính xác.";
+                loginError.textContent = errorMessage;
+                loginError.style.display = 'block';
+            } finally {
+                loginButton.disabled = false;
+                loginButton.textContent = 'Đăng nhập';
+            }
+        });
+
         // --- CÁC HÀM TIỆN ÍCH ---
         const formatNumber = (num) => num?.toLocaleString('vi-VN') || '0';
         
@@ -710,7 +659,10 @@
                 try {
                     statusDiv.className = 'success'; statusDiv.innerText = "Đang đọc file...";
                     const workbook = XLSX.read(new Uint8Array(event.target.result), { type: 'array' });
-                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { raw: false });
+                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { 
+                        raw: false,
+                        defval: ''
+                    });
                     const headers = jsonData.length > 0 ? Object.keys(jsonData[0]) : [];
                     statusDiv.innerText = "Đã đọc file. Đang xử lý...";
                     
@@ -719,7 +671,7 @@
                     statusDiv.innerText = "Đang nhập dữ liệu vào Firestore...";
                     await writeTreeToFirestore(taskTree);
                     statusDiv.innerText = "Nhập dữ liệu thành công! Đang tải lại danh sách...";
-                    window.closeAllModals();
+                    closeAllModals();
                     await fetchData();
                 } catch (error) { console.error("Lỗi khi nhập: ", error); statusDiv.className = 'error'; statusDiv.innerText = `Lỗi: ${error.message}`; }
             };
@@ -730,17 +682,6 @@
             const tree = []; let currentParent = null;
             const isRoman = /^[IVXLCDM]+$/i; const isNumber = /^\d+$/; const isSubNumber = /^\d+\.\d+$/;
             
-            const availableColumns = {
-                tt: headers.includes('TT'),
-                noiDung: headers.includes('Nội dung') || headers.includes('NỘI DUNG CÔNG VIỆC'),
-                donVi: headers.includes('Đơn vị'),
-                soLuong: headers.includes('Số lượng') || headers.includes('Số lượng vật tư'),
-                capDo: headers.includes('Cấp độ'),
-                chiPhi: headers.includes('Chi phí') || headers.includes('Chi phí kế hoạch 2025'),
-                chiPhiThucHien: headers.includes('Chi phí thực hiện'),
-                keHoachConLai: headers.includes('Kế hoạch còn lại')
-            };
-
             const findValue = (row, keys) => {
                 for (const key of keys) {
                     if (headers.includes(key) && row[key] !== undefined && row[key] !== null && row[key] !== '') {
@@ -751,49 +692,34 @@
             };
 
             jsonData.forEach((row) => {
-                const tt = availableColumns.tt ? String(row.TT || '').trim() : '';
+                const tt = String(row.TT || '').trim();
                 if (!tt) return;
                 
                 const data = { tt };
                 
-                if (availableColumns.noiDung) {
-                    const noiDungValue = findValue(row, ['Nội dung', 'NỘI DUNG CÔNG VIỆC']);
-                    if (noiDungValue !== undefined) data.noiDung = noiDungValue;
-                }
+                const noiDungValue = findValue(row, ['Nội dung', 'NỘI DUNG CÔNG VIỆC']);
+                if (noiDungValue !== undefined) data.noiDung = noiDungValue;
                 
-                if (availableColumns.donVi) {
-                    const donViValue = findValue(row, ['Đơn vị']);
-                    if (donViValue !== undefined) data.donVi = donViValue;
-                }
+                const donViValue = findValue(row, ['Đơn vị']);
+                if (donViValue !== undefined) data.donVi = donViValue;
                 
-                if (availableColumns.soLuong) {
-                    const soLuongValue = findValue(row, ['Số lượng', 'Số lượng vật tư']);
-                    if (soLuongValue !== undefined) data.soLuong = soLuongValue;
-                }
+                const soLuongValue = findValue(row, ['Số lượng', 'Số lượng vật tư']);
+                if (soLuongValue !== undefined) data.soLuong = soLuongValue;
                 
-                if (availableColumns.capDo) {
-                    const capDoValue = findValue(row, ['Cấp độ']);
-                    if (capDoValue !== undefined) data.capDo = capDoValue;
-                }
+                const thoiDiemValue = findValue(row, ['Thời điểm TH']);
+                if (thoiDiemValue !== undefined) data.thoiDiemTH = thoiDiemValue;
                 
-                if (availableColumns.chiPhi) {
-                    const chiPhiValue = findValue(row, ['Chi phí', 'Chi phí kế hoạch 2025']);
-                    if (chiPhiValue !== undefined) data.chiPhi = parseNumber(chiPhiValue);
-                }
+                const tanSuatValue = findValue(row, ['Tần suất TH']);
+                if (tanSuatValue !== undefined) data.tanSuatTH = Math.max(0, parseInt(tanSuatValue, 10)) || 0;
                 
-                if (availableColumns.chiPhiThucHien) {
-                    const chiPhiThucHienValue = findValue(row, ['Chi phí thực hiện']);
-                    if (chiPhiThucHienValue !== undefined) data.chiPhiThucHien = parseNumber(chiPhiThucHienValue);
-                }
+                const dvThucHienValue = findValue(row, ['ĐV th.hiện']);
+                if (dvThucHienValue !== undefined) data.dvThucHien = dvThucHienValue;
+
+                const capDoValue = findValue(row, ['Cấp độ']);
+                if (capDoValue !== undefined) data.capDo = capDoValue;
                 
-                if (availableColumns.keHoachConLai) {
-                    const keHoachConLaiValue = findValue(row, ['Kế hoạch còn lại']);
-                    if (keHoachConLaiValue !== undefined) {
-                        data.keHoachConLai = parseNumber(keHoachConLaiValue);
-                    } else if (data.chiPhi !== undefined && data.chiPhiThucHien !== undefined) {
-                        data.keHoachConLai = data.chiPhi - data.chiPhiThucHien;
-                    }
-                }
+                const chiPhiValue = findValue(row, ['Chi phí', 'Chi phí kế hoạch 2025']);
+                if (chiPhiValue !== undefined) data.chiPhi = parseNumber(chiPhiValue);
                 
                 const taskNode = { id: tt, data };
                 
@@ -903,6 +829,22 @@
             await batch.commit();
         };
         
+        const romanToInt = (s) => {
+            if (!s || typeof s !== 'string') return 0;
+            const romanMap = { 'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000 };
+            let num = 0;
+            for (let i = 0; i < s.length; i++) {
+                const current = romanMap[s[i].toUpperCase()];
+                const next = romanMap[s[i + 1]?.toUpperCase()];
+                if (current < next) {
+                    num -= current;
+                } else {
+                    num += current;
+                }
+            }
+            return num;
+        };
+
         const naturalSort = (a, b) => {
             const partsA = String(a.id).split('.').map(v => parseInt(v, 10));
             const partsB = String(b.id).split('.').map(v => parseInt(v, 10));
@@ -914,26 +856,70 @@
             }
             return 0;
         };
+        
+        window.toggleDropdown = (event) => {
+            event.stopPropagation();
+            document.querySelectorAll(".dropdown-content").forEach(content => {
+                if (content !== event.target.nextElementSibling) content.classList.remove('show');
+            });
+            event.target.nextElementSibling.classList.toggle("show");
+        };
+
+        window.showLinks = (event) => {
+            event.stopPropagation();
+            const existingDropdown = document.getElementById('links-dropdown-container');
+            if (existingDropdown) existingDropdown.remove();
+            const button = event.target;
+            const links = JSON.parse(button.dataset.links);
+            if (!links || links.length === 0) return;
+            const dropdown = document.createElement('div');
+            dropdown.id = 'links-dropdown-container';
+            dropdown.className = 'links-dropdown';
+            links.forEach(link => {
+                const a = document.createElement('a');
+                a.href = link;
+                a.textContent = link.length > 50 ? link.substring(0, 50) + '...' : link;
+                a.target = '_blank';
+                a.title = link;
+                dropdown.appendChild(a);
+            });
+            document.body.appendChild(dropdown);
+            const rect = button.getBoundingClientRect();
+            dropdown.style.left = `${rect.left + window.scrollX}px`;
+            dropdown.style.top = `${rect.bottom + window.scrollY}px`;
+        };
+        
+        window.onclick = function(event) {
+            if (!event.target.matches('.dropbtn')) {
+                document.querySelectorAll(".dropdown-content").forEach(content => content.classList.remove('show'));
+            }
+            const linksDropdown = document.getElementById('links-dropdown-container');
+            if (linksDropdown && !linksDropdown.contains(event.target) && !event.target.matches('[data-links]')) {
+                 linksDropdown.remove();
+            }
+        };
 
         window.fetchData = async () => {
             const tableBody = document.getElementById('taskListBody');
-            tableBody.innerHTML = `<tr><td colspan="11">Đang tải dữ liệu...</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="14">Đang tải dữ liệu...</td></tr>`;
             try {
                 await ensureYearCollectionExists(currentYear);
                 
                 const executedGrandchildPaths = new Set();
                 const hoSoLinkMap = new Map();
+                const executionCountMap = new Map();
+
                 const execQuery = query(collectionGroup(db, 'thực hiện'));
                 const execSnapshot = await getDocs(execQuery);
                 execSnapshot.forEach(docSnap => {
                     if (docSnap.ref.path.includes(getParentCollectionName())) {
                         const data = docSnap.data();
+                        const grandchildPath = docSnap.ref.parent.parent.path;
                         if ((data.dvt && parseNumber(data.dvt) !== 0) || data.hoSoLink) {
-                            executedGrandchildPaths.add(docSnap.ref.parent.parent.path);
+                            executedGrandchildPaths.add(grandchildPath);
                         }
                         if (data.hoSoLink) {
                             const pathParts = docSnap.ref.path.split('/');
-                            const grandchildPath = pathParts.slice(0, 6).join('/');
                             const childPath = pathParts.slice(0, 4).join('/');
                             const parentPath = pathParts.slice(0, 2).join('/');
                             [grandchildPath, childPath, parentPath].forEach(path => {
@@ -941,6 +927,7 @@
                                 hoSoLinkMap.get(path).add(data.hoSoLink);
                             });
                         }
+                        executionCountMap.set(grandchildPath, (executionCountMap.get(grandchildPath) || 0) + 1);
                     }
                 });
 
@@ -952,20 +939,23 @@
                 const parentSnapshot = await getDocs(query(collection(db, getParentCollectionName())));
                 const parents = parentSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
+                parents.sort((a, b) => romanToInt(a.id) - romanToInt(b.id));
+
                 for (const parentData of parents) {
                     totalPlannedCost += parentData.chiPhi || 0;
                     totalExecutedCost += parentData.chiPhiThucHien || 0;
                     const parentPath = `${getParentCollectionName()}/${parentData.id}`;
                     const parentLinks = hoSoLinkMap.get(parentPath);
-                    let parentHoSoHtml = '<td></td>';
+                    let parentHoSoHtml = '<td class="col-hoso"></td>';
                     if (parentLinks && parentLinks.size > 0) {
                         const linksJson = JSON.stringify(Array.from(parentLinks));
-                        parentHoSoHtml = `<td><button class="btn-info btn-action" data-links='${linksJson}' onclick="showLinks(event)">Có</button></td>`;
+                        parentHoSoHtml = `<td class="col-hoso"><button class="btn-info btn-action" data-links='${linksJson}' onclick="showLinks(event)">Có</button></td>`;
                     }
                     html += `<tr class="task-parent">
-                        <td></td><td>${parentData.tt}</td><td>${parentData.noiDung}</td><td></td><td></td>
+                        <td></td><td>${parentData.tt}</td><td colspan="3">${parentData.noiDung}</td>
+                        <td class="col-thoidiem-th"></td><td class="col-tansuat-th"></td><td class="col-dv-thuchien"></td>
                         <td class="text-right">${formatNumber(parentData.chiPhi)}</td>
-                        <td class="text-right">${formatNumber(parentData.chiPhiThucHien)}</td>
+                        <td class="text-right col-chiphi-thuchien">${formatNumber(parentData.chiPhiThucHien)}</td>
                         <td class="text-right">${formatNumber(parentData.keHoachConLai)}</td>
                         <td></td>${parentHoSoHtml}
                         <td><div class="dropdown"><button onclick="toggleDropdown(event)" class="btn-secondary btn-action dropbtn">Thêm/sửa</button><div class="dropdown-content"><a href="#" onclick="openAddModal('${parentPath}', 'child')">Thêm Thiết bị mới</a><a href="#" onclick="handleEditClick('${parentPath}', 'parent')">Sửa Nội dung</a></div></div></td>
@@ -984,17 +974,18 @@
                         
                         const childPath = `${parentPath}/công việc con/${childData.id}`;
                         const childLinks = hoSoLinkMap.get(childPath);
-                        let childHoSoHtml = '<td></td>';
+                        let childHoSoHtml = '<td class="col-hoso"></td>';
                         if (childLinks && childLinks.size > 0) {
                             const linksJson = JSON.stringify(Array.from(childLinks));
-                            childHoSoHtml = `<td><button class="btn-info btn-action" data-links='${linksJson}' onclick="showLinks(event)">Có</button></td>`;
+                            childHoSoHtml = `<td class="col-hoso"><button class="btn-info btn-action" data-links='${linksJson}' onclick="showLinks(event)">Có</button></td>`;
                         }
                         if (!childData.isHidden) {
                             html += `<tr class="task-child">
                                 <td><input type="checkbox" class="child-checkbox" data-child-path="${childPath}" onchange="toggleGrandchildrenCheckboxes(this)"></td>
-                                <td>${childData.tt}</td><td>${childData.noiDung}</td><td></td>
-                                <td></td><td class="text-right">${formatNumber(childData.chiPhi)}</td>
-                                <td class="text-right">${formatNumber(childData.chiPhiThucHien)}</td>
+                                <td>${childData.tt}</td><td colspan="3">${childData.noiDung}</td>
+                                <td class="col-thoidiem-th"></td><td class="col-tansuat-th"></td><td class="col-dv-thuchien"></td>
+                                <td class="text-right">${formatNumber(childData.chiPhi)}</td>
+                                <td class="text-right col-chiphi-thuchien">${formatNumber(childData.chiPhiThucHien)}</td>
                                 <td class="text-right">${formatNumber(childData.keHoachConLai)}</td>
                                 <td>${childData.capDo || ''}</td>${childHoSoHtml}
                                 <td><div class="dropdown"><button onclick="toggleDropdown(event)" class="btn-secondary btn-action dropbtn">Thêm/sửa</button><div class="dropdown-content"><a href="#" onclick="openAddModal('${childPath}', 'grandchild')">Thêm công việc chi tiết</a><a href="#" onclick="handleEditClick('${childPath}', 'child')">Sửa Nội dung</a></div></div></td>
@@ -1006,33 +997,43 @@
                         
                         for (const grandchildData of grandchildren) {
                             if (grandchildData.soLuong && parseNumber(grandchildData.soLuong) > 0) {
-                                totalGrandchildren++;
+                                totalGrandchildren += (grandchildData.tanSuatTH || 0);
                             }
 
                             const grandchildPath = `${childPath}/công việc cháu/${grandchildData.id}`;
                             const noiDungStyle = executedGrandchildPaths.has(grandchildPath) ? 'style="color: #5B77A8;"' : '';
                             const grandchildLinks = hoSoLinkMap.get(grandchildPath);
-                            let grandchildHoSoHtml = '<td></td>';
+                            let grandchildHoSoHtml = '<td class="col-hoso"></td>';
                             if (grandchildLinks && grandchildLinks.size > 0) {
                                 const linksJson = JSON.stringify(Array.from(grandchildLinks));
-                                grandchildHoSoHtml = `<td><button class="btn-info btn-action" data-links='${linksJson}' onclick="showLinks(event)">Có</button></td>`;
+                                grandchildHoSoHtml = `<td class="col-hoso"><button class="btn-info btn-action" data-links='${linksJson}' onclick="showLinks(event)">Có</button></td>`;
                             }
-                            const isExecuted = (grandchildData.chiPhiThucHien && grandchildData.chiPhiThucHien > 0) || (grandchildLinks && grandchildLinks.size > 0);
-                            if (isExecuted) totalExecutedGrandchildren++;
+                            
+                            if (grandchildData.chiPhi === 0) {
+                                if (grandchildLinks && grandchildLinks.size > 0) {
+                                    totalExecutedGrandchildren++;
+                                }
+                            } else {
+                                totalExecutedGrandchildren += executionCountMap.get(grandchildPath) || 0;
+                            }
+
                             html += `<tr>
                                 <td><input type="checkbox" class="grandchild-checkbox" data-parent-path="${childPath}" data-path="${grandchildPath}" onchange="toggleSelection(this)"></td>
-                                <td>${grandchildData.tt}</td><td ${noiDungStyle}>${grandchildData.noiDung}</td>
-                                <td>${grandchildData.donVi}</td><td>${grandchildData.soLuong}</td>
-                                <td class="text-right">${formatNumber(grandchildData.chiPhi)}</td>
-                                <td class="text-right">${formatNumber(grandchildData.chiPhiThucHien)}</td>
+                                <td>${grandchildData.tt}</td><td class="col-noidung">${grandchildData.noiDung}</td>
+                                <td class="col-donvi">${grandchildData.donVi || ''}</td><td class="col-soluong">${grandchildData.soLuong || ''}</td>
+                                <td class="col-thoidiem-th">${grandchildData.thoiDiemTH || ''}</td>
+                                <td class="col-tansuat-th">${grandchildData.tanSuatTH || ''}</td>
+                                <td class="col-dv-thuchien">${grandchildData.dvThucHien || ''}</td>
+                                <td class="text-right col-chiphi">${formatNumber(grandchildData.chiPhi)}</td>
+                                <td class="text-right col-chiphi-thuchien">${formatNumber(grandchildData.chiPhiThucHien)}</td>
                                 <td class="text-right">${formatNumber(grandchildData.keHoachConLai)}</td>
-                                <td>${grandchildData.capDo}</td>${grandchildHoSoHtml}
+                                <td class="col-capdo">${grandchildData.capDo || ''}</td>${grandchildHoSoHtml}
                                 <td><button class="btn-secondary btn-action btn-edit-grandchild" onclick="handleEditClick('${grandchildPath}', 'grandchild')">Sửa</button></td>
                             </tr>`;
                         }
                     }
                 }
-                tableBody.innerHTML = html || `<tr><td colspan="11">Không có dữ liệu cho năm ${currentYear}.</td></tr>`;
+                tableBody.innerHTML = html || `<tr><td colspan="14">Không có dữ liệu cho năm ${currentYear}.</td></tr>`;
                 const childPercentage = totalChildTasks > 0 ? Math.round((totalExecutedChildTasks / totalChildTasks) * 100) : 0;
                 const grandchildPercentage = totalGrandchildren > 0 ? Math.round((totalExecutedGrandchildren / totalGrandchildren) * 100) : 0;
                 const costPercentage = totalPlannedCost > 0 ? Math.round((totalExecutedCost / totalPlannedCost) * 100) : 0;
@@ -1048,9 +1049,9 @@
                         <p><strong>Tổng chi phí đã thực hiện:</strong> ${formatNumber(totalExecutedCost)} <span class="percentage">(${costPercentage}%)</span></p>
                     </div>`;
                 selectedGrandchildren.clear();
-                updateUIAfterAuthChange();
+                updateButtonStates();
                 statusDiv.innerText = '';
-            } catch (error) { console.error("Lỗi tải dữ liệu: ", error); tableBody.innerHTML = `<tr><td colspan="11">Lỗi tải dữ liệu: ${error.message}</td></tr>`; }
+            } catch (error) { console.error("Lỗi tải dữ liệu: ", error); tableBody.innerHTML = `<tr><td colspan="14">Lỗi tải dữ liệu: ${error.message}</td></tr>`; }
         };
 
         window.recalculateAllCostsAndReload = async () => {
@@ -1083,6 +1084,24 @@
             } finally {
                 button.disabled = false;
             }
+        };
+
+
+        window.closeAllModals = () => {
+            document.querySelectorAll('.modal').forEach(modal => modal.style.display = 'none');
+            const toggleDiv = document.getElementById('editModeToggle');
+            if (toggleDiv) {
+                toggleDiv.style.display = 'none';
+                document.getElementById('unlockButton').style.display = 'block';
+            }
+        };
+
+        window.openDataManagementModal = () => document.getElementById('dataManagementModal').style.display = 'block';
+
+        window.openDeleteAllDataModal = () => {
+            document.getElementById('deleteAllDataModal').style.display = 'block';
+            document.getElementById('deleteConfirmEmail').value = '';
+            document.getElementById('deleteConfirmPassword').value = '';
         };
 
         window.confirmDeleteAllData = async () => {
@@ -1120,7 +1139,7 @@
                     await deleteDoc(parentDoc.ref);
                 }
                 statusDiv.innerText = "Đã xoá thành công.";
-                window.closeAllModals();
+                closeAllModals();
                 await fetchData();
             } catch (error) {
                 console.error("Lỗi khi xoá: ", error);
@@ -1154,18 +1173,23 @@
             const isChild = level === 'child';
             const isDisabled = (field) => {
                 if (field === 'tt') return true;
-                if ((isParent || isChild) && ['donVi', 'soLuong', 'chiPhi'].includes(field)) return true;
-                if (isParent && field === 'capDo') return true;
+                if ((isParent || isChild)) {
+                    // Cho phép sửa nội dung cho parent/child, khóa các trường khác
+                    return field !== 'noiDung';
+                }
                 return false;
             };
             const chiPhiEvent = level === 'grandchild' ? 'onfocus="this.select()"' : '';
             return `<tr data-path="${path}">
-                        <td class="col-tt"><input type="text" value="${data.tt || ''}" ${isDisabled('tt') ? 'disabled' : ''}></td>
-                        <td class="col-noidung"><input type="text" value="${data.noiDung || ''}" data-field="noiDung"></td>
-                        <td class="col-donvi"><input type="text" value="${data.donVi || ''}" data-field="donVi" ${isDisabled('donVi') ? 'disabled' : ''}></td>
-                        <td class="col-soluong"><input type="text" value="${data.soLuong || ''}" data-field="soLuong" ${isDisabled('soLuong') ? 'disabled' : ''}></td>
-                        <td class="col-chiphi"><input type="text" value="${formatNumber(data.chiPhi || 0)}" data-field="chiPhi" oninput="this.value=formatNumber(parseNumber(this.value))" ${chiPhiEvent} ${isDisabled('chiPhi') ? 'disabled' : ''}></td>
-                        <td class="col-capdo"><input type="text" value="${data.capDo || ''}" data-field="capDo" ${isDisabled('capDo') ? 'disabled' : ''}></td>
+                        <td><input type="text" value="${data.tt || ''}" disabled></td>
+                        <td><input type="text" value="${data.noiDung || ''}" data-field="noiDung" ${isDisabled('noiDung') ? 'disabled' : ''}></td>
+                        <td><input type="text" value="${data.donVi || ''}" data-field="donVi" ${isDisabled('donVi') ? 'disabled' : ''}></td>
+                        <td><input type="text" value="${data.soLuong || ''}" data-field="soLuong" ${isDisabled('soLuong') ? 'disabled' : ''}></td>
+                        <td><input type="text" value="${data.thoiDiemTH || ''}" data-field="thoiDiemTH" ${isDisabled('thoiDiemTH') ? 'disabled' : ''}></td>
+                        <td><input type="number" value="${data.tanSuatTH || ''}" data-field="tanSuatTH" ${isDisabled('tanSuatTH') ? 'disabled' : ''}></td>
+                        <td><input type="text" value="${data.dvThucHien || ''}" data-field="dvThucHien" ${isDisabled('dvThucHien') ? 'disabled' : ''}></td>
+                        <td><input type="text" value="${formatNumber(data.chiPhi || 0)}" data-field="chiPhi" oninput="this.value=formatNumber(parseNumber(this.value))" ${chiPhiEvent} ${isDisabled('chiPhi') ? 'disabled' : ''}></td>
+                        <td><input type="text" value="${data.capDo || ''}" data-field="capDo" ${isDisabled('capDo') ? 'disabled' : ''}></td>
                     </tr>`;
         };
 
@@ -1181,9 +1205,7 @@
             
             const showNote = pathsToEdit.some(path => path.includes('cháu'));
             const headers = [
-                { text: 'TT', class: 'col-tt'}, { text: 'Nội dung', class: 'col-noidung' },
-                { text: 'Đơn vị', class: 'col-donvi' }, { text: 'Số lượng', class: 'col-soluong' },
-                { text: 'Chi phí', class: 'col-chiphi' }, { text: 'Cấp độ', class: 'col-capdo' }
+                'TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Thời điểm TH', 'Tần suất TH', 'ĐV th.hiện', 'Chi phí', 'Cấp độ'
             ];
             let table = createModalTable(headers);
             for (const path of pathsToEdit) {
@@ -1220,9 +1242,7 @@
                 newTT = `${parentTT}.${maxSubId + 1}`;
             }
             const headers = [
-                { text: 'TT', class: 'col-tt'}, { text: 'Nội dung', class: 'col-noidung' },
-                { text: 'Đơn vị', class: 'col-donvi' }, { text: 'Số lượng', class: 'col-soluong' },
-                { text: 'Chi phí', class: 'col-chiphi' }, { text: 'Cấp độ', class: 'col-capdo' }
+                 'TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Thời điểm TH', 'Tần suất TH', 'ĐV th.hiện', 'Chi phí', 'Cấp độ'
             ];
             let table = createModalTable(headers);
             table += createInputRow(parentPath, { tt: newTT }, level);
@@ -1297,7 +1317,12 @@
                     const updatedData = {};
                     row.querySelectorAll('input[data-field]').forEach(input => {
                         const field = input.dataset.field;
-                        updatedData[field] = (field === 'chiPhi') ? parseFormattedNumber(input.value) : input.value;
+                        if (field === 'tanSuatTH') {
+                            const value = parseInt(input.value, 10);
+                            updatedData[field] = isNaN(value) || value < 0 ? 0 : value;
+                        } else {
+                           updatedData[field] = (field === 'chiPhi') ? parseFormattedNumber(input.value) : input.value;
+                        }
                     });
                     if (path.includes('cháu')) {
                         const chiPhi = updatedData.chiPhi || 0;
@@ -1309,7 +1334,7 @@
                 }
                 await batch.commit();
                 await recalculateCostsForParents(pathsToRecalculate);
-                window.closeAllModals();
+                closeAllModals();
                 await fetchData();
                 statusDiv.className = 'success'; statusDiv.innerText = `Đã cập nhật ${rows.length} công việc.`;
             } catch (error) {
@@ -1325,7 +1350,12 @@
             const newData = { tt: newTT, isHidden: false, chiPhi: 0, chiPhiThucHien: 0 };
             row.querySelectorAll('input[data-field]').forEach(input => {
                 const field = input.dataset.field;
-                newData[field] = (field === 'chiPhi') ? parseFormattedNumber(input.value) : input.value;
+                 if (field === 'tanSuatTH') {
+                    const value = parseInt(input.value, 10);
+                    newData[field] = isNaN(value) || value < 0 ? 0 : value;
+                } else {
+                    newData[field] = (field === 'chiPhi') ? parseFormattedNumber(input.value) : input.value;
+                }
             });
             newData.keHoachConLai = newData.chiPhi || 0;
             if (!newData.noiDung) { alert("Nội dung công việc không được để trống!"); return; }
@@ -1333,7 +1363,7 @@
             const newDocPath = `${parentPath}/${subCollectionName}/${newTT}`;
             await setDoc(doc(db, newDocPath), newData);
             await recalculateCostsForParents([newDocPath]);
-            window.closeAllModals();
+            closeAllModals();
             await fetchData();
             statusDiv.className = 'success'; statusDiv.innerText = 'Thêm công việc thành công!';
         };
@@ -1558,7 +1588,7 @@
                     await checkAndUpdateDaThucHien(childPath);
                 }
 
-                window.closeAllModals();
+                closeAllModals();
                 await fetchData();
                 statusDiv.innerText = `Đã lưu các mục thực hiện thành công.`;
             } catch (error) {
@@ -1613,7 +1643,7 @@
                                 <button class="btn-success" onclick="exportAllExecutionsToExcel()" style="margin-right: 20px;">Xuất toàn bộ ra Excel</button>
                                </div>`;
             document.getElementById('modalTitle').innerHTML = modalHeader;
-            let table = `<table class="modal-table responsive-modal-table"><thead><tr><th style="width: 5%;">STT</th><th style="width: 10%;">Ngày T.Hiện</th><th>Trích yếu</th><th style="width: 15%; text-align:right;">Tổng chi phí</th><th style="width: 8%;">Số CV</th><th style="width: 15%;">Hành động</th></tr></thead><tbody>`;
+            let table = `<table class="modal-table responsive-modal-table search-modal-mobile"><thead><tr><th style="width: 5%;">STT</th><th style="width: 10%;">Ngày T.Hiện</th><th>Trích yếu</th><th style="width: 15%; text-align:right;">Tổng chi phí</th><th style="width: 8%;">Số CV</th><th style="width: 15%;">Hành động</th></tr></thead><tbody>`;
             if (querySnapshot.empty) {
                  table += `<tr><td colspan="6">Không tìm thấy lần thực hiện nào.</td></tr>`;
             } else {
@@ -1658,8 +1688,8 @@
                         <td data-label="Tổng chi phí" class="text-right">${formatNumber(totalCost)}</td>
                         <td data-label="Số CV">${grandchildCount}</td>
                         <td data-label="Hành động">
-                            <button class="btn-secondary btn-action" onclick="openExecutionEditModal(${keyParam})">Sửa</button>
-                            <button class="${profileButtonClass} btn-action" onclick="handleProfileUploadClick(${keyParam})">${profileButtonText}</button>
+                            <button class="btn-secondary btn-action btn-edit-exec" onclick="openExecutionEditModal(${keyParam})">Sửa</button>
+                            <button class="${profileButtonClass} btn-action btn-profile-exec" onclick="handleProfileUploadClick(${keyParam})">${profileButtonText}</button>
                         </td>
                     </tr>`;
                 }
@@ -1863,7 +1893,7 @@
                 }
 
                 await recalculateCostsForParents(Array.from(pathsToRecalculate));
-                window.closeAllModals();
+                closeAllModals();
                 await fetchData();
                 statusDiv.innerText = "Đã xóa thành công lần thực hiện.";
             } catch (error) {
@@ -1911,7 +1941,7 @@
                 }
                 
                 await recalculateCostsForParents(Array.from(pathsToRecalculate));
-                window.closeAllModals();
+                closeAllModals();
                 await fetchData();
                 statusDiv.className = 'success'; statusDiv.innerText = "Đã cập nhật thành công lần thực hiện.";
             } catch (error) {
@@ -1923,10 +1953,6 @@
         };
 
         window.handleProfileUploadClick = async (timestampKey) => {
-            if (!isAuthenticated) {
-                alert("Vui lòng xác thực trước khi tải lên hồ sơ.");
-                return;
-            }
             if (!gapiReady) { alert("Dịch vụ Google chưa sẵn sàng, vui lòng thử lại sau giây lát."); return; }
             try {
                 await ensureGapiAuthenticated();
@@ -1975,7 +2001,7 @@
                     
                     await batch.commit();
                 }
-                window.closeAllModals();
+                closeAllModals();
                 await fetchData();
                 statusDiv.innerText = `Tải lên và cập nhật hồ sơ thành công!`;
             } catch (error) {
@@ -1987,6 +2013,14 @@
                 uploadButton.textContent = 'Tải Lên';
             }
         }
+
+        window.toggleSelection = (checkbox) => {
+            const grandchildPath = checkbox.dataset.path;
+            if (checkbox.checked) selectedGrandchildren.add(grandchildPath); 
+            else selectedGrandchildren.delete(grandchildPath);
+            updateParentCheckboxState(checkbox.dataset.parentPath);
+            updateButtonStates();
+        };
         
         const updateParentCheckboxState = (parentPath) => {
              const parentCheckbox = document.querySelector(`.child-checkbox[data-child-path="${parentPath}"]`);
@@ -2004,6 +2038,30 @@
              }
         };
 
+        window.toggleGrandchildrenCheckboxes = (childCheckbox) => {
+            const childPath = childCheckbox.dataset.childPath;
+            const isChecked = childCheckbox.checked;
+            childCheckbox.indeterminate = false;
+            const grandchildrenCheckboxes = document.querySelectorAll(`.grandchild-checkbox[data-parent-path="${childPath}"]`);
+            grandchildrenCheckboxes.forEach(cb => {
+                if (cb.checked !== isChecked) {
+                    cb.checked = isChecked;
+                    cb.dispatchEvent(new Event('change'));
+                }
+            });
+        };
+
+        window.toggleAllCheckboxes = (masterCheckbox) => {
+            const isChecked = masterCheckbox.checked;
+            document.querySelectorAll('.child-checkbox, .grandchild-checkbox').forEach(cb => {
+                cb.indeterminate = false;
+                if (cb.checked !== isChecked) {
+                    cb.checked = isChecked;
+                    cb.dispatchEvent(new Event('change'));
+                }
+            });
+        };
+        
         window.deleteSelectedTasks = async () => {
             if (selectedGrandchildren.size === 0) {
                 alert("Vui lòng chọn ít nhất một công việc để xoá."); return;
@@ -2039,7 +2097,7 @@
                 console.error("Lỗi khi xoá công việc:", error);
                 statusDiv.className = 'error'; statusDiv.innerText = `Lỗi khi xoá: ${error.message}`;
             } finally {
-                updateUIAfterAuthChange();
+                updateButtonStates();
             }
         };
 
@@ -2065,7 +2123,7 @@
                     if (executions.length > maxExecutions) maxExecutions = executions.length;
                 });
                 statusDiv.innerText = 'Đang tạo cấu trúc file Excel...';
-                const baseHeaders = ['TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Chi phí', 'Chi phí thực hiện', 'Kế hoạch còn lại', 'Cấp độ'];
+                const baseHeaders = ['TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Thời điểm TH', 'Tần suất TH', 'ĐV th.hiện', 'Chi phí', 'Chi phí thực hiện', 'Kế hoạch còn lại', 'Cấp độ'];
                 const executionHeaders = [];
                 for (let i = 1; i <= maxExecutions; i++) {
                     executionHeaders.push(`Ngày TH (${i})`, `Số lượng (${i})`, `Đơn giá (${i})`, `Thành tiền (${i})`, `Timestamp (${i})`, `Hồ sơ Link (${i})`);
@@ -2075,22 +2133,32 @@
                 const boldRows = new Set(); 
                 const parentSnapshot = await getDocs(query(collection(db, getParentCollectionName())));
                 const parents = parentSnapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                
+                parents.sort((a, b) => romanToInt(a.id) - romanToInt(b.id));
+
                 for (const parentData of parents) {
                     boldRows.add(rows.length);
-                    const parentRowData = [ parentData.tt, parentData.noiDung, parentData.donVi, parentData.soLuong, parentData.chiPhi, parentData.chiPhiThucHien, parentData.keHoachConLai, parentData.capDo ];
+                    const parentRowData = [ parentData.tt, parentData.noiDung, '', '', '', '', '', '', parentData.chiPhi, parentData.chiPhiThucHien, parentData.keHoachConLai, '' ];
                     parentRowData.push(...Array(maxExecutions * 6).fill('')); 
                     rows.push(parentRowData);
                     const childSnapshot = await getDocs(query(collection(db, `${getParentCollectionName()}/${parentData.id}/công việc con`)));
                     const children = childSnapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                    
+                    children.sort((a, b) => parseInt(a.id, 10) - parseInt(b.id, 10));
+
                     for (const childData of children) {
                         boldRows.add(rows.length); 
-                        const childRowData = [ childData.tt, childData.noiDung, childData.donVi, childData.soLuong, childData.chiPhi, childData.chiPhiThucHien, childData.keHoachConLai, childData.capDo ];
+                        const childRowData = [ childData.tt, childData.noiDung, '', '', '', '', '', '', childData.chiPhi, childData.chiPhiThucHien, childData.keHoachConLai, childData.capDo ];
                         childRowData.push(...Array(maxExecutions * 6).fill('')); 
                         rows.push(childRowData);
                         const grandchildSnapshot = await getDocs(query(collection(db, `${getParentCollectionName()}/${parentData.id}/công việc con/${childData.id}/công việc cháu`)));
                         const grandchildren = grandchildSnapshot.docs.map(d => ({id: d.id, path: d.ref.path, ...d.data()})).sort((a,b) => naturalSort(a,b));
                         for (const grandchildData of grandchildren) {
-                            const grandchildRowData = [ grandchildData.tt, grandchildData.noiDung, grandchildData.donVi, grandchildData.soLuong, grandchildData.chiPhi, grandchildData.chiPhiThucHien, grandchildData.keHoachConLai, grandchildData.capDo ];
+                            const grandchildRowData = [ 
+                                grandchildData.tt, grandchildData.noiDung, grandchildData.donVi, grandchildData.soLuong,
+                                grandchildData.thoiDiemTH, grandchildData.tanSuatTH, grandchildData.dvThucHien,
+                                grandchildData.chiPhi, grandchildData.chiPhiThucHien, grandchildData.keHoachConLai, grandchildData.capDo 
+                            ];
                             const executions = executionsMap.get(grandchildData.path) || [];
                             executions.forEach(exec => {
                                 const execTimestamp = exec.timestamp && typeof exec.timestamp.toMillis === 'function' ? new Date(exec.timestamp.toMillis()).toLocaleString('vi-VN') : (exec.timestamp || '');
@@ -2117,7 +2185,7 @@
                         }
                     }
                 }
-                const colWidths = [ { wch: 8 }, { wch: 60 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 } ];
+                const colWidths = [ { wch: 8 }, { wch: 40 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 } ];
                 for (let i = 0; i < maxExecutions; i++) {
                     colWidths.push({ wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 22 }, { wch: 40 });
                 }
@@ -2140,11 +2208,6 @@
             }
         };
         scrollToTopBtn.onclick = () => { window.scrollTo({top: 0, behavior: 'smooth'}); };
-
-        // --- INITIAL PAGE LOAD SEQUENCE ---
-        initializeYearDropdown();
-        fetchData();
-        initializeGoogleClients();
 
     </script>
 
