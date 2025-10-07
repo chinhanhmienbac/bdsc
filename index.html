@@ -908,6 +908,7 @@
                 const executedGrandchildPaths = new Set();
                 const hoSoLinkMap = new Map();
                 const executionCountMap = new Map();
+                const hoSoLinkCountMap = new Map();
 
                 const execQuery = query(collectionGroup(db, 'thực hiện'));
                 const execSnapshot = await getDocs(execQuery);
@@ -926,6 +927,7 @@
                                 if (!hoSoLinkMap.has(path)) hoSoLinkMap.set(path, new Set());
                                 hoSoLinkMap.get(path).add(data.hoSoLink);
                             });
+                            hoSoLinkCountMap.set(grandchildPath, (hoSoLinkCountMap.get(grandchildPath) || 0) + 1);
                         }
                         executionCountMap.set(grandchildPath, (executionCountMap.get(grandchildPath) || 0) + 1);
                     }
@@ -1001,20 +1003,23 @@
                             }
 
                             const grandchildPath = `${childPath}/công việc cháu/${grandchildData.id}`;
+                            const plannedCount = grandchildData.tanSuatTH || 0;
+                            const chiPhi = grandchildData.chiPhi || 0;
+
+                            if (chiPhi > 0) {
+                                const actualCount = executionCountMap.get(grandchildPath) || 0;
+                                totalExecutedGrandchildren += Math.min(plannedCount, actualCount);
+                            } else { // chiPhi is 0
+                                const linkCount = hoSoLinkCountMap.get(grandchildPath) || 0;
+                                totalExecutedGrandchildren += Math.min(plannedCount, linkCount);
+                            }
+                            
                             const noiDungStyle = executedGrandchildPaths.has(grandchildPath) ? 'style="color: #5B77A8;"' : '';
                             const grandchildLinks = hoSoLinkMap.get(grandchildPath);
                             let grandchildHoSoHtml = '<td class="col-hoso"></td>';
                             if (grandchildLinks && grandchildLinks.size > 0) {
                                 const linksJson = JSON.stringify(Array.from(grandchildLinks));
                                 grandchildHoSoHtml = `<td class="col-hoso"><button class="btn-info btn-action" data-links='${linksJson}' onclick="showLinks(event)">Có</button></td>`;
-                            }
-                            
-                            if (grandchildData.chiPhi === 0) {
-                                if (grandchildLinks && grandchildLinks.size > 0) {
-                                    totalExecutedGrandchildren++;
-                                }
-                            } else {
-                                totalExecutedGrandchildren += executionCountMap.get(grandchildPath) || 0;
                             }
 
                             html += `<tr>
