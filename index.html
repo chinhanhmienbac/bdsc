@@ -101,11 +101,38 @@
         .modal-table input { width: 95%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
         .modal-table input:disabled { background-color: #e9ecef; cursor: not-allowed;}
         
-        .col-tt { width: 4%; }
+        /* ---- UNIFIED COLUMN WIDTHS ---- */
         .col-noidung { width: 25%; }
-        .col-donvi, .col-soluong, .col-capdo, .col-dvt, .col-dongia { width: 6%; }
+
+        .col-tt,
+        .col-donvi,
+        .col-soluong,
+        .col-tansuat-th,
+        .col-capdo,
+        .col-hoso {
+            width: 3%;
+        }
+
+        /* Other Columns (un-changed from original) */
         .col-chiphi, .col-thanhtien { width: 9%; }
         .col-thoidiem, .col-tansuat, .col-dvth { width: 7%; }
+        .col-dvt, .col-dongia { width: 6%; }
+
+        /* Generic Modal Table Column Widths (will be overridden by inline styles if present) */
+        /* TT / Mục */
+        .modal-table th:nth-child(1), .modal-table td:nth-child(1) { width: 3%; } 
+        /* Nội dung / Thiết bị */
+        .modal-table th:nth-child(2), .modal-table td:nth-child(2) { width: 25%; }
+        /* Đơn vị */
+        .modal-table th:nth-child(3), .modal-table td:nth-child(3) { width: 3%; } 
+        /* Số lượng */
+        .modal-table th:nth-child(4), .modal-table td:nth-child(4) { width: 3%; }
+        /* Tần suất TH (in Sửa info modal) */
+        .modal-table th:nth-child(6), .modal-table td:nth-child(6) { width: 3%; } 
+        /* Cấp độ (in Sửa info modal) */
+        .modal-table th:nth-child(9), .modal-table td:nth-child(9) { width: 3%; }
+        /* ---- END UNIFIED WIDTHS ---- */
+
         .modal-footer { text-align: right; margin-top: 20px; }
         .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
         
@@ -209,9 +236,9 @@
             }
             .search-modal-mobile .btn-profile-exec {
                 width: 100%;
-                padding: 10px 0;
-                font-size: 16px;
-                margin-top: 5px;
+                padding: 10px 0; /* Add vertical padding */
+                font-size: 16px;  /* Increase font size */
+                margin-top: 5px; /* Add some space above */
             }
         }
     </style>
@@ -985,12 +1012,12 @@
                             if (chiPhi > 0) {
                                 const actualCount = executionCountMap.get(grandchildPath) || 0;
                                 totalExecutedGrandchildren += Math.min(plannedCount, actualCount);
-                            } else { 
+                            } else { // chiPhi is 0
                                 const linkCount = hoSoLinkCountMap.get(grandchildPath) || 0;
                                 totalExecutedGrandchildren += Math.min(plannedCount, linkCount);
                             }
                             
-                            const noiDungStyle = executedGrandchildPaths.has(grandchildPath) ? 'style="color: #00008B;"' : '';
+                            const noiDungStyle = executedGrandchildPaths.has(grandchildPath) ? 'style="color: #5B77A8;"' : '';
                             const grandchildLinks = hoSoLinkMap.get(grandchildPath);
                             let grandchildHoSoHtml = '<td class="col-hoso"></td>';
                             if (grandchildLinks && grandchildLinks.size > 0) {
@@ -1174,6 +1201,7 @@
             const isDisabled = (field) => {
                 if (field === 'tt') return true;
                 if ((isParent || isChild)) {
+                    // Cho phép sửa nội dung cho parent/child, khóa các trường khác
                     return field !== 'noiDung';
                 }
                 return false;
