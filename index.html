@@ -1643,7 +1643,7 @@
                                 <button class="btn-success" onclick="exportAllExecutionsToExcel()" style="margin-right: 20px;">Xuất toàn bộ ra Excel</button>
                                </div>`;
             document.getElementById('modalTitle').innerHTML = modalHeader;
-            let table = `<table class="modal-table responsive-modal-table search-modal-mobile"><thead><tr><th style="width: 5%;">STT</th><th style="width: 10%;">Ngày T.Hiện</th><th>Trích yếu</th><th style="width: 15%; text-align:right;">Tổng chi phí</th><th style="width: 8%;">Số CV</th><th style="width: 15%;">Hành động</th></tr></thead><tbody>`;
+            let table = `<table class="modal-table responsive-modal-table search-modal-mobile"><thead><tr><th style="width: 5%;">STT</th><th style="width: 10%;">Ngày T.Hiện</th><th style="width: 45%;">Trích yếu</th><th style="width: 15%; text-align:right;">Tổng chi phí</th><th style="width: 8%;">Số CV</th><th style="width: 15%;">Hành động</th></tr></thead><tbody>`;
             if (querySnapshot.empty) {
                  table += `<tr><td colspan="6">Không tìm thấy lần thực hiện nào.</td></tr>`;
             } else {
