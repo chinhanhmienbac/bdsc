@@ -101,38 +101,11 @@
         .modal-table input { width: 95%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
         .modal-table input:disabled { background-color: #e9ecef; cursor: not-allowed;}
         
-        /* ---- UNIFIED COLUMN WIDTHS ---- */
+        .col-tt { width: 4%; }
         .col-noidung { width: 25%; }
-
-        .col-tt,
-        .col-donvi,
-        .col-soluong,
-        .col-tansuat-th,
-        .col-capdo,
-        .col-hoso {
-            width: 3%;
-        }
-
-        /* Other Columns (un-changed from original) */
+        .col-donvi, .col-soluong, .col-capdo, .col-dvt, .col-dongia { width: 6%; }
         .col-chiphi, .col-thanhtien { width: 9%; }
         .col-thoidiem, .col-tansuat, .col-dvth { width: 7%; }
-        .col-dvt, .col-dongia { width: 6%; }
-
-        /* Generic Modal Table Column Widths (will be overridden by inline styles if present) */
-        /* TT / Mục */
-        .modal-table th:nth-child(1), .modal-table td:nth-child(1) { width: 3%; } 
-        /* Nội dung / Thiết bị */
-        .modal-table th:nth-child(2), .modal-table td:nth-child(2) { width: 25%; }
-        /* Đơn vị */
-        .modal-table th:nth-child(3), .modal-table td:nth-child(3) { width: 3%; } 
-        /* Số lượng */
-        .modal-table th:nth-child(4), .modal-table td:nth-child(4) { width: 3%; }
-        /* Tần suất TH (in Sửa info modal) */
-        .modal-table th:nth-child(6), .modal-table td:nth-child(6) { width: 3%; } 
-        /* Cấp độ (in Sửa info modal) */
-        .modal-table th:nth-child(9), .modal-table td:nth-child(9) { width: 3%; }
-        /* ---- END UNIFIED WIDTHS ---- */
-
         .modal-footer { text-align: right; margin-top: 20px; }
         .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
         
@@ -236,9 +209,9 @@
             }
             .search-modal-mobile .btn-profile-exec {
                 width: 100%;
-                padding: 10px 0; /* Add vertical padding */
-                font-size: 16px;  /* Increase font size */
-                margin-top: 5px; /* Add some space above */
+                padding: 10px 0;
+                font-size: 16px;
+                margin-top: 5px;
             }
         }
     </style>
@@ -1012,12 +985,12 @@
                             if (chiPhi > 0) {
                                 const actualCount = executionCountMap.get(grandchildPath) || 0;
                                 totalExecutedGrandchildren += Math.min(plannedCount, actualCount);
-                            } else { // chiPhi is 0
+                            } else { 
                                 const linkCount = hoSoLinkCountMap.get(grandchildPath) || 0;
                                 totalExecutedGrandchildren += Math.min(plannedCount, linkCount);
                             }
                             
-                            const noiDungStyle = executedGrandchildPaths.has(grandchildPath) ? 'style="color: #5B77A8;"' : '';
+                            const noiDungStyle = executedGrandchildPaths.has(grandchildPath) ? 'style="color: #00008B;"' : '';
                             const grandchildLinks = hoSoLinkMap.get(grandchildPath);
                             let grandchildHoSoHtml = '<td class="col-hoso"></td>';
                             if (grandchildLinks && grandchildLinks.size > 0) {
@@ -1027,7 +1000,7 @@
 
                             html += `<tr>
                                 <td><input type="checkbox" class="grandchild-checkbox" data-parent-path="${childPath}" data-path="${grandchildPath}" onchange="toggleSelection(this)"></td>
-                                <td>${grandchildData.tt}</td><td class="col-noidung">${grandchildData.noiDung}</td>
+                                <td>${grandchildData.tt}</td><td class="col-noidung" ${noiDungStyle}>${grandchildData.noiDung}</td>
                                 <td class="col-donvi">${grandchildData.donVi || ''}</td><td class="col-soluong">${grandchildData.soLuong || ''}</td>
                                 <td class="col-thoidiem-th">${grandchildData.thoiDiemTH || ''}</td>
                                 <td class="col-tansuat-th">${grandchildData.tanSuatTH || ''}</td>
@@ -1201,7 +1174,6 @@
             const isDisabled = (field) => {
                 if (field === 'tt') return true;
                 if ((isParent || isChild)) {
-                    // Cho phép sửa nội dung cho parent/child, khóa các trường khác
                     return field !== 'noiDung';
                 }
                 return false;
