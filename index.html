@@ -102,7 +102,7 @@
         .modal-table input:disabled { background-color: #e9ecef; cursor: not-allowed;}
         
         /* ---- UNIFIED COLUMN WIDTHS ---- */
-        .col-noidung { width: 25%; }
+        .col-noidung { width: 23%; }
 
         .col-tt,
         .col-donvi,
@@ -113,24 +113,30 @@
             width: 3%;
         }
 
+        .col-ghichu {
+            width: 10%;
+        }
+
         /* Other Columns (un-changed from original) */
-        .col-chiphi, .col-thanhtien { width: 9%; }
-        .col-thoidiem, .col-tansuat, .col-dvth { width: 7%; }
-        .col-dvt, .col-dongia { width: 6%; }
+       .col-chiphi, .col-thanhtien { width: 8%; }
+        /.col-thoidiem, .col-tansuat, .col-dvth { width: 7%; }
+        .col-dvt, .col-dongia { width: 7%; }
 
         /* Generic Modal Table Column Widths (will be overridden by inline styles if present) */
         /* TT / Mục */
-        .modal-table th:nth-child(1), .modal-table td:nth-child(1) { width: 3%; } 
+        .modal-table th:nth-child(1), .modal-table td:nth-child(1) { width: 2%; } 
         /* Nội dung / Thiết bị */
-        .modal-table th:nth-child(2), .modal-table td:nth-child(2) { width: 25%; }
+        .modal-table th:nth-child(2), .modal-table td:nth-child(2) { width: 23%; }
         /* Đơn vị */
         .modal-table th:nth-child(3), .modal-table td:nth-child(3) { width: 3%; } 
         /* Số lượng */
         .modal-table th:nth-child(4), .modal-table td:nth-child(4) { width: 3%; }
         /* Tần suất TH (in Sửa info modal) */
-        .modal-table th:nth-child(6), .modal-table td:nth-child(6) { width: 3%; } 
+        .modal-table th:nth-child(6), .modal-table td:nth-child(6) { width: 2%; } 
         /* Cấp độ (in Sửa info modal) */
-        .modal-table th:nth-child(9), .modal-table td:nth-child(9) { width: 3%; }
+        .modal-table th:nth-child(9), .modal-table td:nth-child(9) { width: 2%; }
+        /* Ghi chú (in Sửa info modal) */
+        .modal-table th:nth-child(10), .modal-table td:nth-child(10) { width: 20%; }
         /* ---- END UNIFIED WIDTHS ---- */
 
         .modal-footer { text-align: right; margin-top: 20px; }
@@ -196,18 +202,20 @@
             box-sizing: border-box;
         }
         
-        .planning-mode .col-chiphi-thuchien,
-        .planning-mode .col-hoso {
+        .planning-mode .col-hoso,
+        .planning-mode .col-kehoach-conlai {
             display: none;
         }
         .col-thoidiem-th,
         .col-tansuat-th,
-        .col-dv-thuchien {
+        .col-dv-thuchien,
+        .col-ghichu {
             display: none;
         }
         .planning-mode .col-thoidiem-th,
         .planning-mode .col-tansuat-th,
-        .planning-mode .col-dv-thuchien {
+        .planning-mode .col-dv-thuchien,
+        .planning-mode .col-ghichu {
             display: table-cell;
         }
 
@@ -307,8 +315,8 @@
         <table id="taskList">
             <thead>
                 <tr>
-                    <th style="width: 3%;"><input type="checkbox" onchange="toggleAllCheckboxes(this)"></th>
-                    <th class="col-tt" style="width: 3%;">TT</th>
+                    <th style="width: 2%;"><input type="checkbox" onchange="toggleAllCheckboxes(this)"></th>
+                    <th class="col-tt" style="width: 2%;">TT</th>
                     <th class="col-noidung">Nội dung</th>
                     <th class="col-donvi">Đơn vị</th>
                     <th class="col-soluong">Số lượng</th>
@@ -316,11 +324,12 @@
                     <th class="col-tansuat-th">Tần suất TH</th>
                     <th class="col-dv-thuchien">ĐV th.hiện</th>
                     <th class="text-right col-chiphi">Chi phí</th>
-                    <th class="text-right col-chiphi-thuchien" style="width: 9%;">Chi phí thực hiện</th>
-                    <th class="text-right" style="width: 9%;">Kế hoạch còn lại</th>
+                    <th class="text-right col-chiphi-thuchien" style="width: 6%;">Chi phí thực hiện</th>
+                    <th class="text-right col-kehoach-conlai" style="width: 6%;">Kế hoạch còn lại</th>
                     <th class="col-capdo">Cấp độ</th>
+                    <th class="col-ghichu">Ghi chú</th>
                     <th class="col-hoso" style="width: 3%;">Hồ sơ</th>
-                    <th style="width: 7%;">Hành động</th>
+                    <th style="width: 5%;">Hành động</th>
                 </tr>
             </thead>
             <tbody id="taskListBody"></tbody>
@@ -702,6 +711,9 @@
                 
                 const noiDungValue = findValue(row, ['Nội dung', 'NỘI DUNG CÔNG VIỆC']);
                 if (noiDungValue !== undefined) data.noiDung = noiDungValue;
+
+                const ghiChuValue = findValue(row, ['Ghi chú']);
+                if (ghiChuValue !== undefined) data.ghiChu = ghiChuValue;
                 
                 const donViValue = findValue(row, ['Đơn vị']);
                 if (donViValue !== undefined) data.donVi = donViValue;
@@ -904,7 +916,7 @@
 
         window.fetchData = async () => {
             const tableBody = document.getElementById('taskListBody');
-            tableBody.innerHTML = `<tr><td colspan="14">Đang tải dữ liệu...</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="15">Đang tải dữ liệu...</td></tr>`;
             try {
                 await ensureYearCollectionExists(currentYear);
                 
@@ -940,6 +952,8 @@
                 let totalChildTasks = 0, totalPlannedCost = 0, totalExecutedCost = 0;
                 let totalExecutedChildTasks = 0, totalExecutedGrandchildren = 0;
                 let totalGrandchildren = 0;
+                let totalGrandchildrenCap1 = 0;
+                let totalExecutedGrandchildrenCap1 = 0;
                 
                 const parentSnapshot = await getDocs(query(collection(db, getParentCollectionName())));
                 const parents = parentSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -961,8 +975,10 @@
                         <td class="col-thoidiem-th"></td><td class="col-tansuat-th"></td><td class="col-dv-thuchien"></td>
                         <td class="text-right">${formatNumber(parentData.chiPhi)}</td>
                         <td class="text-right col-chiphi-thuchien">${formatNumber(parentData.chiPhiThucHien)}</td>
-                        <td class="text-right">${formatNumber(parentData.keHoachConLai)}</td>
-                        <td></td>${parentHoSoHtml}
+                        <td class="text-right col-kehoach-conlai">${formatNumber(parentData.keHoachConLai)}</td>
+                        <td></td>
+                        <td class="col-ghichu">${parentData.ghiChu || ''}</td>
+                        ${parentHoSoHtml}
                         <td><div class="dropdown"><button onclick="toggleDropdown(event)" class="btn-secondary btn-action dropbtn">Thêm/sửa</button><div class="dropdown-content"><a href="#" onclick="openAddModal('${parentPath}', 'child')">Thêm Thiết bị mới</a><a href="#" onclick="handleEditClick('${parentPath}', 'parent')">Sửa Nội dung</a></div></div></td>
                     </tr>`;
 
@@ -991,8 +1007,10 @@
                                 <td class="col-thoidiem-th"></td><td class="col-tansuat-th"></td><td class="col-dv-thuchien"></td>
                                 <td class="text-right">${formatNumber(childData.chiPhi)}</td>
                                 <td class="text-right col-chiphi-thuchien">${formatNumber(childData.chiPhiThucHien)}</td>
-                                <td class="text-right">${formatNumber(childData.keHoachConLai)}</td>
-                                <td>${childData.capDo || ''}</td>${childHoSoHtml}
+                                <td class="text-right col-kehoach-conlai">${formatNumber(childData.keHoachConLai)}</td>
+                                <td>${childData.capDo || ''}</td>
+                                <td class="col-ghichu">${childData.ghiChu || ''}</td>
+                                ${childHoSoHtml}
                                 <td><div class="dropdown"><button onclick="toggleDropdown(event)" class="btn-secondary btn-action dropbtn">Thêm/sửa</button><div class="dropdown-content"><a href="#" onclick="openAddModal('${childPath}', 'grandchild')">Thêm công việc chi tiết</a><a href="#" onclick="handleEditClick('${childPath}', 'child')">Sửa Nội dung</a></div></div></td>
                             </tr>`;
                         }
@@ -1001,6 +1019,7 @@
                         grandchildren.sort(naturalSort);
                         
                         for (const grandchildData of grandchildren) {
+                            // Tổng hợp chung
                             if (grandchildData.soLuong && parseNumber(grandchildData.soLuong) > 0) {
                                 totalGrandchildren += (grandchildData.tanSuatTH || 0);
                             }
@@ -1015,6 +1034,20 @@
                             } else { // chiPhi is 0
                                 const linkCount = hoSoLinkCountMap.get(grandchildPath) || 0;
                                 totalExecutedGrandchildren += Math.min(plannedCount, linkCount);
+                            }
+
+                            // Tổng hợp riêng cho Cấp 1
+                            if (grandchildData.capDo == 1) {
+                                if (grandchildData.soLuong && parseNumber(grandchildData.soLuong) > 0) {
+                                    totalGrandchildrenCap1 += (grandchildData.tanSuatTH || 0);
+                                }
+                                if (chiPhi > 0) {
+                                    const actualCount = executionCountMap.get(grandchildPath) || 0;
+                                    totalExecutedGrandchildrenCap1 += Math.min(plannedCount, actualCount);
+                                } else {
+                                    const linkCount = hoSoLinkCountMap.get(grandchildPath) || 0;
+                                    totalExecutedGrandchildrenCap1 += Math.min(plannedCount, linkCount);
+                                }
                             }
                             
                             const noiDungStyle = executedGrandchildPaths.has(grandchildPath) ? 'style="color: #5B77A8;"' : '';
@@ -1034,28 +1067,33 @@
                                 <td class="col-dv-thuchien">${grandchildData.dvThucHien || ''}</td>
                                 <td class="text-right col-chiphi">${formatNumber(grandchildData.chiPhi)}</td>
                                 <td class="text-right col-chiphi-thuchien">${formatNumber(grandchildData.chiPhiThucHien)}</td>
-                                <td class="text-right">${formatNumber(grandchildData.keHoachConLai)}</td>
-                                <td class="col-capdo">${grandchildData.capDo || ''}</td>${grandchildHoSoHtml}
+                                <td class="text-right col-kehoach-conlai">${formatNumber(grandchildData.keHoachConLai)}</td>
+                                <td class="col-capdo">${grandchildData.capDo || ''}</td>
+                                <td class="col-ghichu">${grandchildData.ghiChu || ''}</td>
+                                ${grandchildHoSoHtml}
                                 <td><button class="btn-secondary btn-action btn-edit-grandchild" onclick="handleEditClick('${grandchildPath}', 'grandchild')">Sửa</button></td>
                             </tr>`;
                         }
                     }
                 }
-                tableBody.innerHTML = html || `<tr><td colspan="14">Không có dữ liệu cho năm ${currentYear}.</td></tr>`;
+                tableBody.innerHTML = html || `<tr><td colspan="15">Không có dữ liệu cho năm ${currentYear}.</td></tr>`;
                 
                 const childPercentage = totalChildTasks > 0 ? Math.round((totalExecutedChildTasks / totalChildTasks) * 100) : 0;
                 const grandchildPercentage = totalGrandchildren > 0 ? Math.round((totalExecutedGrandchildren / totalGrandchildren) * 100) : 0;
                 const costPercentage = totalPlannedCost > 0 ? Math.round((totalExecutedCost / totalPlannedCost) * 100) : 0;
-                
+                const cap1Percentage = totalGrandchildrenCap1 > 0 ? Math.round((totalExecutedGrandchildrenCap1 / totalGrandchildrenCap1) * 100) : 0;
+
                 document.getElementById('summarySection').innerHTML = `
                     <div class="summary-column">
                         <p><strong>Tổng số đầu việc thiết bị:</strong> ${totalChildTasks}</p>
                         <p><strong>Tổng số đầu việc chi tiết cần thực hiện:</strong> ${totalGrandchildren}</p>
+                        <p><strong>Tổng số đầu việc cấp 1 cần thực hiện:</strong> ${totalGrandchildrenCap1}</p>
                         <p><strong>Tổng chi phí theo kế hoạch:</strong> ${formatNumber(totalPlannedCost)}</p>
                     </div>
                     <div class="summary-column">
                         <p><strong>Số đầu việc thiết bị đã thực hiện:</strong> ${totalExecutedChildTasks} <span class="percentage">(${childPercentage}%)</span></p>
                         <p><strong>Số đầu việc chi tiết đã thực hiện:</strong> ${totalExecutedGrandchildren} <span class="percentage">(${grandchildPercentage}%)</span></p>
+                        <p><strong>Số đầu việc cấp 1 đã thực hiện:</strong> ${totalExecutedGrandchildrenCap1} <span class="percentage">(${cap1Percentage}%)</span></p>
                         <p><strong>Tổng chi phí đã thực hiện:</strong> ${formatNumber(totalExecutedCost)} <span class="percentage">(${costPercentage}%)</span></p>
                     </div>`;
 
@@ -1064,6 +1102,8 @@
                     const summaryData = {
                         totalExecutedGrandchildren,
                         totalGrandchildren,
+                        totalExecutedGrandchildrenCap1,
+                        totalGrandchildrenCap1,
                         totalExecutedCost,
                         totalPlannedCost,
                         totalChildTasks,
@@ -1078,7 +1118,7 @@
                 selectedGrandchildren.clear();
                 updateButtonStates();
                 statusDiv.innerText = '';
-            } catch (error) { console.error("Lỗi tải dữ liệu: ", error); tableBody.innerHTML = `<tr><td colspan="14">Lỗi tải dữ liệu: ${error.message}</td></tr>`; }
+            } catch (error) { console.error("Lỗi tải dữ liệu: ", error); tableBody.innerHTML = `<tr><td colspan="15">Lỗi tải dữ liệu: ${error.message}</td></tr>`; }
         };
 
         window.recalculateAllCostsAndReload = async () => {
@@ -1201,8 +1241,8 @@
             const isDisabled = (field) => {
                 if (field === 'tt') return true;
                 if ((isParent || isChild)) {
-                    // Cho phép sửa nội dung cho parent/child, khóa các trường khác
-                    return field !== 'noiDung';
+                    // Cho phép sửa nội dung và ghi chú cho parent/child
+                    return !['noiDung', 'ghiChu'].includes(field);
                 }
                 return false;
             };
@@ -1217,6 +1257,7 @@
                         <td><input type="text" value="${data.dvThucHien || ''}" data-field="dvThucHien" ${isDisabled('dvThucHien') ? 'disabled' : ''}></td>
                         <td><input type="text" value="${formatNumber(data.chiPhi || 0)}" data-field="chiPhi" oninput="this.value=formatNumber(parseNumber(this.value))" ${chiPhiEvent} ${isDisabled('chiPhi') ? 'disabled' : ''}></td>
                         <td><input type="text" value="${data.capDo || ''}" data-field="capDo" ${isDisabled('capDo') ? 'disabled' : ''}></td>
+                        <td><input type="text" value="${data.ghiChu || ''}" data-field="ghiChu" ${isDisabled('ghiChu') ? 'disabled' : ''}></td>
                     </tr>`;
         };
 
@@ -1232,7 +1273,7 @@
             
             const showNote = pathsToEdit.some(path => path.includes('cháu'));
             const headers = [
-                'TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Thời điểm TH', 'Tần suất TH', 'ĐV th.hiện', 'Chi phí', 'Cấp độ'
+                'TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Thời điểm TH', 'Tần suất TH', 'ĐV th.hiện', 'Chi phí', 'Cấp độ', 'Ghi chú'
             ];
             let table = createModalTable(headers);
             for (const path of pathsToEdit) {
@@ -1269,7 +1310,7 @@
                 newTT = `${parentTT}.${maxSubId + 1}`;
             }
             const headers = [
-                 'TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Thời điểm TH', 'Tần suất TH', 'ĐV th.hiện', 'Chi phí', 'Cấp độ'
+                 'TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Thời điểm TH', 'Tần suất TH', 'ĐV th.hiện', 'Chi phí', 'Cấp độ', 'Ghi chú'
             ];
             let table = createModalTable(headers);
             table += createInputRow(parentPath, { tt: newTT }, level);
@@ -2150,7 +2191,7 @@
                     if (executions.length > maxExecutions) maxExecutions = executions.length;
                 });
                 statusDiv.innerText = 'Đang tạo cấu trúc file Excel...';
-                const baseHeaders = ['TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Thời điểm TH', 'Tần suất TH', 'ĐV th.hiện', 'Chi phí', 'Chi phí thực hiện', 'Kế hoạch còn lại', 'Cấp độ'];
+                const baseHeaders = ['TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Thời điểm TH', 'Tần suất TH', 'ĐV th.hiện', 'Chi phí', 'Chi phí thực hiện', 'Kế hoạch còn lại', 'Cấp độ', 'Ghi chú'];
                 const executionHeaders = [];
                 for (let i = 1; i <= maxExecutions; i++) {
                     executionHeaders.push(`Ngày TH (${i})`, `Số lượng (${i})`, `Đơn giá (${i})`, `Thành tiền (${i})`, `Timestamp (${i})`, `Hồ sơ Link (${i})`);
@@ -2165,7 +2206,7 @@
 
                 for (const parentData of parents) {
                     boldRows.add(rows.length);
-                    const parentRowData = [ parentData.tt, parentData.noiDung, '', '', '', '', '', parentData.chiPhi, parentData.chiPhiThucHien, parentData.keHoachConLai, '' ];
+                    const parentRowData = [ parentData.tt, parentData.noiDung, '', '', '', '', '', parentData.chiPhi, parentData.chiPhiThucHien, parentData.keHoachConLai, '', parentData.ghiChu || '' ];
                     parentRowData.push(...Array(maxExecutions * 6).fill('')); 
                     rows.push(parentRowData);
                     const childSnapshot = await getDocs(query(collection(db, `${getParentCollectionName()}/${parentData.id}/công việc con`)));
@@ -2175,7 +2216,7 @@
 
                     for (const childData of children) {
                         boldRows.add(rows.length); 
-                        const childRowData = [ childData.tt, childData.noiDung, '', '', '', '', '', childData.chiPhi, childData.chiPhiThucHien, childData.keHoachConLai, childData.capDo ];
+                        const childRowData = [ childData.tt, childData.noiDung, '', '', '', '', '', childData.chiPhi, childData.chiPhiThucHien, childData.keHoachConLai, childData.capDo, childData.ghiChu || '' ];
                         childRowData.push(...Array(maxExecutions * 6).fill('')); 
                         rows.push(childRowData);
                         const grandchildSnapshot = await getDocs(query(collection(db, `${getParentCollectionName()}/${parentData.id}/công việc con/${childData.id}/công việc cháu`)));
@@ -2184,7 +2225,7 @@
                             const grandchildRowData = [ 
                                 grandchildData.tt, grandchildData.noiDung, grandchildData.donVi, grandchildData.soLuong,
                                 grandchildData.thoiDiemTH, grandchildData.tanSuatTH, grandchildData.dvThucHien,
-                                grandchildData.chiPhi, grandchildData.chiPhiThucHien, grandchildData.keHoachConLai, grandchildData.capDo 
+                                grandchildData.chiPhi, grandchildData.chiPhiThucHien, grandchildData.keHoachConLai, grandchildData.capDo, grandchildData.ghiChu || ''
                             ];
                             const executions = executionsMap.get(grandchildData.path) || [];
                             executions.forEach(exec => {
@@ -2212,7 +2253,7 @@
                         }
                     }
                 }
-                const colWidths = [ { wch: 8 }, { wch: 40 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 } ];
+                const colWidths = [ { wch: 8 }, { wch: 40 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, {wch: 25} ];
                 for (let i = 0; i < maxExecutions; i++) {
                     colWidths.push({ wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 22 }, { wch: 40 });
                 }
