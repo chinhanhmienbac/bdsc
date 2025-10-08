@@ -2165,7 +2165,7 @@
 
                 for (const parentData of parents) {
                     boldRows.add(rows.length);
-                    const parentRowData = [ parentData.tt, parentData.noiDung, '', '', '', '', '', '', parentData.chiPhi, parentData.chiPhiThucHien, parentData.keHoachConLai, '' ];
+                    const parentRowData = [ parentData.tt, parentData.noiDung, '', '', '', '', '', parentData.chiPhi, parentData.chiPhiThucHien, parentData.keHoachConLai, '' ];
                     parentRowData.push(...Array(maxExecutions * 6).fill('')); 
                     rows.push(parentRowData);
                     const childSnapshot = await getDocs(query(collection(db, `${getParentCollectionName()}/${parentData.id}/công việc con`)));
@@ -2175,7 +2175,7 @@
 
                     for (const childData of children) {
                         boldRows.add(rows.length); 
-                        const childRowData = [ childData.tt, childData.noiDung, '', '', '', '', '', '', childData.chiPhi, childData.chiPhiThucHien, childData.keHoachConLai, childData.capDo ];
+                        const childRowData = [ childData.tt, childData.noiDung, '', '', '', '', '', childData.chiPhi, childData.chiPhiThucHien, childData.keHoachConLai, childData.capDo ];
                         childRowData.push(...Array(maxExecutions * 6).fill('')); 
                         rows.push(childRowData);
                         const grandchildSnapshot = await getDocs(query(collection(db, `${getParentCollectionName()}/${parentData.id}/công việc con/${childData.id}/công việc cháu`)));
