@@ -35,7 +35,7 @@
         .button-group > div { display: flex; gap: 10px; flex-wrap: wrap; }
         button {
             border: none; padding: 10px 18px; border-radius: 5px;
-            cursor: pointer; font-size: 16px; transition: background-color 0.3s, transform 0.1s;
+            cursor: pointer; font-size: 16px; transition: background-color: 0.3s, transform: 0.1s;
         }
         button:disabled { background-color: #ccc; cursor: not-allowed; }
         button:active { transform: scale(0.98); }
@@ -146,7 +146,7 @@
             display: none; position: fixed; bottom: 25px; right: 25px; z-index: 999;
             border: none; outline: none; background-color: #007bff; color: white; cursor: pointer;
             padding: 0; border-radius: 50%; font-size: 24px; width: 50px; height: 50px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: background-color 0.3s, transform 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: background-color: 0.3s, transform: 0.2s;
         }
         #scrollToTopBtn:hover { background-color: #0056b3; transform: translateY(-2px); }
 
@@ -445,7 +445,7 @@
         const statusDiv = document.getElementById('status');
         let selectedGrandchildren = new Set();
         let executionGroups = new Map();
-        let noiDungMap = new Map();
+        let taskDetailsMap = new Map();
         let tokenClient;
         let gapiReady = false;
         let editModeStatusByYear = {}; 
@@ -712,10 +712,10 @@
                 const noiDungValue = findValue(row, ['Nội dung', 'NỘI DUNG CÔNG VIỆC']);
                 if (noiDungValue !== undefined) data.noiDung = noiDungValue;
 
-                const ghiChuValue = findValue(row, ['Ghi chú']);
+                const ghiChuValue = findValue(row, ['Ghi chú', 'ghi chú']);
                 if (ghiChuValue !== undefined) data.ghiChu = ghiChuValue;
                 
-                const donViValue = findValue(row, ['Đơn vị']);
+                const donViValue = findValue(row, ['Đơn vị', 'Đơn vị tính']);
                 if (donViValue !== undefined) data.donVi = donViValue;
                 
                 const soLuongValue = findValue(row, ['Số lượng', 'Số lượng vật tư']);
@@ -730,10 +730,10 @@
                 const dvThucHienValue = findValue(row, ['ĐV th.hiện']);
                 if (dvThucHienValue !== undefined) data.dvThucHien = dvThucHienValue;
 
-                const capDoValue = findValue(row, ['Cấp độ']);
+                const capDoValue = findValue(row, ['Cấp độ', 'cấp độ']);
                 if (capDoValue !== undefined) data.capDo = capDoValue;
                 
-                const chiPhiValue = findValue(row, ['Chi phí', 'Chi phí kế hoạch 2025']);
+                const chiPhiValue = findValue(row, ['Chi phí', 'Chi phí kế hoạch']);
                 if (chiPhiValue !== undefined) data.chiPhi = parseNumber(chiPhiValue);
                 
                 const taskNode = { id: tt, data };
@@ -1697,12 +1697,12 @@
                     group[parentChildPath].push(executionData);
                 }
             });
-            noiDungMap.clear();
+            taskDetailsMap.clear();
             const pathsToFetch = [...uniqueGrandchildPaths, ...uniqueChildPaths];
             const fetchPromises = Array.from(new Set(pathsToFetch)).map(path => getDoc(doc(db, path)));
             const allDocs = await Promise.all(fetchPromises);
             allDocs.forEach(docSnap => {
-                if (docSnap.exists()) noiDungMap.set(docSnap.ref.path, docSnap.data().noiDung);
+                if (docSnap.exists()) taskDetailsMap.set(docSnap.ref.path, docSnap.data());
             });
             statusDiv.innerText = "";
             
@@ -1716,9 +1716,28 @@
                  table += `<tr><td colspan="6">Không tìm thấy lần thực hiện nào.</td></tr>`;
             } else {
                 const sortedGroups = Array.from(executionGroups.entries()).sort((a, b) => {
-                    const timeA = typeof a[0] === 'number' ? a[0] : 0; const timeB = typeof b[0] === 'number' ? b[0] : 0;
+                    // a and b are [timestampKey, groupObject]
+                    const groupA = a[1];
+                    const groupB = b[1];
+
+                    // Get the date from the first item in each group
+                    const dateA = groupA[Object.keys(groupA)[0]][0].ngayThucHien;
+                    const dateB = groupB[Object.keys(groupB)[0]][0].ngayThucHien;
+                    
+                    // Assuming YYYY-MM-DD format, string comparison works for sorting
+                    if (dateA < dateB) {
+                        return 1; // B is more recent, should come first
+                    }
+                    if (dateA > dateB) {
+                        return -1; // A is more recent, should come first
+                    }
+
+                    // If dates are the same, fall back to timestamp sorting for precision
+                    const timeA = typeof a[0] === 'number' ? a[0] : 0;
+                    const timeB = typeof b[0] === 'number' ? b[0] : 0;
                     return timeB - timeA;
                 });
+
                 let counter = 1;
                 for (const [timestampKey, group] of sortedGroups) {
                     let totalCost = 0; let summaryHtml = ''; let grandchildCount = 0;
@@ -1735,11 +1754,11 @@
                     }
                     
                     for (const childPath in group) {
-                        const childName = noiDungMap.get(childPath) || 'Công việc con không xác định';
+                        const childName = (taskDetailsMap.get(childPath) || {}).noiDung || 'Công việc con không xác định';
                         summaryHtml += `<div><strong>${childName}</strong></div>`;
                         const grandchildrenSummaries = group[childPath].map(item => {
                             totalCost += item.thanhTien; grandchildCount++;
-                            const noiDung = noiDungMap.get(item.parentGrandchildPath) || '';
+                            const noiDung = (taskDetailsMap.get(item.parentGrandchildPath) || {}).noiDung || '';
                             return noiDung.length > 20 ? noiDung.substring(0, 20) + '...' : noiDung;
                         }).join('; ');
                         summaryHtml += `<div style="padding-left: 15px;">${grandchildrenSummaries}</div>`;
@@ -1771,33 +1790,69 @@
         };
         
         window.exportAllExecutionsToExcel = async () => {
-            if (executionGroups.size === 0) { alert("Không có dữ liệu thực hiện để xuất."); return; }
+            if (executionGroups.size === 0) {
+                alert("Không có dữ liệu thực hiện để xuất.");
+                return;
+            }
             try {
-                statusDiv.className = 'success'; statusDiv.innerText = "Đang chuẩn bị dữ liệu Excel...";
-                const rows = [['STT', 'Ngày Thực Hiện', 'Nội dung Thiết bị', 'Nội dung Công việc', 'Số lượng', 'Đơn giá', 'Thành tiền', 'Link Hồ sơ']];
-                const sortedGroups = Array.from(executionGroups.entries()).sort((a, b) => {
-                    const timeA = typeof a[0] === 'number' ? a[0] : 0; const timeB = typeof b[0] === 'number' ? b[0] : 0;
-                    return timeB - timeA;
-                });
-                let counter = 1;
-                for (const [timestampKey, group] of sortedGroups) {
+                statusDiv.className = 'success';
+                statusDiv.innerText = "Đang chuẩn bị dữ liệu Excel...";
+
+                // 1. Flatten all execution records into a single array
+                const allExecutions = [];
+                for (const [timestampKey, group] of executionGroups.entries()) {
                     for (const childPath in group) {
-                        const childName = noiDungMap.get(childPath) || 'N/A';
+                        const childData = taskDetailsMap.get(childPath) || {};
+                        const childName = childData.noiDung || 'N/A';
+                        
                         for (const exec of group[childPath]) {
-                             const grandchildName = noiDungMap.get(exec.parentGrandchildPath) || 'N/A';
-                             rows.push([ counter++, exec.ngayThucHien, childName, grandchildName, exec.dvt, exec.donGia, exec.thanhTien, exec.hoSoLink || '' ]);
+                            const grandchildData = taskDetailsMap.get(exec.parentGrandchildPath) || {};
+                            const grandchildName = grandchildData.noiDung || 'N/A';
+                            
+                            allExecutions.push({
+                                ...exec,
+                                childName: childName,
+                                grandchildName: grandchildName,
+                                grandchildTT: grandchildData.tt || '',
+                                grandchildKeHoachConLai: grandchildData.keHoachConLai
+                            });
                         }
                     }
                 }
+
+                // 2. Sort the flattened array by 'ngayThucHien' descending
+                allExecutions.sort((a, b) => b.ngayThucHien.localeCompare(a.ngayThucHien));
+
+                // 3. Build the final rows for SheetJS from the sorted array
+                const rows = [['STT', 'Ngày Thực Hiện', 'Nội dung Thiết bị', 'Tiểu mục', 'Nội dung Công việc', 'Số lượng', 'Đơn giá', 'Thành tiền', 'Kế hoạch còn lại', 'Link Hồ sơ']];
+                let counter = 1;
+                allExecutions.forEach(exec => {
+                    rows.push([
+                        counter++,
+                        exec.ngayThucHien,
+                        exec.childName,
+                        exec.grandchildTT,
+                        exec.grandchildName,
+                        exec.dvt,
+                        exec.donGia,
+                        exec.thanhTien,
+                        exec.grandchildKeHoachConLai,
+                        exec.hoSoLink || ''
+                    ]);
+                });
+
+                // 4. Create and download the Excel file using SheetJS
                 const wb = XLSX.utils.book_new();
                 const ws = XLSX.utils.aoa_to_sheet(rows);
-                ws['!cols'] = [ { wch: 5 }, { wch: 15 }, { wch: 40 }, { wch: 60 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 40 } ];
+                ws['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 40 }, { wch: 10 }, { wch: 60 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 40 }];
                 XLSX.utils.book_append_sheet(wb, ws, 'Lịch sử thực hiện');
                 XLSX.writeFile(wb, `LichSuThucHien_ToanBo_${currentYear}.xlsx`);
                 statusDiv.innerText = "Xuất Excel thành công!";
+
             } catch (error) {
                 console.error("Lỗi khi xuất toàn bộ lịch sử:", error);
-                statusDiv.className = 'error'; statusDiv.innerText = `Lỗi khi xuất Excel: ${error.message}`;
+                statusDiv.className = 'error';
+                statusDiv.innerText = `Lỗi khi xuất Excel: ${error.message}`;
             }
         };
 
@@ -2173,6 +2228,7 @@
             statusDiv.className = 'success';
             statusDiv.innerText = 'Đang chuẩn bị dữ liệu. Vui lòng chờ...';
             try {
+                // --- 1. Data Gathering ---
                 statusDiv.innerText = 'Đang tổng hợp dữ liệu các lần thực hiện...';
                 const executionsMap = new Map();
                 let maxExecutions = 0;
@@ -2190,6 +2246,7 @@
                     executions.sort((a, b) => a.lanThucHien - b.lanThucHien);
                     if (executions.length > maxExecutions) maxExecutions = executions.length;
                 });
+
                 statusDiv.innerText = 'Đang tạo cấu trúc file Excel...';
                 const baseHeaders = ['TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Thời điểm TH', 'Tần suất TH', 'ĐV th.hiện', 'Chi phí', 'Chi phí thực hiện', 'Kế hoạch còn lại', 'Cấp độ', 'Ghi chú'];
                 const executionHeaders = [];
@@ -2197,32 +2254,43 @@
                     executionHeaders.push(`Ngày TH (${i})`, `Số lượng (${i})`, `Đơn giá (${i})`, `Thành tiền (${i})`, `Timestamp (${i})`, `Hồ sơ Link (${i})`);
                 }
                 const fullHeaders = [...baseHeaders, ...executionHeaders];
-                const rows = [];
-                const boldRows = new Set(); 
+
+                // --- 2. HTML String Construction ---
+                let tableHTML = '<table><thead><tr>';
+                fullHeaders.forEach(header => {
+                    tableHTML += `<th>${header}</th>`;
+                });
+                tableHTML += '</tr></thead><tbody>';
+
                 const parentSnapshot = await getDocs(query(collection(db, getParentCollectionName())));
                 const parents = parentSnapshot.docs.map(d => ({id: d.id, ...d.data()}));
-                
                 parents.sort((a, b) => romanToInt(a.id) - romanToInt(b.id));
 
                 for (const parentData of parents) {
-                    boldRows.add(rows.length);
                     const parentRowData = [ parentData.tt, parentData.noiDung, '', '', '', '', '', parentData.chiPhi, parentData.chiPhiThucHien, parentData.keHoachConLai, '', parentData.ghiChu || '' ];
                     parentRowData.push(...Array(maxExecutions * 6).fill('')); 
-                    rows.push(parentRowData);
+                    
+                    tableHTML += `<tr style="font-weight: bold;">`;
+                    parentRowData.forEach(cellData => tableHTML += `<td>${cellData != null ? cellData : ''}</td>`);
+                    tableHTML += `</tr>`;
+
                     const childSnapshot = await getDocs(query(collection(db, `${getParentCollectionName()}/${parentData.id}/công việc con`)));
                     const children = childSnapshot.docs.map(d => ({id: d.id, ...d.data()}));
-                    
                     children.sort((a, b) => parseInt(a.id, 10) - parseInt(b.id, 10));
 
                     for (const childData of children) {
-                        boldRows.add(rows.length); 
                         const childRowData = [ childData.tt, childData.noiDung, '', '', '', '', '', childData.chiPhi, childData.chiPhiThucHien, childData.keHoachConLai, childData.capDo, childData.ghiChu || '' ];
                         childRowData.push(...Array(maxExecutions * 6).fill('')); 
-                        rows.push(childRowData);
+                        
+                        tableHTML += `<tr style="font-weight: bold;">`;
+                        childRowData.forEach(cellData => tableHTML += `<td>${cellData != null ? cellData : ''}</td>`);
+                        tableHTML += `</tr>`;
+                        
                         const grandchildSnapshot = await getDocs(query(collection(db, `${getParentCollectionName()}/${parentData.id}/công việc con/${childData.id}/công việc cháu`)));
                         const grandchildren = grandchildSnapshot.docs.map(d => ({id: d.id, path: d.ref.path, ...d.data()})).sort((a,b) => naturalSort(a,b));
+
                         for (const grandchildData of grandchildren) {
-                            const grandchildRowData = [ 
+                            let grandchildRowData = [ 
                                 grandchildData.tt, grandchildData.noiDung, grandchildData.donVi, grandchildData.soLuong,
                                 grandchildData.thoiDiemTH, grandchildData.tanSuatTH, grandchildData.dvThucHien,
                                 grandchildData.chiPhi, grandchildData.chiPhiThucHien, grandchildData.keHoachConLai, grandchildData.capDo, grandchildData.ghiChu || ''
@@ -2234,38 +2302,45 @@
                             });
                             const paddingCount = (maxExecutions - executions.length) * 6;
                             if (paddingCount > 0) grandchildRowData.push(...Array(paddingCount).fill(''));
-                            rows.push(grandchildRowData);
+                            
+                            tableHTML += `<tr>`;
+                            grandchildRowData.forEach(cellData => tableHTML += `<td>${cellData != null ? cellData : ''}</td>`);
+                            tableHTML += `</tr>`;
                         }
                     }
                 }
-                statusDiv.innerText = 'Đang ghi dữ liệu ra file, vui lòng chờ trong giây lát...';
-                const wb = XLSX.utils.book_new();
-                const ws = XLSX.utils.aoa_to_sheet([fullHeaders, ...rows]);
-                for (let i = 0; i < rows.length; i++) {
-                    if (boldRows.has(i)) {
-                        for (let j = 0; j < baseHeaders.length; j++) {
-                            const cellAddress = XLSX.utils.encode_cell({ r: i + 1, c: j });
-                            if(ws[cellAddress]) {
-                                if(!ws[cellAddress].s) ws[cellAddress].s = {};
-                                if(!ws[cellAddress].s.font) ws[cellAddress].s.font = {};
-                                ws[cellAddress].s.font.bold = true;
-                            }
-                        }
-                    }
-                }
-                const colWidths = [ { wch: 8 }, { wch: 40 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, {wch: 25} ];
-                for (let i = 0; i < maxExecutions; i++) {
-                    colWidths.push({ wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 22 }, { wch: 40 });
-                }
-                ws['!cols'] = colWidths;
-                XLSX.utils.book_append_sheet(wb, ws, 'Danh sách công việc');
-                XLSX.writeFile(wb, `KeHoachBaoDuong_DayDu_${currentYear}.xlsx`);
+                
+                tableHTML += '</tbody></table>';
+
+                // --- 3. Create and Download File ---
+                const excelTemplate = `
+                    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+                    <head>
+                        <meta charset="UTF-8">
+                        </head>
+                    <body>
+                        ${tableHTML}
+                    </body>
+                    </html>`;
+                    
+                const blob = new Blob([excelTemplate], { type: 'application/vnd.ms-excel' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `KeHoachBaoDuong_DayDu_${currentYear}.xls`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+
                 statusDiv.innerText = 'Xuất file Excel thành công!';
+
             } catch (error) {
                 console.error("Lỗi khi xuất Excel: ", error);
-                statusDiv.className = 'error'; statusDiv.innerText = `Lỗi khi xuất file: ${error.message}`;
+                statusDiv.className = 'error';
+                statusDiv.innerText = `Lỗi khi xuất file: ${error.message}`;
             }
         };
+
 
         const scrollToTopBtn = document.getElementById("scrollToTopBtn");
         window.onscroll = () => {
