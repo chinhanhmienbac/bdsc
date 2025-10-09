@@ -210,8 +210,8 @@
         <h2>Đăng nhập Hệ thống</h2>
         <form id="login-form">
             <input type="text" id="email" 
-                   value="n*****@pvgaslpg*****" 
-                   data-real-email="namdinh@pvgaslpg.com.vn" 
+                   value="bdsc***@pvgaslpg*****" 
+                   data-real-email="bdsc-cnmb@pvgaslpg.com.vn" 
                    readonly 
                    style="background-color: #e9ecef; cursor: not-allowed; text-align: center; color: #495057;">
             <input type="password" id="password" placeholder="Mật khẩu" required autofocus>
@@ -240,7 +240,7 @@
         <div id="status"></div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
-            <h2>Danh sách công việc</h2>
+            <h2>Danh mục BDSC tại ..</h2>
              <div>
                 <label for="yearSelect" style="margin-right: 10px; font-weight: bold;">Năm:</label>
                 <select id="yearSelect" onchange="changeYear(this.value)"></select>
@@ -2138,10 +2138,20 @@
                     const row = rows[i];
                     const isBold = boldRows.has(i);
                     tableHtml += '<tr>';
-                    row.forEach(cell => {
-                        const style = isBold ? ' style="font-weight: bold;"' : '';
+                    row.forEach((cell, j) => {
+                        let styles = [];
+                        if (isBold) {
+                            styles.push('font-weight: bold;');
+                        }
+                        // Check if it's a "Ngày TH" column
+                        // Base headers count = 12. Execution headers start at index 12.
+                        // Each execution block has 6 columns. The date is the first one.
+                        if (j >= 12 && (j - 12) % 6 === 0) {
+                            styles.push("mso-number-format:'\\@'");
+                        }
+                        const styleAttr = styles.length > 0 ? ` style="${styles.join(' ')}"` : '';
                         const cellData = cell === null || cell === undefined ? '' : cell;
-                        tableHtml += `<td${style}>${cellData}</td>`;
+                        tableHtml += `<td${styleAttr}>${cellData}</td>`;
                     });
                     tableHtml += '</tr>';
                 }
