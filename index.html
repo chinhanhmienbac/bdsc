@@ -12,12 +12,12 @@
         #container {
             max-width: 1400px; margin: auto; background-color: white;
             padding: 25px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            display: block; 
+            display: none; 
         }
         #login-container {
             max-width: 400px; margin: 100px auto; padding: 30px; background-color: white;
             border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center;
-            display: none; 
+            display: block; 
         }
         #login-container h2 { margin-top: 0; color: #333; }
         #login-container input {
@@ -2193,8 +2193,6 @@
         scrollToTopBtn.onclick = () => { window.scrollTo({top: 0, behavior: 'smooth'}); };
 
         async function startApp() {
-            await signOut(auth).catch(err => console.error("Initial sign out failed:", err));
-
             const settingsDocRef = doc(db, 'settings', 'global');
             onSnapshot(settingsDocRef, (docSnap) => {
                 if (docSnap.exists()) {
@@ -2206,7 +2204,6 @@
             });
 
             initializeYearDropdown();
-            fetchData();
             initializeGoogleClients();
         }
 
