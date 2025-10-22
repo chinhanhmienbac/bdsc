@@ -1808,6 +1808,10 @@
                 }
             }
             table += '</tbody></table>';
+
+            // [SỬA LỖI] Bổ sung dòng còn thiếu để thêm bảng vào modal
+            modalBodyHTML += table;
+
             modalBodyHTML += `<div class="modal-note">Mẹo: Sử dụng phím Enter hoặc các phím mũi tên (↑, ↓) để di chuyển nhanh giữa các ô nhập liệu.</div>`;
             const footerLeftHTML = `<div style="display: flex; flex-direction: column; align-items: flex-start;">
                                       <div style="display: flex; gap: 10px;">
