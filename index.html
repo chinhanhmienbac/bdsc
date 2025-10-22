@@ -12,20 +12,9 @@
         #container {
             max-width: 1400px; margin: auto; background-color: white;
             padding: 25px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            display: none; 
-        }
-        #login-container {
-            max-width: 400px; margin: 100px auto; padding: 30px; background-color: white;
-            border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center;
             display: block; 
         }
-        #login-container h2 { margin-top: 0; color: #333; }
-        #login-container input {
-            width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc;
-            border-radius: 4px; box-sizing: border-box; font-size: 16px;
-        }
-        #login-container button { width: 100%; padding: 12px; font-size: 16px; }
-        #login-error { color: #dc3545; margin-top: 15px; font-weight: bold; }
+        /* [THAY ĐỔI] Xóa toàn bộ khối CSS #login-container cũ */
         
         h1, h2 { color: #333; }
         h3 { color: #555; font-weight: normal; border-bottom: 1px solid #eee; padding-bottom: 10px; }
@@ -75,6 +64,13 @@
         #status.success { color: #28a745; }
         #status.error { color: #dc3545; }
 
+        /* [THAY ĐỔI] Bổ sung CSS căn giữa cho các cột */
+        #taskList th.col-tansuat-th, #taskList td.col-tansuat-th,
+        #taskList th.col-nam-phanbo, #taskList td.col-nam-phanbo,
+        #taskList th.col-capdo, #taskList td.col-capdo {
+            text-align: center;
+        }
+
         #summarySection {
             background-color: #e9ecef; padding: 15px; border-radius: 5px; margin-top: 20px;
             display: flex; justify-content: space-between; flex-wrap: wrap;
@@ -102,19 +98,46 @@
         .modal-table input { width: 95%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
         .modal-table input:disabled { background-color: #e9ecef; cursor: not-allowed;}
         
-        .col-noidung { width: 23%; }
-        .col-tt, .col-donvi, .col-soluong, .col-tansuat-th, .col-capdo, .col-hoso { width: 3%; }
-        .col-ghichu { width: 10%; }
-        .col-chiphi, .col-thanhtien { width: 8%; }
-        .col-dvt, .col-dongia { width: 7%; }
+        /* [THAY ĐỔI] Đặt độ rộng 3% cho các cột modal sửa/thêm */
+.modal-table th:nth-child(1), .modal-table td:nth-child(1),   /* TT */
+.modal-table th:nth-child(4), .modal-table td:nth-child(4),   /* Số lượng */         
+.modal-table th:nth-child(6), .modal-table td:nth-child(6),   /* Tần suất TH */
+        .modal-table th:nth-child(11), .modal-table td:nth-child(11), /* Năm PB */
+        .modal-table th:nth-child(13), .modal-table td:nth-child(13)  /* Cấp độ */
+        {
+            width: 3%;
+        }
+ .modal-table th:nth-child(2), .modal-table td:nth-child(2)  /* Nội dung */
+        {
+            width: 20%;
+        }
+.modal-table th:nth-child(3), .modal-table td:nth-child(3),   /* Đơn vị */
+        .modal-table th:nth-child(5), .modal-table td:nth-child(5), /* Thời điểm */
+        .modal-table th:nth-child(7), .modal-table td:nth-child(7)  /* DV thực hiện */
+        {
+            width: 5%;
+        }
 
-        .modal-table th:nth-child(1), .modal-table td:nth-child(1) { width: 2%; } 
-        .modal-table th:nth-child(2), .modal-table td:nth-child(2) { width: 23%; }
-        .modal-table th:nth-child(3), .modal-table td:nth-child(3) { width: 3%; } 
-        .modal-table th:nth-child(4), .modal-table td:nth-child(4) { width: 3%; }
-        .modal-table th:nth-child(6), .modal-table td:nth-child(6) { width: 2%; } 
-        .modal-table th:nth-child(9), .modal-table td:nth-child(9) { width: 2%; }
-        .modal-table th:nth-child(10), .modal-table td:nth-child(10) { width: 20%; }
+        /* [THAY ĐỔI] Bổ sung CSS căn giữa cho modal */
+        .modal-table th:nth-child(6),   /* Tần suất TH */
+        .modal-table th:nth-child(11),  /* Năm PB */
+        .modal-table th:nth-child(13) { /* Cấp độ */
+            text-align: center;
+        }
+        
+        .modal-table td:nth-child(6) input,
+        .modal-table td:nth-child(11) input,
+        .modal-table td:nth-child(13) input {
+            text-align: center;
+        }
+
+        .col-noidung { width: 23%; }
+        /* [THAY ĐỔI] Thêm .col-nam-phanbo vào nhóm 3% */
+        .col-tt { width: 4%; }
+.col-donvi, .col-soluong, .col-tansuat-th, .col-capdo, .col-hoso, .col-nam-phanbo { width: 3%; }
+        .col-ghichu { width: 8%; } /* Giảm 1/5 (từ 10% -> 8%) */
+        .col-chiphi, .col-thanhtien { width: 9%; } /* Tăng 1% (từ 8% -> 9%) */
+        .col-dvt, .col-dongia { width: 7%; }
         
         .execution-modal-table th:nth-child(1), .execution-modal-table td:nth-child(1) { width: 8%; }
         .execution-modal-table th:nth-child(2), .execution-modal-table td:nth-child(2) { width: 54%; }
@@ -174,9 +197,32 @@
         
         .planning-mode .col-hoso,
         .planning-mode .col-kehoach-conlai { display: none; }
-        .col-thoidiem-th, .col-tansuat-th, .col-dv-thuchien, .col-ghichu { display: none; }
-        .planning-mode .col-thoidiem-th, .planning-mode .col-tansuat-th,
-        .planning-mode .col-dv-thuchien, .planning-mode .col-ghichu { display: table-cell; }
+        
+        .col-thoidiem-th, .col-tansuat-th, .col-dv-thuchien, .col-ghichu,
+        .col-kh-namtruoc, .col-uoc-th-namtruoc, .col-nam-phanbo, .col-cp-phanbo { display: none; }
+        
+        /* [THAY ĐỔI] Xóa .col-tansuat-th khỏi quy tắc 7% */
+        .planning-mode .col-thoidiem-th,
+        .planning-mode .col-dv-thuchien {
+    	width: 5%;
+	} 
+	.planning-mode .col-ghichu,
+        .planning-mode .col-kh-namtruoc, .planning-mode .col-uoc-th-namtruoc,
+        .planning-mode .col-nam-phanbo, .planning-mode .col-cp-phanbo { display: table-cell; }
+
+	/* [THAY ĐỔI] Thêm 3 cột vào quy tắc display: table-cell; */
+	.planning-mode .col-thoidiem-th,
+	.planning-mode .col-tansuat-th,
+	.planning-mode .col-dv-thuchien,
+	.planning-mode .col-ghichu,
+    .planning-mode .col-kh-namtruoc, .planning-mode .col-uoc-th-namtruoc,
+    .planning-mode .col-nam-phanbo, .planning-mode .col-cp-phanbo { display: table-cell; }
+
+        /* Giảm cỡ chữ và padding ở planning mode */
+        .planning-mode#taskList th, .planning-mode#taskList td {
+            font-size: 70%;
+            padding: 6px;
+        }
 
         @media screen and (max-width: 768px) {
             .responsive-modal-table thead { display: none; }
@@ -205,19 +251,22 @@
 </head>
 <body>
     
-    <div id="login-container">
-        <img src="PVGLPG.gif" alt="Logo" style="width: 120px; height: auto; margin-bottom: 20px;">
-        <h2>Đăng nhập Hệ thống</h2>
-        <form id="login-form">
-            <input type="text" id="email" 
-                   value="bdsc***@pvgaslpg*****" 
-                   data-real-email="bdsc-cnmb@pvgaslpg.com.vn" 
-                   readonly 
-                   style="background-color: #e9ecef; cursor: not-allowed; text-align: center; color: #495057;">
-            <input type="password" id="password" placeholder="Mật khẩu" required autofocus>
-            <button type="submit" class="btn-primary">Đăng nhập</button>
-            <p id="login-error" style="display: none;"></p>
-        </form>
+    <div id="login-container" class="modal">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <span class="close-button" onclick="closeLoginModal()">&times;</span>
+            <img src="PVGLPG.gif" alt="Logo" style="width: 120px; height: auto; margin-bottom: 20px;">
+            <h2>Đăng nhập Hệ thống</h2>
+            <form id="login-form">
+                <input type="text" id="email" 
+                       value="bdsc***@pvgaslpg*****" 
+                       data-real-email="bdsc-cnmb@pvgaslpg.com.vn" 
+                       readonly 
+                       style="background-color: #e9ecef; cursor: not-allowed; text-align: center; color: #495057;">
+                <input type="password" id="password" placeholder="Mật khẩu" required autofocus>
+                <button type="submit" class="btn-primary">Đăng nhập</button>
+                <p id="login-error" style="display: none;"></p>
+            </form>
+        </div>
     </div>
 
     <div id="container">
@@ -231,6 +280,9 @@
         
         <div class="button-group" style="padding-bottom: 10px; border-bottom: 1px solid #eee;">
             <div>
+                <button id="loginButton" class="btn-info" onclick="openLoginModal()" style="display: none;">Đăng nhập</button>
+                <button id="logoutButton" class="btn-warning" onclick="logoutUser()" style="display: none;">Đăng xuất</button>
+                
                 <button class="btn-secondary" onclick="recalculateAllCostsAndReload()">Tải lại & Tính toán lại</button>
                 <button class="btn-primary" onclick="openDataManagementModal()">Quản lý Dữ liệu</button>
                 <button id="deleteSelectedBtn" class="btn-danger" onclick="deleteSelectedTasks()" disabled>Xoá công việc đã chọn</button>
@@ -264,17 +316,21 @@
             <thead>
                 <tr>
                     <th style="width: 2%;"><input type="checkbox" onchange="toggleAllCheckboxes(this)"></th>
-                    <th class="col-tt" style="width: 2%;">TT</th>
+                    <th class="col-tt" style="width: 4%;">TT</th>
                     <th class="col-noidung">Nội dung</th>
                     <th class="col-donvi">Đơn vị</th>
+                    <th class="text-right col-kh-namtruoc" style="width: 7%;">KH năm trước</th>
+                    <th class="text-right col-uoc-th-namtruoc" style="width: 7%;">Ước TH năm trước</th>
                     <th class="col-soluong">Số lượng</th>
                     <th class="col-thoidiem-th">Thời điểm TH</th>
-                    <th class="col-tansuat-th">Tần suất TH</th>
+                    <th class="col-tansuat-th" style="text-align: center;">Tần suất TH</th>
                     <th class="col-dv-thuchien">ĐV th.hiện</th>
                     <th class="text-right col-chiphi">Chi phí</th>
-                    <th class="text-right col-chiphi-thuchien" style="width: 6%;">Chi phí thực hiện</th>
+                    <th class="text-right col-chiphi-thuchien" style="width: 7%;">Chi phí thực hiện</th>
                     <th class="text-right col-kehoach-conlai" style="width: 6%;">Kế hoạch còn lại</th>
-                    <th class="col-capdo">Cấp độ</th>
+                    <th class="col-nam-phanbo" style="text-align: center;">Năm PB</th>
+                    <th class="text-right col-cp-phanbo" style="width: 7%;">CP phân bổ</th>
+                    <th class="col-capdo" style="text-align: center;">Cấp độ</th>
                     <th class="col-ghichu">Ghi chú</th>
                     <th class="col-hoso" style="width: 3%;">Hồ sơ</th>
                     <th style="width: 5%;">Hành động</th>
@@ -324,12 +380,7 @@
                 </div>
             </div>
 
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ccc;">
-                <h3>Xác thực Cơ sở dữ liệu</h3>
-                <p>Để có thể chỉnh sửa, thêm, xóa dữ liệu, bạn cần xác thực.</p>
-                <button class="btn-info" onclick="promptForAuthentication()">Xác thực CSDL</button>
             </div>
-        </div>
     </div>
 
     <div id="deleteAllDataModal" class="modal">
@@ -421,22 +472,40 @@
         const loginForm = document.getElementById('login-form');
         const loginError = document.getElementById('login-error');
 
-        function showAuthError() {
-            statusDiv.className = 'error';
-            statusDiv.innerText = 'Lỗi: Bạn cần xác thực để thực hiện hành động này. Vui lòng vào "Quản lý dữ liệu" -> "Xác thực CSDL".';
-            setTimeout(() => { if (statusDiv.innerText && statusDiv.innerText.includes('Bạn cần xác thực')) { statusDiv.innerText = ''; } }, 6000);
-        }
-
-        window.promptForAuthentication = () => {
-            closeAllModals();
-            loginContainer.style.display = 'block';
+        // [THAY ĐỔI] Thêm các hàm quản lý modal đăng nhập
+        window.closeLoginModal = () => {
+            loginContainer.style.display = 'none';
         };
 
+        window.openLoginModal = () => {
+            loginContainer.style.display = 'block';
+            document.getElementById('password').value = ''; // Xóa mật khẩu cũ
+            document.getElementById('password').focus(); // Focus vào ô mật khẩu
+        };
+
+        window.logoutUser = () => {
+            if (confirm('Bạn có chắc chắn muốn đăng xuất không?')) {
+                signOut(auth).catch(err => console.error("Lỗi đăng xuất:", err));
+            }
+        };
+
+        // [THAY ĐỔI] Cập nhật thông báo lỗi
+        function showAuthError() {
+            statusDiv.className = 'error';
+            statusDiv.innerText = 'Lỗi: Bạn cần đăng nhập để thực hiện hành động này. Vui lòng nhấn nút "Đăng nhập".';
+            setTimeout(() => { if (statusDiv.innerText && statusDiv.innerText.includes('Bạn cần đăng nhập')) { statusDiv.innerText = ''; } }, 6000);
+        }
+
+        // [THAY ĐỔI] Xóa hàm promptForAuthentication
+        
+        // [THAY ĐỔI] Cập nhật hàm onAuthStateChanged
         onAuthStateChanged(auth, user => {
             if (user) {
                 isAuthenticated = true;
-                loginContainer.style.display = 'none';
-                mainContainer.style.display = 'block';
+                loginContainer.style.display = 'none'; // Đóng modal đăng nhập nếu đang mở
+                mainContainer.style.display = 'block'; // Đảm bảo nội dung chính hiển thị
+                document.getElementById('loginButton').style.display = 'none';
+                document.getElementById('logoutButton').style.display = 'block';
 
                 const settingsDocRef = doc(db, 'settings', 'global');
                 onSnapshot(settingsDocRef, (docSnap) => {
@@ -450,7 +519,10 @@
                 fetchData(); 
             } else {
                 isAuthenticated = false;
+                document.getElementById('loginButton').style.display = 'block';
+                document.getElementById('logoutButton').style.display = 'none';
                 updateButtonStates();
+                // Không ẩn mainContainer, chỉ cập nhật trạng thái nút
             }
         });
 
@@ -464,6 +536,7 @@
             loginButton.textContent = 'Đang xử lý...';
             try {
                 await signInWithEmailAndPassword(auth, email, password);
+                // onAuthStateChanged sẽ tự động xử lý đóng modal và tải lại
             } catch (error) {
                 console.error("Lỗi đăng nhập:", error);
                 let errorMessage = "Đã xảy ra lỗi. Vui lòng thử lại.";
@@ -473,6 +546,8 @@
             } finally {
                 loginButton.disabled = false;
                 loginButton.textContent = 'Đăng nhập';
+                // [THAY ĐỔI] Xóa mật khẩu sau khi thử đăng nhập
+                document.getElementById('password').value = '';
             }
         });
 
@@ -527,7 +602,7 @@
                 statusDiv.className = 'success';
                 statusDiv.innerText = 'Đang tính toán lại toàn bộ dữ liệu... Vui lòng chờ.';
                 button.disabled = true;
-                const fieldsToRecalculate = ['chiPhi', 'chiPhiThucHien'];
+                const fieldsToRecalculate = ['chiPhi', 'chiPhiThucHien', 'khNamTruoc', 'uocTHNamTruoc', 'cpPhanBo'];
                 const parentSnapshot = await getDocs(query(collection(db, getParentCollectionName())));
                 for (const parentDoc of parentSnapshot.docs) {
                     const childSnapshot = await getDocs(query(collection(parentDoc.ref, "công việc con")));
@@ -535,6 +610,15 @@
                         const grandchildSnapshot = await getDocs(query(collection(childDoc.ref, "công việc cháu")));
                         for (const grandchildDoc of grandchildSnapshot.docs) {
                             await recalculateGrandchildExecutionCost(grandchildDoc.ref.path);
+                            
+                            // Recalculate cpPhanBo for grandchild
+                            const grandchildData = grandchildDoc.data();
+                            const chiPhi = grandchildData.chiPhi || 0;
+                            const namPhanBo = grandchildData.namPhanBo || 1;
+                            const cpPhanBo = chiPhi / namPhanBo;
+                            if (grandchildData.cpPhanBo !== cpPhanBo) {
+                                await updateDoc(grandchildDoc.ref, { cpPhanBo: cpPhanBo });
+                            }
                         }
                         await recalculateSingleParentCost(childDoc.ref.path, 'công việc cháu', fieldsToRecalculate);
                         await checkAndUpdateDaThucHien(childDoc.ref.path);
@@ -553,7 +637,7 @@
         };
 
         window.importData = () => {
-            if (!isAuthenticated) return showAuthError();
+            if (!isAuthenticated) return showAuthError(); // Vẫn kiểm tra đăng nhập
             const fileInput = document.getElementById('excelFile');
             if (!fileInput.files.length) {
                 statusDiv.className = 'error'; statusDiv.innerText = "Vui lòng chọn một file Excel (.xlsx)."; return;
@@ -572,6 +656,16 @@
                     
                     const taskTree = buildTaskTree(jsonData, headers);
                     calculateCosts(taskTree);
+
+                    // [THAY ĐỔI] Kiểm tra quyền ghi (mở khóa) trước khi ghi vào CSDL
+                    const canWrite = isAuthenticated && editModeStatusByYear[currentYear] === true;
+                    if (!canWrite) {
+                        statusDiv.className = 'error';
+                        // Do đã check isAuthenticated ở đầu, lỗi ở đây là do chưa mở khóa
+                        statusDiv.innerText = 'Lỗi: Chế độ sửa đổi cho năm ' + currentYear + ' đang bị khóa. Dữ liệu đã được xử lý nhưng CHƯA được lưu. Vui lòng "Mở khóa cho phép sửa đổi" và thử lại.';
+                        return; // Dừng lại trước khi ghi
+                    }
+
                     statusDiv.innerText = "Đang nhập dữ liệu vào Firestore...";
                     await writeTreeToFirestore(taskTree);
                     statusDiv.innerText = "Nhập dữ liệu thành công! Đang tải lại danh sách...";
@@ -587,10 +681,10 @@
             tree.forEach(p => {
                 if (p.data && Object.keys(p.data).length > 1) batch.set(doc(db, getParentCollectionName(), p.id), p.data, { merge: true });
                 (p.children || []).forEach(c => {
-                    if (c.data && Object.keys(c.data).length > 1) batch.set(doc(db, getParentCollectionName(), p.id, "công việc con", c.id), c.data, { merge: true });
+                    if (c.data && Object.keys(p.data).length > 1) batch.set(doc(db, getParentCollectionName(), p.id, "công việc con", c.id), c.data, { merge: true });
                     (c.grandchildren || []).forEach(gc => {
                         const grandchildRef = doc(db, `${getParentCollectionName()}/${p.id}/công việc con/${c.id}/công việc cháu`, gc.id);
-                        if (gc.data && Object.keys(gc.data).length > 1) batch.set(grandchildRef, gc.data, { merge: true });
+                        if (gc.data && Object.keys(p.data).length > 1) batch.set(grandchildRef, gc.data, { merge: true });
                         if (gc.executions && gc.executions.length > 0) {
                             gc.executions.forEach(exec => {
                                 const execDocRef = doc(collection(grandchildRef, "thực hiện"), String(exec.lanThucHien));
@@ -671,8 +765,12 @@
                         if (field === 'tanSuatTH') {
                             const value = parseInt(input.value, 10);
                             updatedData[field] = isNaN(value) || value < 0 ? 0 : value;
+                        } else if (field === 'namPhanBo') {
+                            const value = parseInt(input.value, 10);
+                            updatedData[field] = isNaN(value) || value <= 0 ? 1 : value; // Default to 1
                         } else {
-                           updatedData[field] = (field === 'chiPhi') ? parseFormattedNumber(input.value) : input.value;
+                           const numberFields = ['chiPhi', 'khNamTruoc', 'uocTHNamTruoc'];
+                           updatedData[field] = numberFields.includes(field) ? parseFormattedNumber(input.value) : input.value;
                         }
                     });
                     if (path.includes('cháu')) {
@@ -680,6 +778,9 @@
                         const docSnap = await getDoc(docRef);
                         const chiPhiThucHien = docSnap.exists() ? (docSnap.data().chiPhiThucHien || 0) : 0;
                         updatedData.keHoachConLai = chiPhi - chiPhiThucHien;
+
+                        const namPhanBo = updatedData.namPhanBo || 1;
+                        updatedData.cpPhanBo = chiPhi / namPhanBo;
                     }
                     batch.update(docRef, updatedData);
                 }
@@ -705,11 +806,19 @@
                  if (field === 'tanSuatTH') {
                     const value = parseInt(input.value, 10);
                     newData[field] = isNaN(value) || value < 0 ? 0 : value;
+                } else if (field === 'namPhanBo') {
+                    const value = parseInt(input.value, 10);
+                    newData[field] = isNaN(value) || value <= 0 ? 1 : value; // Default to 1
                 } else {
-                    newData[field] = (field === 'chiPhi') ? parseFormattedNumber(input.value) : input.value;
+                    const numberFields = ['chiPhi', 'khNamTruoc', 'uocTHNamTruoc'];
+                    newData[field] = numberFields.includes(field) ? parseFormattedNumber(input.value) : input.value;
                 }
             });
             newData.keHoachConLai = newData.chiPhi || 0;
+            
+            const namPhanBo = newData.namPhanBo || 1;
+            newData.cpPhanBo = (newData.chiPhi || 0) / namPhanBo;
+
             if (!newData.noiDung) { alert("Nội dung công việc không được để trống!"); return; }
             const subCollectionName = level === 'child' ? 'công việc con' : 'công việc cháu';
             const newDocPath = `${parentPath}/${subCollectionName}/${newTT}`;
@@ -1030,6 +1139,20 @@
                 const taskNode = { id: tt, data };
                 
                 if (isSubNumber.test(tt)) {
+                    // NEW FIELDS
+                    const khNamTruocValue = findValue(row, ['KH năm trước', 'KH nam truoc']);
+                    if (khNamTruocValue !== undefined) data.khNamTruoc = parseNumber(khNamTruocValue);
+
+                    const uocTHNamTruocValue = findValue(row, ['Ước TH năm trước', 'Uoc TH nam truoc']);
+                    if (uocTHNamTruocValue !== undefined) data.uocTHNamTruoc = parseNumber(uocTHNamTruocValue);
+
+                    const namPhanBoValue = findValue(row, ['Năm phân bổ', 'Nam phan bo']);
+                    data.namPhanBo = (namPhanBoValue !== undefined) ? (parseInt(namPhanBoValue, 10) || 1) : 1;
+                    if (data.namPhanBo <= 0) data.namPhanBo = 1;
+
+                    data.cpPhanBo = (data.chiPhi || 0) / data.namPhanBo;
+                    // /NEW FIELDS
+
                     taskNode.executions = [];
                     let i = 1;
                     while(true) {
@@ -1094,21 +1217,37 @@
         const calculateCosts = (tree) => {
             tree.forEach(parent => {
                 let parentChiPhi = 0; let parentChiPhiThucHien = 0;
+                let parentKhNamTruoc = 0; let parentUocTHNamTruoc = 0; let parentCpPhanBo = 0;
+                
                 (parent.children || []).forEach(child => {
                     const childChiPhi = (child.grandchildren || []).reduce((sum, gc) => sum + (gc.data.chiPhi || 0), 0);
                     const childChiPhiThucHien = (child.grandchildren || []).reduce((sum, gc) => sum + (gc.data.chiPhiThucHien || 0), 0);
+                    const childKhNamTruoc = (child.grandchildren || []).reduce((sum, gc) => sum + (gc.data.khNamTruoc || 0), 0);
+                    const childUocTHNamTruoc = (child.grandchildren || []).reduce((sum, gc) => sum + (gc.data.uocTHNamTruoc || 0), 0);
+                    const childCpPhanBo = (child.grandchildren || []).reduce((sum, gc) => sum + (gc.data.cpPhanBo || 0), 0);
+                    
                     if(child.data) {
                       child.data.chiPhi = childChiPhi;
                       child.data.chiPhiThucHien = childChiPhiThucHien;
                       child.data.keHoachConLai = childChiPhi - childChiPhiThucHien;
+                      child.data.khNamTruoc = childKhNamTruoc;
+                      child.data.uocTHNamTruoc = childUocTHNamTruoc;
+                      child.data.cpPhanBo = childCpPhanBo;
                     }
                     parentChiPhi += childChiPhi;
                     parentChiPhiThucHien += childChiPhiThucHien;
+                    parentKhNamTruoc += childKhNamTruoc;
+                    parentUocTHNamTruoc += childUocTHNamTruoc;
+                    parentCpPhanBo += childCpPhanBo;
                 });
+                
                 if(parent.data) {
                   parent.data.chiPhi = parentChiPhi;
                   parent.data.chiPhiThucHien = parentChiPhiThucHien;
                   parent.data.keHoachConLai = parentChiPhi - parentChiPhiThucHien;
+                  parent.data.khNamTruoc = parentKhNamTruoc;
+                  parent.data.uocTHNamTruoc = parentUocTHNamTruoc;
+                  parent.data.cpPhanBo = parentCpPhanBo;
                 }
             });
         };
@@ -1179,7 +1318,7 @@
         };
         window.fetchData = async () => {
             const tableBody = document.getElementById('taskListBody');
-            tableBody.innerHTML = `<tr><td colspan="15">Đang tải dữ liệu...</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="19">Đang tải dữ liệu...</td></tr>`;
             try {
                 await ensureYearCollectionExists(currentYear);
                 const executedGrandchildPaths = new Set();
@@ -1228,12 +1367,22 @@
                         parentHoSoHtml = `<td class="col-hoso"><button class="btn-info btn-action" data-links='${linksJson}' onclick="showLinks(event)">Có</button></td>`;
                     }
                     html += `<tr class="task-parent">
-                        <td></td><td>${parentData.tt}</td><td colspan="3">${parentData.noiDung}</td>
-                        <td class="col-thoidiem-th"></td><td class="col-tansuat-th"></td><td class="col-dv-thuchien"></td>
+                        <td></td>
+                        <td>${parentData.tt}</td>
+                        <td>${parentData.noiDung}</td>
+                        <td class="col-donvi"></td>
+                        <td class="text-right col-kh-namtruoc">${formatNumber(parentData.khNamTruoc)}</td>
+                        <td class="text-right col-uoc-th-namtruoc">${formatNumber(parentData.uocTHNamTruoc)}</td>
+                        <td class="col-soluong"></td>
+                        <td class="col-thoidiem-th"></td>
+                        <td class="col-tansuat-th"></td>
+                        <td class="col-dv-thuchien"></td>
                         <td class="text-right">${formatNumber(parentData.chiPhi)}</td>
                         <td class="text-right col-chiphi-thuchien">${formatNumber(parentData.chiPhiThucHien)}</td>
                         <td class="text-right col-kehoach-conlai">${formatNumber(parentData.keHoachConLai)}</td>
-                        <td></td>
+                        <td class="col-nam-phanbo"></td>
+                        <td class="text-right col-cp-phanbo">${formatNumber(parentData.cpPhanBo)}</td>
+                        <td class="col-capdo"></td>
                         <td class="col-ghichu">${parentData.ghiChu || ''}</td>
                         ${parentHoSoHtml}
                         <td><div class="dropdown"><button onclick="toggleDropdown(event)" class="btn-secondary btn-action dropbtn">Thêm/sửa</button><div class="dropdown-content"><a href="#" onclick="openAddModal('${parentPath}', 'child')">Thêm Thiết bị mới</a><a href="#" onclick="handleEditClick('${parentPath}', 'parent')">Sửa Nội dung</a></div></div></td>
@@ -1256,12 +1405,21 @@
                         if (!childData.isHidden) {
                             html += `<tr class="task-child">
                                 <td><input type="checkbox" class="child-checkbox" data-child-path="${childPath}" onchange="toggleGrandchildrenCheckboxes(this)"></td>
-                                <td>${childData.tt}</td><td colspan="3">${childData.noiDung}</td>
-                                <td class="col-thoidiem-th"></td><td class="col-tansuat-th"></td><td class="col-dv-thuchien"></td>
+                                <td>${childData.tt}</td>
+                                <td>${childData.noiDung}</td>
+                                <td class="col-donvi"></td>
+                                <td class="text-right col-kh-namtruoc">${formatNumber(childData.khNamTruoc)}</td>
+                                <td class="text-right col-uoc-th-namtruoc">${formatNumber(childData.uocTHNamTruoc)}</td>
+                                <td class="col-soluong"></td>
+                                <td class="col-thoidiem-th"></td>
+                                <td class="col-tansuat-th"></td>
+                                <td class="col-dv-thuchien"></td>
                                 <td class="text-right">${formatNumber(childData.chiPhi)}</td>
                                 <td class="text-right col-chiphi-thuchien">${formatNumber(childData.chiPhiThucHien)}</td>
                                 <td class="text-right col-kehoach-conlai">${formatNumber(childData.keHoachConLai)}</td>
-                                <td>${childData.capDo || ''}</td>
+                                <td class="col-nam-phanbo"></td>
+                                <td class="text-right col-cp-phanbo">${formatNumber(childData.cpPhanBo)}</td>
+                                <td class="col-capdo">${childData.capDo || ''}</td>
                                 <td class="col-ghichu">${childData.ghiChu || ''}</td>
                                 ${childHoSoHtml}
                                 <td><div class="dropdown"><button onclick="toggleDropdown(event)" class="btn-secondary btn-action dropbtn">Thêm/sửa</button><div class="dropdown-content"><a href="#" onclick="openAddModal('${childPath}', 'grandchild')">Thêm công việc chi tiết</a><a href="#" onclick="handleEditClick('${childPath}', 'child')">Sửa Nội dung</a></div></div></td>
@@ -1306,13 +1464,18 @@
                             html += `<tr>
                                 <td><input type="checkbox" class="grandchild-checkbox" data-parent-path="${childPath}" data-path="${grandchildPath}" onchange="toggleSelection(this)"></td>
                                 <td>${grandchildData.tt}</td><td class="col-noidung" ${noiDungStyle}>${grandchildData.noiDung}</td>
-                                <td class="col-donvi">${grandchildData.donVi || ''}</td><td class="col-soluong">${grandchildData.soLuong || ''}</td>
+                                <td class="col-donvi">${grandchildData.donVi || ''}</td>
+                                <td class="text-right col-kh-namtruoc">${formatNumber(grandchildData.khNamTruoc)}</td>
+                                <td class="text-right col-uoc-th-namtruoc">${formatNumber(grandchildData.uocTHNamTruoc)}</td>
+                                <td class="col-soluong">${grandchildData.soLuong || ''}</td>
                                 <td class="col-thoidiem-th">${grandchildData.thoiDiemTH || ''}</td>
                                 <td class="col-tansuat-th">${grandchildData.tanSuatTH || ''}</td>
                                 <td class="col-dv-thuchien">${grandchildData.dvThucHien || ''}</td>
                                 <td class="text-right col-chiphi">${formatNumber(grandchildData.chiPhi)}</td>
                                 <td class="text-right col-chiphi-thuchien">${formatNumber(grandchildData.chiPhiThucHien)}</td>
                                 <td class="text-right col-kehoach-conlai">${formatNumber(grandchildData.keHoachConLai)}</td>
+                                <td class="col-nam-phanbo">${grandchildData.namPhanBo || ''}</td>
+                                <td class="text-right col-cp-phanbo">${formatNumber(grandchildData.cpPhanBo)}</td>
                                 <td class="col-capdo">${grandchildData.capDo || ''}</td>
                                 <td class="col-ghichu">${grandchildData.ghiChu || ''}</td>
                                 ${grandchildHoSoHtml}
@@ -1321,7 +1484,7 @@
                         }
                     }
                 }
-                tableBody.innerHTML = html || `<tr><td colspan="15">Không có dữ liệu cho năm ${currentYear}.</td></tr>`;
+                tableBody.innerHTML = html || `<tr><td colspan="19">Không có dữ liệu cho năm ${currentYear}.</td></tr>`;
                 const childPercentage = totalChildTasks > 0 ? Math.round((totalExecutedChildTasks / totalChildTasks) * 100) : 0;
                 const grandchildPercentage = totalGrandchildren > 0 ? Math.round((totalExecutedGrandchildren / totalGrandchildren) * 100) : 0;
                 const costPercentage = totalPlannedCost > 0 ? Math.round((totalExecutedCost / totalPlannedCost) * 100) : 0;
@@ -1349,7 +1512,7 @@
                 selectedGrandchildren.clear();
                 updateButtonStates();
                 statusDiv.innerText = '';
-            } catch (error) { console.error("Lỗi tải dữ liệu: ", error); tableBody.innerHTML = `<tr><td colspan="15">Lỗi tải dữ liệu: ${error.message}</td></tr>`; }
+            } catch (error) { console.error("Lỗi tải dữ liệu: ", error); tableBody.innerHTML = `<tr><td colspan="19">Lỗi tải dữ liệu: ${error.message}</td></tr>`; }
         };
         
         window.togglePlanningColumns = (isChecked) => {
@@ -1407,15 +1570,14 @@
                 toggleDiv.style.display = 'none';
                 document.getElementById('unlockButton').style.display = 'block';
             }
+            // Đảm bảo modal đăng nhập cũng bị đóng
+            closeLoginModal();
         };
         window.openDataManagementModal = () => document.getElementById('dataManagementModal').style.display = 'block';
-        const createModalTable = (headers) => {
+        const createModalTable = (headersText) => {
             let table = '<table class="modal-table"><thead><tr>';
-            headers.forEach(h => {
-                const style = h.width ? ` style="width: ${h.width};"` : '';
-                const className = h.class ? ` class="${h.class}"` : '';
-                const text = typeof h === 'object' ? h.text : h;
-                table += `<th${style}${className}>${text}</th>`;
+            headersText.forEach(text => {
+                table += `<th>${text}</th>`;
             });
             table += '</tr></thead><tbody>';
             return table;
@@ -1423,14 +1585,18 @@
         const createInputRow = (path, data, level) => {
             const isParent = level === 'parent';
             const isChild = level === 'child';
+            const isGrandchild = level === 'grandchild';
             const isDisabled = (field) => {
                 if (field === 'tt') return true;
                 if ((isParent || isChild)) {
+                    // Parents/children can only edit noiDung and ghiChu
                     return !['noiDung', 'ghiChu'].includes(field);
                 }
+                // Grandchildren can edit most fields, but not calculated ones
+                if (field === 'cpPhanBo') return true; 
                 return false;
             };
-            const chiPhiEvent = level === 'grandchild' ? 'onfocus="this.select()"' : '';
+            const numEvent = isGrandchild ? 'onfocus="this.select()"' : '';
             return `<tr data-path="${path}">
                         <td><input type="text" value="${data.tt || ''}" disabled></td>
                         <td><input type="text" value="${data.noiDung || ''}" data-field="noiDung" ${isDisabled('noiDung') ? 'disabled' : ''}></td>
@@ -1439,7 +1605,12 @@
                         <td><input type="text" value="${data.thoiDiemTH || ''}" data-field="thoiDiemTH" ${isDisabled('thoiDiemTH') ? 'disabled' : ''}></td>
                         <td><input type="number" value="${data.tanSuatTH || ''}" data-field="tanSuatTH" ${isDisabled('tanSuatTH') ? 'disabled' : ''}></td>
                         <td><input type="text" value="${data.dvThucHien || ''}" data-field="dvThucHien" ${isDisabled('dvThucHien') ? 'disabled' : ''}></td>
-                        <td><input type="text" value="${formatNumber(data.chiPhi || 0)}" data-field="chiPhi" oninput="this.value=formatNumber(parseNumber(this.value))" ${chiPhiEvent} ${isDisabled('chiPhi') ? 'disabled' : ''}></td>
+                        <td><input type="text" value="${formatNumber(data.chiPhi || 0)}" data-field="chiPhi" oninput="this.value=formatNumber(parseNumber(this.value))" ${numEvent} ${isDisabled('chiPhi') ? 'disabled' : ''}></td>
+                        
+                        <td><input type="text" value="${formatNumber(data.khNamTruoc || 0)}" data-field="khNamTruoc" oninput="this.value=formatNumber(parseNumber(this.value))" ${numEvent} ${isDisabled('khNamTruoc') ? 'disabled' : ''}></td>
+                        <td><input type="text" value="${formatNumber(data.uocTHNamTruoc || 0)}" data-field="uocTHNamTruoc" oninput="this.value=formatNumber(parseNumber(this.value))" ${numEvent} ${isDisabled('uocTHNamTruoc') ? 'disabled' : ''}></td>
+                        <td><input type="number" value="${data.namPhanBo || ''}" data-field="namPhanBo" ${numEvent} ${isDisabled('namPhanBo') ? 'disabled' : ''}></td>
+                        <td><input type="text" value="${formatNumber(data.cpPhanBo || 0)}" data-field="cpPhanBo" ${isDisabled('cpPhanBo') ? 'disabled' : ''}></td>
                         <td><input type="text" value="${data.capDo || ''}" data-field="capDo" ${isDisabled('capDo') ? 'disabled' : ''}></td>
                         <td><input type="text" value="${data.ghiChu || ''}" data-field="ghiChu" ${isDisabled('ghiChu') ? 'disabled' : ''}></td>
                     </tr>`;
@@ -1454,7 +1625,7 @@
             }
             document.getElementById('modalTitle').innerHTML = `<h2>${title}</h2>`;
             const showNote = pathsToEdit.some(path => path.includes('cháu'));
-            const headers = [ 'TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Thời điểm TH', 'Tần suất TH', 'ĐV th.hiện', 'Chi phí', 'Cấp độ', 'Ghi chú' ];
+            const headers = [ 'TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Thời điểm TH', 'Tần suất TH', 'ĐV th.hiện', 'Chi phí', 'KH năm trước', 'Ước TH năm trước', 'Năm PB', 'CP phân bổ', 'Cấp độ', 'Ghi chú' ];
             let table = createModalTable(headers);
             for (const path of pathsToEdit) {
                 const docSnap = await getDoc(doc(db, path));
@@ -1488,7 +1659,7 @@
                 const maxSubId = existingIds.reduce((max, id) => Math.max(max, parseInt(id.split('.')[1] || 0)), 0);
                 newTT = `${parentTT}.${maxSubId + 1}`;
             }
-            const headers = [ 'TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Thời điểm TH', 'Tần suất TH', 'ĐV th.hiện', 'Chi phí', 'Cấp độ', 'Ghi chú' ];
+            const headers = [ 'TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Thời điểm TH', 'Tần suất TH', 'ĐV th.hiện', 'Chi phí', 'KH năm trước', 'Ước TH năm trước', 'Năm PB', 'CP phân bổ', 'Cấp độ', 'Ghi chú' ];
             let table = createModalTable(headers);
             table += createInputRow(parentPath, { tt: newTT }, level);
             table += '</tbody></table>';
@@ -1512,7 +1683,7 @@
                 }
                 return null;
             }).filter(p => p));
-            const fieldsToRecalculate = ['chiPhi', 'chiPhiThucHien'];
+            const fieldsToRecalculate = ['chiPhi', 'chiPhiThucHien', 'khNamTruoc', 'uocTHNamTruoc', 'cpPhanBo'];
             for (const pathStr of uniqueParentChildPaths) {
                 const { child, parent } = JSON.parse(pathStr);
                 await recalculateSingleParentCost(child, 'công việc cháu', fieldsToRecalculate);
@@ -1637,7 +1808,6 @@
                 }
             }
             table += '</tbody></table>';
-            modalBodyHTML += table;
             modalBodyHTML += `<div class="modal-note">Mẹo: Sử dụng phím Enter hoặc các phím mũi tên (↑, ↓) để di chuyển nhanh giữa các ô nhập liệu.</div>`;
             const footerLeftHTML = `<div style="display: flex; flex-direction: column; align-items: flex-start;">
                                       <div style="display: flex; gap: 10px;">
@@ -1848,7 +2018,7 @@
                 { text: 'Tiểu mục', width: '4%' }, { text: 'Công việc chi tiết', width: '35%' },
                 { text: 'Số lượng', width: '6%' }, { text: 'Đơn giá', width: '13%' }, { text: 'Thành tiền', width: '13%' }
             ];
-            let table = createModalTable(headers);
+            let table = createModalTable(headers.map(h => h.text));
             for (const execution of group) {
                 const childSnap = await getDoc(doc(db, execution.parentChildPath));
                 const grandchildSnap = await getDoc(doc(db, execution.parentGrandchildPath));
@@ -2041,7 +2211,7 @@
                 if (executions.length > maxExecutions) maxExecutions = executions.length;
             });
 
-            const baseHeaders = ['TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Thời điểm TH', 'Tần suất TH', 'ĐV th.hiện', 'Chi phí', 'Chi phí thực hiện', 'Kế hoạch còn lại', 'Cấp độ', 'Ghi chú'];
+            const baseHeaders = ['TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Thời điểm TH', 'Tần suất TH', 'ĐV th.hiện', 'Chi phí', 'Chi phí thực hiện', 'Kế hoạch còn lại', 'Cấp độ', 'Ghi chú', 'KH năm trước', 'Ước TH năm trước', 'Năm phân bổ', 'CP phân bổ'];
             const executionHeaders = [];
             for (let i = 1; i <= maxExecutions; i++) {
                 executionHeaders.push(`Ngày TH (${i})`, `Số lượng (${i})`, `Đơn giá (${i})`, `Thành tiền (${i})`, `Timestamp (${i})`, `Hồ sơ Link (${i})`);
@@ -2055,7 +2225,7 @@
 
             for (const parentData of parents) {
                 boldRows.add(rows.length);
-                const parentRowData = [ parentData.tt, parentData.noiDung, '', '', '', '', '', parentData.chiPhi, parentData.chiPhiThucHien, parentData.keHoachConLai, '', parentData.ghiChu || '' ];
+                const parentRowData = [ parentData.tt, parentData.noiDung, '', '', '', '', '', parentData.chiPhi, parentData.chiPhiThucHien, parentData.keHoachConLai, '', parentData.ghiChu || '', parentData.khNamTruoc, parentData.uocTHNamTruoc, '', parentData.cpPhanBo ];
                 parentRowData.push(...Array(maxExecutions * 6).fill('')); 
                 rows.push(parentRowData);
                 const childSnapshot = await getDocs(query(collection(db, `${getParentCollectionName()}/${parentData.id}/công việc con`)));
@@ -2064,7 +2234,7 @@
 
                 for (const childData of children) {
                     boldRows.add(rows.length); 
-                    const childRowData = [ childData.tt, childData.noiDung, '', '', '', '', '', childData.chiPhi, childData.chiPhiThucHien, childData.keHoachConLai, childData.capDo, childData.ghiChu || '' ];
+                    const childRowData = [ childData.tt, childData.noiDung, '', '', '', '', '', childData.chiPhi, childData.chiPhiThucHien, childData.keHoachConLai, childData.capDo, childData.ghiChu || '', childData.khNamTruoc, childData.uocTHNamTruoc, '', childData.cpPhanBo ];
                     childRowData.push(...Array(maxExecutions * 6).fill('')); 
                     rows.push(childRowData);
                     const grandchildSnapshot = await getDocs(query(collection(db, `${getParentCollectionName()}/${parentData.id}/công việc con/${childData.id}/công việc cháu`)));
@@ -2073,7 +2243,8 @@
                         const grandchildRowData = [ 
                             grandchildData.tt, grandchildData.noiDung, grandchildData.donVi, grandchildData.soLuong,
                             grandchildData.thoiDiemTH, grandchildData.tanSuatTH, grandchildData.dvThucHien,
-                            grandchildData.chiPhi, grandchildData.chiPhiThucHien, grandchildData.keHoachConLai, grandchildData.capDo, grandchildData.ghiChu || ''
+                            grandchildData.chiPhi, grandchildData.chiPhiThucHien, grandchildData.keHoachConLai, grandchildData.capDo, grandchildData.ghiChu || '',
+                            grandchildData.khNamTruoc, grandchildData.uocTHNamTruoc, grandchildData.namPhanBo, grandchildData.cpPhanBo
                         ];
                         const executions = executionsMap.get(grandchildData.path) || [];
                         executions.forEach(exec => {
@@ -2100,7 +2271,7 @@
                 const ws = XLSX.utils.aoa_to_sheet([fullHeaders, ...rows]);
                 for (let i = 0; i < rows.length; i++) {
                     if (boldRows.has(i)) {
-                        for (let j = 0; j < 12; j++) { // 12 is the number of base headers
+                        for (let j = 0; j < 16; j++) { // 16 is the number of base headers
                             const cellAddress = XLSX.utils.encode_cell({ r: i + 1, c: j });
                             if(ws[cellAddress]) {
                                 if(!ws[cellAddress].s) ws[cellAddress].s = {};
@@ -2110,7 +2281,7 @@
                         }
                     }
                 }
-                const colWidths = [ { wch: 8 }, { wch: 40 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, {wch: 25} ];
+                const colWidths = [ { wch: 8 }, { wch: 40 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, {wch: 25}, {wch: 15}, {wch: 15}, {wch: 10}, {wch: 15} ];
                 for (let i = 0; i < maxExecutions; i++) {
                     colWidths.push({ wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 22 }, { wch: 40 });
                 }
@@ -2144,9 +2315,9 @@
                             styles.push('font-weight: bold;');
                         }
                         // Check if it's a "Ngày TH" column
-                        // Base headers count = 12. Execution headers start at index 12.
+                        // Base headers count = 16. Execution headers start at index 16.
                         // Each execution block has 6 columns. The date is the first one.
-                        if (j >= 12 && (j - 12) % 6 === 0) {
+                        if (j >= 16 && (j - 16) % 6 === 0) {
                             styles.push("mso-number-format:'\\@'");
                         }
                         const styleAttr = styles.length > 0 ? ` style="${styles.join(' ')}"` : '';
@@ -2192,7 +2363,10 @@
         };
         scrollToTopBtn.onclick = () => { window.scrollTo({top: 0, behavior: 'smooth'}); };
 
+        // [THAY ĐỔI] Cập nhật hàm startApp
         async function startApp() {
+            // Xóa signOut ban đầu, onAuthStateChanged sẽ xử lý trạng thái chưa đăng nhập
+            
             const settingsDocRef = doc(db, 'settings', 'global');
             onSnapshot(settingsDocRef, (docSnap) => {
                 if (docSnap.exists()) {
@@ -2204,6 +2378,7 @@
             });
 
             initializeYearDropdown();
+            fetchData(); // Tải dữ liệu ban đầu (ngay cả khi chưa đăng nhập)
             initializeGoogleClients();
         }
 
