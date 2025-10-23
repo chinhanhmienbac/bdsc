@@ -2369,7 +2369,8 @@
 
         // [THAY ĐỔI] Cập nhật hàm startApp
         async function startApp() {
-            // Xóa signOut ban đầu, onAuthStateChanged sẽ xử lý trạng thái chưa đăng nhập
+await signOut(auth).catch(err => console.log("Lỗi đăng xuất tự động:", err));           
+ // onAuthStateChanged sẽ xử lý trạng thái chưa đăng nhập
             
             const settingsDocRef = doc(db, 'settings', 'global');
             onSnapshot(settingsDocRef, (docSnap) => {
