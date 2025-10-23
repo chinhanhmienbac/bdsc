@@ -1822,7 +1822,7 @@
                 {text: 'Số lượng', class: 'col-dvt'}, {text: 'Đơn giá', class: 'col-dongia'}, 
                 {text: 'Thành tiền', class: 'col-thanhtien'}
             ];
-            let modalBodyHTML = `<div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;"><label for="executionDate" style="font-weight: bold;">Ngày thực hiện:</label><input type="date" id="executionDate" style="padding: 5px; border: 1px solid #ccc; border-radius: 4px;" value="${new Date().toISOString().split('T')[0]}"></div>`;
+            let modalBodyHTML = `<div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;"><label for="executionDate" style="font-weight: bold;">Ngày thực hiện:</label><input type="date" id="executionDate" style="padding: 5px; border: 1px solid #ccc; border-radius: 4px;" value=""></div>`;
             
             let table = `<table class="modal-table execution-modal-table"><thead><tr>`;
             headers.forEach(h => {
@@ -1973,11 +1973,29 @@
                     for (const childPath in group) {
                         const childName = (docDataMap.get(childPath) || {}).noiDung || 'Công việc con không xác định'; 
                         summaryHtml += `<div><strong>${childName}</strong></div>`;
-                        const grandchildrenSummaries = group[childPath].map(item => {
+                        
+                        // [THAY ĐỔI] Sắp xếp các công việc cháu theo thứ tự 'tt' (natural sort)
+                        const sortedExecutions = group[childPath].sort((a, b) => {
+                            const ttA = (docDataMap.get(a.parentGrandchildPath) || {}).tt || '0';
+                            const ttB = (docDataMap.get(b.parentGrandchildPath) || {}).tt || '0';
+                            
+                            const partsA = String(ttA).split('.').map(v => parseInt(v, 10));
+                            const partsB = String(ttB).split('.').map(v => parseInt(v, 10));
+                            const len = Math.max(partsA.length, partsB.length);
+                            for (let i = 0; i < len; i++) {
+                                const valA = partsA[i] || 0;
+                                const valB = partsB[i] || 0;
+                                if (valA !== valB) return valA - valB;
+                            }
+                            return 0;
+                        });
+
+                        const grandchildrenSummaries = sortedExecutions.map(item => { // [THAY ĐỔI] Lặp qua mảng đã sắp xếp
                             totalCost += item.thanhTien; grandchildCount++;
                             const noiDung = (docDataMap.get(item.parentGrandchildPath) || {}).noiDung || ''; 
                             return noiDung.length > 20 ? noiDung.substring(0, 20) + '...' : noiDung;
                         }).join('; ');
+
                         summaryHtml += `<div style="padding-left: 15px;">${grandchildrenSummaries}</div>`;
                     }
                     const keyParam = typeof timestampKey === 'number' ? timestampKey : `'${timestampKey}'`;
@@ -2019,7 +2037,24 @@
                 for (const [timestampKey, group] of sortedGroups) {
                     for (const childPath in group) {
                         const childName = (docDataMap.get(childPath) || { noiDung: 'N/A' }).noiDung;
-                        for (const exec of group[childPath]) {
+
+                        // [THAY ĐỔI] Sắp xếp các công việc cháu theo thứ tự 'tt' (natural sort)
+                        const sortedExecutions = group[childPath].sort((a, b) => {
+                            const ttA = (docDataMap.get(a.parentGrandchildPath) || {}).tt || '0';
+                            const ttB = (docDataMap.get(b.parentGrandchildPath) || {}).tt || '0';
+                            
+                            const partsA = String(ttA).split('.').map(v => parseInt(v, 10));
+                            const partsB = String(ttB).split('.').map(v => parseInt(v, 10));
+                            const len = Math.max(partsA.length, partsB.length);
+                            for (let i = 0; i < len; i++) {
+                                const valA = partsA[i] || 0;
+                                const valB = partsB[i] || 0;
+                                if (valA !== valB) return valA - valB;
+                            }
+                            return 0;
+                        });
+
+                        for (const exec of sortedExecutions) { // [THAY ĐỔI] Lặp qua mảng đã sắp xếp
                              const grandchildData = docDataMap.get(exec.parentGrandchildPath) || { tt: 'N/A', noiDung: 'N/A', keHoachConLai: '' };
                              rows.push([ 
                                  counter++, 
@@ -2050,7 +2085,25 @@
         window.openExecutionEditModal = async (timestampKey) => {
             const groupObject = executionGroups.get(timestampKey);
             if (!groupObject) return;
-            const group = Object.values(groupObject).flat();
+            let group = Object.values(groupObject).flat(); // [THAY ĐỔI] Dùng let thay vì const
+
+            // [THAY ĐỔI] Sắp xếp các công việc cháu theo thứ tự 'tt' (natural sort)
+            group.sort((a, b) => {
+                // Lấy 'tt' từ docDataMap đã được tải trước đó
+                const ttA = (docDataMap.get(a.parentGrandchildPath) || {}).tt || '0';
+                const ttB = (docDataMap.get(b.parentGrandchildPath) || {}).tt || '0';
+                
+                const partsA = String(ttA).split('.').map(v => parseInt(v, 10));
+                const partsB = String(ttB).split('.').map(v => parseInt(v, 10));
+                const len = Math.max(partsA.length, partsB.length);
+                for (let i = 0; i < len; i++) {
+                    const valA = partsA[i] || 0;
+                    const valB = partsB[i] || 0;
+                    if (valA !== valB) return valA - valB;
+                }
+                return 0;
+            });
+
             const keyParam = typeof timestampKey === 'number' ? timestampKey : `'${timestampKey}'`;
             document.getElementById('modalTitle').innerHTML = `<h2>Sửa lần thực hiện ngày ${group[0].ngayThucHien}</h2>`;
             const headers = [
@@ -2059,14 +2112,13 @@
                 { text: 'Số lượng', width: '6%' }, { text: 'Đơn giá', width: '13%' }, { text: 'Thành tiền', width: '13%' }
             ];
             
-            // [THAY ĐỔI] Thêm class 'edit-execution-modal-table' để áp dụng CSS riêng
             let table = createModalTable(headers.map(h => h.text), 'edit-execution-modal-table');
             
-            for (const execution of group) {
-                const childSnap = await getDoc(doc(db, execution.parentChildPath));
-                const grandchildSnap = await getDoc(doc(db, execution.parentGrandchildPath));
-                const childData = childSnap.exists() ? childSnap.data() : { tt: 'N/A', noiDung: 'Không tìm thấy' };
-                const grandchildData = grandchildSnap.exists() ? grandchildSnap.data() : { tt: 'N/A', noiDung: 'Không tìm thấy' };
+            for (const execution of group) { // [THAY ĐỔI] Vòng lặp này bây giờ chạy trên mảng đã sắp xếp
+                // [THAY ĐỔI] Lấy dữ liệu từ docDataMap thay vì getDoc()
+                const childData = docDataMap.get(execution.parentChildPath) || { tt: 'N/A', noiDung: 'Không tìm thấy' };
+                const grandchildData = docDataMap.get(execution.parentGrandchildPath) || { tt: 'N/A', noiDung: 'Không tìm thấy' };
+
                 table += `<tr data-exec-path="${execution.path}" data-tt="${grandchildData.tt}">
                             <td><input type="text" value="${childData.tt}" disabled></td>
                             <td><input type="text" value="${childData.noiDung}" disabled></td>
@@ -2140,15 +2192,34 @@
             try {
                 const groupObject = executionGroups.get(timestampKey);
                 if (!groupObject) throw new Error("Không tìm thấy dữ liệu thực hiện.");
-                const group = Object.values(groupObject).flat();
+                let group = Object.values(groupObject).flat(); // [THAY ĐỔI] Dùng let thay vì const
+
+                // [THAY ĐỔI] Sắp xếp các công việc cháu theo thứ tự 'tt' (natural sort)
+                group.sort((a, b) => {
+                    // Lấy 'tt' từ docDataMap đã được tải trước đó
+                    const ttA = (docDataMap.get(a.parentGrandchildPath) || {}).tt || '0';
+                    const ttB = (docDataMap.get(b.parentGrandchildPath) || {}).tt || '0';
+                    
+                    const partsA = String(ttA).split('.').map(v => parseInt(v, 10));
+                    const partsB = String(ttB).split('.').map(v => parseInt(v, 10));
+                    const len = Math.max(partsA.length, partsB.length);
+                    for (let i = 0; i < len; i++) {
+                        const valA = partsA[i] || 0;
+                        const valB = partsB[i] || 0;
+                        if (valA !== valB) return valA - valB;
+                    }
+                    return 0;
+                });
+
                 const ngayThucHien = group[0]?.ngayThucHien || 'UnknownDate';
                 const headers = ['Mục', 'Thiết bị', 'Tiểu mục', 'Công việc chi tiết', 'Số lượng', 'Đơn giá', 'Thành tiền'];
                 const rows = [headers];
-                for (const exec of group) {
-                    const childSnap = await getDoc(doc(db, exec.parentChildPath));
-                    const grandchildSnap = await getDoc(doc(db, exec.parentGrandchildPath));
-                    const childData = childSnap.exists() ? childSnap.data() : { tt: 'N/A', noiDung: 'N/A' };
-                    const grandchildData = grandchildSnap.exists() ? grandchildSnap.data() : { tt: 'N/A', noiDung: 'N/A' };
+                
+                for (const exec of group) { // [THAY ĐỔI] Lặp qua mảng đã sắp xếp
+                    // [THAY ĐỔI] Lấy dữ liệu từ docDataMap thay vì getDoc()
+                    const childData = docDataMap.get(exec.parentChildPath) || { tt: 'N/A', noiDung: 'N/A' };
+                    const grandchildData = docDataMap.get(exec.parentGrandchildPath) || { tt: 'N/A', noiDung: 'N/A' };
+                    
                     rows.push([ childData.tt, childData.noiDung, grandchildData.tt, grandchildData.noiDung, exec.dvt, exec.donGia, exec.thanhTien ]);
                 }
                 const wb = XLSX.utils.book_new();
