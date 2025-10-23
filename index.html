@@ -98,36 +98,36 @@
         .modal-table input { width: 95%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
         .modal-table input:disabled { background-color: #e9ecef; cursor: not-allowed;}
         
-        /* [THAY ĐỔI] Đặt độ rộng 3% cho các cột modal sửa/thêm */
-.modal-table th:nth-child(1), .modal-table td:nth-child(1),   /* TT */
-.modal-table th:nth-child(4), .modal-table td:nth-child(4),   /* Số lượng */         
-.modal-table th:nth-child(6), .modal-table td:nth-child(6),   /* Tần suất TH */
-        .modal-table th:nth-child(11), .modal-table td:nth-child(11), /* Năm PB */
-        .modal-table th:nth-child(13), .modal-table td:nth-child(13)  /* Cấp độ */
+        /* [THAY ĐỔI] Đặt độ rộng 3% cho các cột modal sửa/thêm (ÁP DỤNG RIÊNG CHO .add-edit-task-table) */
+.add-edit-task-table th:nth-child(1), .add-edit-task-table td:nth-child(1),   /* TT */
+.add-edit-task-table th:nth-child(4), .add-edit-task-table td:nth-child(4),   /* Số lượng */         
+.add-edit-task-table th:nth-child(6), .add-edit-task-table td:nth-child(6),   /* Tần suất TH */
+        .add-edit-task-table th:nth-child(11), .add-edit-task-table td:nth-child(11), /* Năm PB */
+        .add-edit-task-table th:nth-child(13), .add-edit-task-table td:nth-child(13)  /* Cấp độ */
         {
             width: 3%;
         }
- .modal-table th:nth-child(2), .modal-table td:nth-child(2)  /* Nội dung */
+ .add-edit-task-table th:nth-child(2), .add-edit-task-table td:nth-child(2)  /* Nội dung */
         {
             width: 20%;
         }
-.modal-table th:nth-child(3), .modal-table td:nth-child(3),   /* Đơn vị */
-        .modal-table th:nth-child(5), .modal-table td:nth-child(5), /* Thời điểm */
-        .modal-table th:nth-child(7), .modal-table td:nth-child(7)  /* DV thực hiện */
+.add-edit-task-table th:nth-child(3), .add-edit-task-table td:nth-child(3),   /* Đơn vị */
+        .add-edit-task-table th:nth-child(5), .add-edit-task-table td:nth-child(5), /* Thời điểm */
+        .add-edit-task-table th:nth-child(7), .add-edit-task-table td:nth-child(7)  /* DV thực hiện */
         {
             width: 5%;
         }
 
-        /* [THAY ĐỔI] Bổ sung CSS căn giữa cho modal */
-        .modal-table th:nth-child(6),   /* Tần suất TH */
-        .modal-table th:nth-child(11),  /* Năm PB */
-        .modal-table th:nth-child(13) { /* Cấp độ */
+        /* [THAY ĐỔI] Bổ sung CSS căn giữa cho modal (ÁP DỤNG RIÊNG CHO .add-edit-task-table) */
+        .add-edit-task-table th:nth-child(6),   /* Tần suất TH */
+        .add-edit-task-table th:nth-child(11),  /* Năm PB */
+        .add-edit-task-table th:nth-child(13) { /* Cấp độ */
             text-align: center;
         }
         
-        .modal-table td:nth-child(6) input,
-        .modal-table td:nth-child(11) input,
-        .modal-table td:nth-child(13) input {
+        .add-edit-task-table td:nth-child(6) input,
+        .add-edit-task-table td:nth-child(11) input,
+        .add-edit-task-table td:nth-child(13) input {
             text-align: center;
         }
 
@@ -144,6 +144,34 @@
         .execution-modal-table th:nth-child(3), .execution-modal-table td:nth-child(3) { width: 12%; }
         .execution-modal-table th:nth-child(4), .execution-modal-table td:nth-child(4) { width: 13%; }
         .execution-modal-table th:nth-child(5), .execution-modal-table td:nth-child(5) { width: 13%; }
+
+        /* [BỔ SUNG] Quy tắc CSS mới cho modal "Sửa lần thực hiện" */
+        .edit-execution-modal-table th:nth-child(1), .edit-execution-modal-table td:nth-child(1), /* Mục */
+        .edit-execution-modal-table th:nth-child(3), .edit-execution-modal-table td:nth-child(3)  /* Tiểu mục */
+        {
+            width: 5%;
+        }
+        
+        .edit-execution-modal-table th:nth-child(2), .edit-execution-modal-table td:nth-child(2), /* Thiết bị */
+        .edit-execution-modal-table th:nth-child(4), .edit-execution-modal-table td:nth-child(4)  /* Công việc chi tiết */
+        {
+            width: 20%;
+        }
+
+        .edit-execution-modal-table th:nth-child(5), .edit-execution-modal-table td:nth-child(5)  /* Số lượng */
+        {
+            width: 16.5%;
+        }
+
+        .edit-execution-modal-table th:nth-child(6), .edit-execution-modal-table td:nth-child(6)  /* Đơn giá */
+        {
+            width: 17%;
+        }
+
+        .edit-execution-modal-table th:nth-child(7), .edit-execution-modal-table td:nth-child(7)  /* Thành tiền */
+        {
+            width: 16.5%;
+        }
 
         .modal-footer { text-align: right; margin-top: 20px; }
         .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
@@ -1574,8 +1602,10 @@
             closeLoginModal();
         };
         window.openDataManagementModal = () => document.getElementById('dataManagementModal').style.display = 'block';
-        const createModalTable = (headersText) => {
-            let table = '<table class="modal-table"><thead><tr>';
+        
+        // [THAY ĐỔI] Thêm tham số additionalClass để thêm class CSS tùy chỉnh
+        const createModalTable = (headersText, additionalClass = '') => {
+            let table = `<table class="modal-table ${additionalClass.trim()}"><thead><tr>`;
             headersText.forEach(text => {
                 table += `<th>${text}</th>`;
             });
@@ -1626,7 +1656,10 @@
             document.getElementById('modalTitle').innerHTML = `<h2>${title}</h2>`;
             const showNote = pathsToEdit.some(path => path.includes('cháu'));
             const headers = [ 'TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Thời điểm TH', 'Tần suất TH', 'ĐV th.hiện', 'Chi phí', 'KH năm trước', 'Ước TH năm trước', 'Năm PB', 'CP phân bổ', 'Cấp độ', 'Ghi chú' ];
-            let table = createModalTable(headers);
+            
+            // [THAY ĐỔI] Thêm class 'add-edit-task-table' để áp dụng CSS riêng
+            let table = createModalTable(headers, 'add-edit-task-table');
+            
             for (const path of pathsToEdit) {
                 const docSnap = await getDoc(doc(db, path));
                 if (docSnap.exists()) {
@@ -1660,7 +1693,10 @@
                 newTT = `${parentTT}.${maxSubId + 1}`;
             }
             const headers = [ 'TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Thời điểm TH', 'Tần suất TH', 'ĐV th.hiện', 'Chi phí', 'KH năm trước', 'Ước TH năm trước', 'Năm PB', 'CP phân bổ', 'Cấp độ', 'Ghi chú' ];
-            let table = createModalTable(headers);
+            
+            // [THAY ĐỔI] Thêm class 'add-edit-task-table' để áp dụng CSS riêng
+            let table = createModalTable(headers, 'add-edit-task-table');
+            
             table += createInputRow(parentPath, { tt: newTT }, level);
             table += '</tbody></table>';
             let modalBodyHTML = '';
@@ -2022,7 +2058,10 @@
                 { text: 'Tiểu mục', width: '4%' }, { text: 'Công việc chi tiết', width: '35%' },
                 { text: 'Số lượng', width: '6%' }, { text: 'Đơn giá', width: '13%' }, { text: 'Thành tiền', width: '13%' }
             ];
-            let table = createModalTable(headers.map(h => h.text));
+            
+            // [THAY ĐỔI] Thêm class 'edit-execution-modal-table' để áp dụng CSS riêng
+            let table = createModalTable(headers.map(h => h.text), 'edit-execution-modal-table');
+            
             for (const execution of group) {
                 const childSnap = await getDoc(doc(db, execution.parentChildPath));
                 const grandchildSnap = await getDoc(doc(db, execution.parentGrandchildPath));
@@ -2215,7 +2254,9 @@
                 if (executions.length > maxExecutions) maxExecutions = executions.length;
             });
 
-            const baseHeaders = ['TT', 'Nội dung', 'Đơn vị', 'Số lượng', 'Thời điểm TH', 'Tần suất TH', 'ĐV th.hiện', 'Chi phí', 'Chi phí thực hiện', 'Kế hoạch còn lại', 'Cấp độ', 'Ghi chú', 'KH năm trước', 'Ước TH năm trước', 'Năm phân bổ', 'CP phân bổ'];
+            // [SỬA LỖI] Sắp xếp lại baseHeaders theo đúng thứ tự của <table id="taskList">
+            const baseHeaders = ['TT', 'Nội dung', 'Đơn vị', 'KH năm trước', 'Ước TH năm trước', 'Số lượng', 'Thời điểm TH', 'Tần suất TH', 'ĐV th.hiện', 'Chi phí', 'Chi phí thực hiện', 'Kế hoạch còn lại', 'Năm PB', 'CP phân bổ', 'Cấp độ', 'Ghi chú'];
+            
             const executionHeaders = [];
             for (let i = 1; i <= maxExecutions; i++) {
                 executionHeaders.push(`Ngày TH (${i})`, `Số lượng (${i})`, `Đơn giá (${i})`, `Thành tiền (${i})`, `Timestamp (${i})`, `Hồ sơ Link (${i})`);
@@ -2229,7 +2270,15 @@
 
             for (const parentData of parents) {
                 boldRows.add(rows.length);
-                const parentRowData = [ parentData.tt, parentData.noiDung, '', '', '', '', '', parentData.chiPhi, parentData.chiPhiThucHien, parentData.keHoachConLai, '', parentData.ghiChu || '', parentData.khNamTruoc, parentData.uocTHNamTruoc, '', parentData.cpPhanBo ];
+                // [SỬA LỖI] Sắp xếp lại dữ liệu trong parentRowData
+                const parentRowData = [ 
+                    parentData.tt, parentData.noiDung, '', 
+                    parentData.khNamTruoc, parentData.uocTHNamTruoc, 
+                    '', '', '', '', 
+                    parentData.chiPhi, parentData.chiPhiThucHien, parentData.keHoachConLai, 
+                    '', parentData.cpPhanBo, 
+                    '', parentData.ghiChu || '' 
+                ];
                 parentRowData.push(...Array(maxExecutions * 6).fill('')); 
                 rows.push(parentRowData);
                 const childSnapshot = await getDocs(query(collection(db, `${getParentCollectionName()}/${parentData.id}/công việc con`)));
@@ -2238,17 +2287,28 @@
 
                 for (const childData of children) {
                     boldRows.add(rows.length); 
-                    const childRowData = [ childData.tt, childData.noiDung, '', '', '', '', '', childData.chiPhi, childData.chiPhiThucHien, childData.keHoachConLai, childData.capDo, childData.ghiChu || '', childData.khNamTruoc, childData.uocTHNamTruoc, '', childData.cpPhanBo ];
+                    // [SỬA LỖI] Sắp xếp lại dữ liệu trong childRowData
+                    const childRowData = [ 
+                        childData.tt, childData.noiDung, '', 
+                        childData.khNamTruoc, childData.uocTHNamTruoc, 
+                        '', '', '', '', 
+                        childData.chiPhi, childData.chiPhiThucHien, childData.keHoachConLai, 
+                        '', childData.cpPhanBo, 
+                        childData.capDo, childData.ghiChu || '' 
+                    ];
                     childRowData.push(...Array(maxExecutions * 6).fill('')); 
                     rows.push(childRowData);
                     const grandchildSnapshot = await getDocs(query(collection(db, `${getParentCollectionName()}/${parentData.id}/công việc con/${childData.id}/công việc cháu`)));
                     const grandchildren = grandchildSnapshot.docs.map(d => ({id: d.id, path: d.ref.path, ...d.data()})).sort((a,b) => naturalSort(a,b));
                     for (const grandchildData of grandchildren) {
+                        // [SỬA LỖI] Sắp xếp lại dữ liệu trong grandchildRowData
                         const grandchildRowData = [ 
-                            grandchildData.tt, grandchildData.noiDung, grandchildData.donVi, grandchildData.soLuong,
-                            grandchildData.thoiDiemTH, grandchildData.tanSuatTH, grandchildData.dvThucHien,
-                            grandchildData.chiPhi, grandchildData.chiPhiThucHien, grandchildData.keHoachConLai, grandchildData.capDo, grandchildData.ghiChu || '',
-                            grandchildData.khNamTruoc, grandchildData.uocTHNamTruoc, grandchildData.namPhanBo, grandchildData.cpPhanBo
+                            grandchildData.tt, grandchildData.noiDung, grandchildData.donVi, 
+                            grandchildData.khNamTruoc, grandchildData.uocTHNamTruoc,
+                            grandchildData.soLuong, grandchildData.thoiDiemTH, grandchildData.tanSuatTH, grandchildData.dvThucHien,
+                            grandchildData.chiPhi, grandchildData.chiPhiThucHien, grandchildData.keHoachConLai, 
+                            grandchildData.namPhanBo, grandchildData.cpPhanBo,
+                            grandchildData.capDo, grandchildData.ghiChu || ''
                         ];
                         const executions = executionsMap.get(grandchildData.path) || [];
                         executions.forEach(exec => {
@@ -2285,7 +2345,27 @@
                         }
                     }
                 }
-                const colWidths = [ { wch: 8 }, { wch: 40 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, {wch: 25}, {wch: 15}, {wch: 15}, {wch: 10}, {wch: 15} ];
+                
+                // [SỬA LỖI] Sắp xếp lại colWidths để khớp với baseHeaders mới
+                const colWidths = [ 
+                    { wch: 8 },  // TT
+                    { wch: 40 }, // Nội dung
+                    { wch: 10 }, // Đơn vị
+                    { wch: 15 }, // KH năm trước
+                    { wch: 15 }, // Ước TH năm trước
+                    { wch: 10 }, // Số lượng
+                    { wch: 12 }, // Thời điểm TH
+                    { wch: 12 }, // Tần suất TH
+                    { wch: 12 }, // ĐV th.hiện
+                    { wch: 15 }, // Chi phí
+                    { wch: 15 }, // Chi phí thực hiện
+                    { wch: 15 }, // Kế hoạch còn lại
+                    { wch: 10 }, // Năm PB
+                    { wch: 15 }, // CP phân bổ
+                    { wch: 10 }, // Cấp độ
+                    { wch: 25 }  // Ghi chú
+                ];
+
                 for (let i = 0; i < maxExecutions; i++) {
                     colWidths.push({ wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 22 }, { wch: 40 });
                 }
