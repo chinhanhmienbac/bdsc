@@ -1242,13 +1242,38 @@
         }
         function ensureGapiAuthenticated() {
             return new Promise((resolve, reject) => {
-                if (gapi.client.getToken()) return resolve(gapi.client.getToken());
-                tokenClient.requestAccessToken({ prompt: '' }); 
+                const token = gapi.client.getToken();
+                if (token) {
+                    // console.log("Token already exists:", token); // Bỏ comment nếu muốn debug
+                    return resolve(token);
+                }
+                // console.log("Requesting new token..."); // Bỏ comment nếu muốn debug
+
+                // Đặt callback *trước khi* yêu cầu token.
                 tokenClient.callback = (resp) => {
-                    if (resp.error) reject(resp.error);
-                    else resolve(resp);
-                    tokenClient.callback = () => {};
+                    // Quan trọng: Đặt lại callback ngay lập tức để tránh gọi lại không mong muốn
+                    const currentCallback = tokenClient.callback;
+                    tokenClient.callback = () => {}; // Đặt lại ngay
+
+                    // Chỉ xử lý nếu callback này thực sự được gọi cho yêu cầu hiện tại
+                    if (currentCallback !== arguments.callee) { 
+                        // console.log("Ignoring stale callback"); // Bỏ comment nếu muốn debug
+                        return;
+                    }
+
+
+                    if (resp.error) {
+                        console.error("Token request error:", resp.error);
+                        return reject(resp.error); // Trả về lỗi
+                    }
+                    // console.log("Token received:", resp); // Bỏ comment nếu muốn debug
+                    return resolve(resp); // Trả về token thành công
                 };
+
+                // Kích hoạt yêu cầu token. Callback ở trên sẽ xử lý kết quả.
+                // Thử yêu cầu ngầm trước. Nếu thất bại (do chưa đăng nhập/chưa cấp quyền),
+                // nó có thể hiển thị popup, và popup đó sẽ dùng callback đã đặt.
+                tokenClient.requestAccessToken({ prompt: '' }); 
             });
         }
         const buildTaskTree = (jsonData, headers) => {
@@ -2601,14 +2626,17 @@ window.openAddModal = async (parentPath, level) => {
             if (!gapiReady) { alert("Dịch vụ Google chưa sẵn sàng, vui lòng thử lại sau giây lát."); return; }
             
             try {
-                await ensureGapiAuthenticated();
+                // console.log("Ensuring GAPI authentication..."); // Bỏ comment nếu muốn debug
+                await ensureGapiAuthenticated(); // Chờ token
+                // console.log("Authentication successful or token already present."); // Bỏ comment nếu muốn debug
+
+                // Chỉ tiếp tục mở modal sau khi xác thực thành công
                 const uploadModal = document.getElementById('uploadPdfModal');
                 const uploadButton = document.getElementById('uploadPdfButton');
                 document.getElementById('pdf_file_input').value = '';
                 uploadModal.style.display = 'block';
                 
-                // [BỔ SUNG] Đặt hàm callback cho việc upload file Kế hoạch
-                // timestampKey là null vì nó không liên quan đến một lần thực hiện cụ thể
+                // Đặt callback *sau khi* đảm bảo đã xác thực thành công
                 uploadButton.onclick = () => performPdfUpload(null, async (fileLink, fileName) => {
                     // Sau khi upload thành công, lưu link vào CSDL
                     await savePlanLink({ name: fileName, url: fileLink });
@@ -2620,7 +2648,24 @@ window.openAddModal = async (parentPath, level) => {
             } catch (error) {
                 console.error("Lỗi xác thực Google:", error);
                 statusDiv.className = 'error';
-                statusDiv.innerText = 'Lỗi xác thực với Google. Vui lòng thử lại.';
+                // Cung cấp thông báo lỗi cụ thể hơn nếu có thể
+                let errorMsg = 'Lỗi xác thực với Google. Vui lòng thử lại.';
+                // Kiểm tra các lỗi phổ biến từ Google Identity Services
+                if (typeof error === 'string') {
+                     if (error.includes('popup_closed_by_user') || error.includes('access_denied')) {
+                        errorMsg = 'Bạn đã hủy hoặc từ chối yêu cầu xác thực Google.';
+                     } else if (error.includes('popup_blocked_by_browser')) {
+                         errorMsg = 'Trình duyệt đã chặn cửa sổ xác thực Google. Vui lòng cho phép cửa sổ bật lên cho trang này và thử lại.';
+                     }
+                } else if (error && error.type === 'popup_closed_by_user') {
+                     errorMsg = 'Bạn đã đóng cửa sổ xác thực Google.';
+                } else if (error && error.type === 'popup_failed_to_open') {
+                     errorMsg = 'Không thể mở cửa sổ xác thực Google. Vui lòng kiểm tra cài đặt chặn popup của trình duyệt.';
+                }
+                
+                statusDiv.innerText = errorMsg;
+                // Đảm bảo đóng modal nếu có lỗi xảy ra trong quá trình xác thực
+                 closeAllModals(); 
             }
         };
 
