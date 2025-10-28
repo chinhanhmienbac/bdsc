@@ -1218,13 +1218,12 @@ async function performPdfUpload(file, onSuccessCallback) {
             } catch (error) {
                 // Ném lại lỗi để khối catch bên ngoài xử lý và hiển thị cho người dùng
                 throw error; 
-            } finally {
-                // Chỉ bật lại nút nếu không có lỗi hoặc lỗi đã được xử lý (ví dụ: người dùng đóng popup)
-                // Nếu ném lỗi ở trên, khối catch bên ngoài sẽ xử lý việc giữ modal mở
-                if (!(error instanceof Error && error.message.startsWith('Tải lên thất bại'))) {
-                   uploadButton.disabled = false;
-                   uploadButton.textContent = 'Tải Lên';
-                }
+           } finally {
+            // [SỬA LỖI] Chỉ truy cập 'error' nếu nó được định nghĩa (nghĩa là đã vào catch)
+            // Tuy nhiên, logic kiểm tra lỗi đã được chuyển ra ngoài khối catch, nên chỉ cần bật lại nút
+             uploadButton.disabled = false;
+             uploadButton.textContent = 'Tải Lên';
+        }
             }
         }
 
