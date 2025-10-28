@@ -14,7 +14,49 @@
             padding: 25px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             display: block; 
         }
-        /* [THAY ĐỔI] Xóa toàn bộ khối CSS #login-container cũ */
+        /* [THAY ĐỔI] Bổ sung CSS cho modal đăng nhập mới */
+        #login-container .modal-content {
+            text-align: center; /* Đảm bảo logo và h2 ở giữa */
+        }
+        #login-form {
+            text-align: left; /* Căn lề trái cho label */
+            width: 100%;
+        }
+        #login-form label {
+            display: block; /* Hiển thị label trên một dòng riêng */
+            margin-top: 15px;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        #login-form input[type="text"],
+        #login-form input[type="password"] {
+            width: 100%;
+            padding: 10px; /* Tăng padding cho dễ nhìn hơn */
+            box-sizing: border-box; /* Quan trọng để width: 100% hoạt động đúng */
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        /* Áp dụng lại kiểu "bị vô hiệu hóa" cho email nhưng giữ căn lề trái */
+        #login-form input#email[readonly] {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+            color: #495057;
+        }
+        #login-form button {
+            width: 100%; /* Button chiếm toàn bộ chiều rộng */
+            margin-top: 20px;
+            padding: 12px; /* Tăng padding cho button */
+        }
+        #login-form #login-error {
+            margin-top: 15px;
+            text-align: center;
+            min-height: 1.2em;
+            color: #dc3545; /* Sử dụng màu .btn-danger */
+            font-weight: bold;
+        }
+        /* Kết thúc CSS modal đăng nhập mới */
         
         h1, h2 { color: #333; }
         h3 { color: #555; font-weight: normal; border-bottom: 1px solid #eee; padding-bottom: 10px; }
@@ -282,16 +324,21 @@
     <div id="login-container" class="modal">
         <div class="modal-content" style="max-width: 400px; text-align: center;">
             <span class="close-button" onclick="closeLoginModal()">&times;</span>
-            <img src="PVGLPG.gif" alt="Logo" style="width: 120px; height: auto; margin-bottom: 20px;">
+            <img src="PVGLPG.gif" alt="Logo" style="width: 100px; height: auto; margin: 0 auto 15px; object-fit: contain;">
             <h2>Đăng nhập Hệ thống</h2>
+            
             <form id="login-form">
+                <label for="email">Email:</label>
                 <input type="text" id="email" 
                        value="bdsc***@pvgaslpg*****" 
                        data-real-email="bdsc-cnmb@pvgaslpg.com.vn" 
-                       readonly 
-                       style="background-color: #e9ecef; cursor: not-allowed; text-align: center; color: #495057;">
-                <input type="password" id="password" placeholder="Mật khẩu" required autofocus>
+                       readonly>
+                       
+                <label for="password">Mật khẩu:</label>
+                <input type="password" id="password" placeholder="Nhập mật khẩu của bạn" required autofocus>
+                
                 <button type="submit" class="btn-primary">Đăng nhập</button>
+                
                 <p id="login-error" style="display: none;"></p>
             </form>
         </div>
@@ -324,6 +371,7 @@
              <div>
                 <label for="yearSelect" style="margin-right: 10px; font-weight: bold;">Năm:</label>
                 <select id="yearSelect" onchange="changeYear(this.value)"></select>
+                <button id="approvedPlanBtn" class="btn-secondary" onclick="openApprovedPlanModal()" style="margin-left: 10px;">KH đã duyệt</button>
             </div>
         </div>
 
@@ -451,6 +499,25 @@
             <div style="display: flex; justify-content: space-around; margin-top: 20px; gap: 15px;">
                 <button class="btn-primary" style="flex: 1; padding: 15px;" onclick="exportPlainDataExcel()">1. Tạo nhanh file Excel<br><small>(Thuần dữ liệu, *.xlsx)</small></button>
                 <button class="btn-success" style="flex: 1; padding: 15px;" onclick="exportFormattedExcel_HTML()">2. Tạo file Excel định dạng<br><small>(In đậm Hệ thống & Thiết bị, *.xls)</small></button>
+            </div>
+        </div>
+    </div>
+
+<div id="approvedPlanModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <span class="close-button" onclick="closeAllModals()">&times;</span>
+            <h2 id="approvedPlanModalTitle">Kế hoạch đã duyệt (Năm 2024)</h2>
+            
+            <div id="approvedPlanList" style="margin-top: 20px; max-height: 400px; overflow-y: auto;">
+                </div>
+            
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+                <button id="deletePlanLinkBtn" class="btn-danger" onclick="deleteSelectedPlanLinks()" disabled>Xóa link đã chọn</button>
+                
+                <div>
+                    <button class="btn-primary" onclick="promptForPlanLink()">1. Dán link có sẵn</button>
+                    <button class="btn-success" onclick="uploadNewPlanFile()">2. Tải file mới</button>
+                </div>
             </div>
         </div>
     </div>
@@ -825,36 +892,102 @@
             }
         };
 
-        window.addNewTask = async (parentPath, level, newTT) => {
+        window.saveNewTasks = async () => {
             if (!isAuthenticated) return showAuthError();
-            const row = document.querySelector("#dataModal .modal-table tbody tr");
-            const newData = { tt: newTT, isHidden: false, chiPhi: 0, chiPhiThucHien: 0 };
-            row.querySelectorAll('input[data-field]').forEach(input => {
-                const field = input.dataset.field;
-                 if (field === 'tanSuatTH') {
-                    const value = parseInt(input.value, 10);
-                    newData[field] = isNaN(value) || value < 0 ? 0 : value;
-                } else if (field === 'namPhanBo') {
-                    const value = parseInt(input.value, 10);
-                    newData[field] = isNaN(value) || value <= 0 ? 1 : value; // Default to 1
-                } else {
-                    const numberFields = ['chiPhi', 'khNamTruoc', 'uocTHNamTruoc'];
-                    newData[field] = numberFields.includes(field) ? parseFormattedNumber(input.value) : input.value;
-                }
-            });
-            newData.keHoachConLai = newData.chiPhi || 0;
             
-            const namPhanBo = newData.namPhanBo || 1;
-            newData.cpPhanBo = (newData.chiPhi || 0) / namPhanBo;
+            const saveButton = document.getElementById('modalSaveButton');
+            const rows = document.querySelectorAll("#add-task-tbody tr");
+            
+            if (rows.length === 0) {
+                alert("Không có công việc nào để thêm.");
+                return;
+            }
 
-            if (!newData.noiDung) { alert("Nội dung công việc không được để trống!"); return; }
-            const subCollectionName = level === 'child' ? 'công việc con' : 'công việc cháu';
-            const newDocPath = `${parentPath}/${subCollectionName}/${newTT}`;
-            await setDoc(doc(db, newDocPath), newData);
-            await recalculateCostsForParents([newDocPath]);
-            closeAllModals();
-            await fetchData();
-            statusDiv.className = 'success'; statusDiv.innerText = 'Thêm công việc thành công!';
+            try {
+                saveButton.disabled = true; saveButton.textContent = 'Đang lưu...';
+                const batch = writeBatch(db);
+                const pathsToRecalculate = new Set();
+                let addedCount = 0;
+
+                for (const row of rows) {
+                    const parentPath = row.dataset.path; // Đây là parentPath
+                    const level = row.dataset.level;
+                    const tt = row.querySelector('input[data-field="tt"]').value;
+                    const noiDung = row.querySelector('input[data-field="noiDung"]').value;
+
+                    if (!noiDung) continue; // Bỏ qua các hàng không có nội dung
+
+                    pathsToRecalculate.add(parentPath);
+                    const newData = { tt: tt, isHidden: false, chiPhi: 0, chiPhiThucHien: 0 };
+                    
+                    row.querySelectorAll('input[data-field]').forEach(input => {
+                        const field = input.dataset.field;
+                        if (field === 'tt') return; // Đã lấy ở trên
+                        
+                        if (field === 'tanSuatTH') {
+                            const value = parseInt(input.value, 10);
+                            newData[field] = isNaN(value) || value < 0 ? 0 : value;
+                        } else if (field === 'namPhanBo') {
+                            const value = parseInt(input.value, 10);
+                            newData[field] = isNaN(value) || value <= 0 ? 1 : value;
+                        } else {
+                            const numberFields = ['chiPhi', 'khNamTruoc', 'uocTHNamTruoc', 'cpPhanBo']; 
+                            if (numberFields.includes(field)) {
+                                newData[field] = parseFormattedNumber(input.value);
+                            } else {
+                                newData[field] = input.value;
+                            }
+                        }
+                    });
+
+                    const chiPhi = newData.chiPhi || 0;
+                    newData.keHoachConLai = chiPhi; // Vì chiPhiThucHien = 0
+                    
+                    const namPhanBo = newData.namPhanBo || 1;
+                    newData.cpPhanBo = chiPhi / namPhanBo;
+
+                    const subCollectionName = level === 'child' ? 'công việc con' : 'công việc cháu';
+                    const newDocPath = `${parentPath}/${subCollectionName}/${tt}`;
+                    
+                    batch.set(doc(db, newDocPath), newData);
+                    addedCount++;
+                }
+
+                if (addedCount === 0) {
+                    throw new Error("Không có công việc nào hợp lệ (Nội dung không được để trống).");
+                }
+
+                await batch.commit();
+                
+                // Tính toán lại chi phí cho các mục cha
+                const fieldsToRecalculate = ['chiPhi', 'chiPhiThucHien', 'khNamTruoc', 'uocTHNamTruoc', 'cpPhanBo'];
+                const uniqueGrandParentPaths = new Set();
+
+                for (const path of pathsToRecalculate) {
+                     if (path.includes('con')) { // parentPath là một child, vd: "công việc mẹ 2024/I/công việc con/1"
+                        await recalculateSingleParentCost(path, 'công việc cháu', fieldsToRecalculate);
+                        const grandParentPath = path.substring(0, path.lastIndexOf('/công việc con/'));
+                        uniqueGrandParentPaths.add(grandParentPath);
+                    } else if (path.includes('mẹ')) { // parentPath là một parent, vd: "công việc mẹ 2024/I"
+                         await recalculateSingleParentCost(path, 'công việc con', fieldsToRecalculate);
+                    }
+                }
+                
+                for (const grandParentPath of uniqueGrandParentPaths) {
+                    await recalculateSingleParentCost(grandParentPath, 'công việc con', fieldsToRecalculate);
+                }
+
+                closeAllModals();
+                await fetchData();
+                statusDiv.className = 'success';
+                statusDiv.innerText = `Thêm ${addedCount} công việc thành công!`;
+
+            } catch (error) {
+                console.error("Lỗi khi lưu nhiều công việc:", error);
+                statusDiv.className = 'error'; statusDiv.innerText = `Lỗi khi lưu: ${error.message}`;
+            } finally {
+                saveButton.disabled = false; saveButton.textContent = 'Lưu thay đổi';
+            }
         };
 
         window.saveMultiExecutionData = async () => {
@@ -990,7 +1123,7 @@
             }
         };
         
-        async function performPdfUpload(timestampKey) {
+        async function performPdfUpload(timestampKey, onSuccessCallback) {
             if (!isAuthenticated) return showAuthError();
             const uploadButton = document.getElementById('uploadPdfButton');
             const fileInput = document.getElementById('pdf_file_input');
@@ -1005,29 +1138,29 @@
                 formData.append('file', file);
                 const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${gapi.client.getToken().access_token}` },
+                    // [SỬA LỖI] Xóa dấu \ trước dấu `
+                    headers: { 'Authorization': `Bearer ${gapi.client.getToken().access_token}` }, 
                     body: formData
                 });
-                if (!response.ok) { const error = await response.json(); throw new Error(`Lỗi API: ${error.error.message}`); }
+                // [SỬA LỖI] Xóa dấu \ trước dấu `
+                if (!response.ok) { const error = await response.json(); throw new Error(`Lỗi API: ${error.error.message}`); } 
                 const fileData = await response.json();
+                // [SỬA LỖI] Xóa dấu \ trước dấu `
                 const fileLink = `https://drive.google.com/file/d/${fileData.id}/view`;
-                statusDiv.innerText = 'Đang lưu đường link vào cơ sở dữ liệu...';
-                const group = Object.values(executionGroups.get(timestampKey) || {}).flat();
-                if (group.length > 0) {
-                    const batch = writeBatch(db);
-                    group.forEach(exec => batch.update(doc(db, exec.path), { hoSoLink: fileLink }));
-                    const childPathsToUpdate = new Set(group.map(exec => exec.parentChildPath));
-                     childPathsToUpdate.forEach(path => {
-                        batch.update(doc(db, path), { daThucHien: true });
-                    });
-                    await batch.commit();
+                
+                // [THAY ĐỔI] Gọi hàm callback với link và tên file
+                if (onSuccessCallback) {
+                    await onSuccessCallback(fileLink, file.name);
+                } else {
+                     closeAllModals();
+                     // [SỬA LỖI] Xóa dấu \ trước dấu `
+                     statusDiv.innerText = `Tải lên thành công nhưng không có hành động nào được chỉ định.`;
                 }
-                closeAllModals();
-                await fetchData();
-                statusDiv.innerText = `Tải lên và cập nhật hồ sơ thành công!`;
+
             } catch (error) {
                 console.error('Lỗi khi tải tệp hồ sơ:', error);
                 statusDiv.className = 'error';
+                // [SỬA LỖI] Xóa dấu \ trước dấu `
                 statusDiv.innerText = `Đã xảy ra lỗi: ${error.message}`;
             } finally {
                 uploadButton.disabled = false;
@@ -1612,7 +1745,61 @@
             table += '</tr></thead><tbody>';
             return table;
         };
-        const createInputRow = (path, data, level) => {
+        
+const createAddFormInputRow = (parentPath, data, level) => {
+            // Hàm này là bản sao của createInputRow nhưng được đơn giản hóa cho việc *thêm mới*
+            // Nó đảm bảo tất cả các trường đều có thể nhập liệu, trừ TT và CP Phân bổ
+            const numEvent = 'onfocus="this.select()"';
+            return `<tr data-path="${parentPath}" data-level="${level}">
+                        <td><input type="text" value="${data.tt || ''}" data-field="tt" readonly style="background-color: #e9ecef;"></td>
+                        <td><input type="text" value="${data.noiDung || ''}" data-field="noiDung"></td>
+                        <td><input type="text" value="${data.donVi || ''}" data-field="donVi"></td>
+                        <td><input type="text" value="${data.soLuong || ''}" data-field="soLuong"></td>
+                        <td><input type="text" value="${data.thoiDiemTH || ''}" data-field="thoiDiemTH"></td>
+                        <td><input type="number" value="${data.tanSuatTH || ''}" data-field="tanSuatTH" ${numEvent}></td>
+                        <td><input type="text" value="${data.dvThucHien || ''}" data-field="dvThucHien"></td>
+                        <td><input type="text" value="${formatNumber(data.chiPhi || 0)}" data-field="chiPhi" oninput="this.value=formatNumber(parseNumber(this.value))" ${numEvent}></td>
+                        
+                        <td><input type="text" value="${formatNumber(data.khNamTruoc || 0)}" data-field="khNamTruoc" oninput="this.value=formatNumber(parseNumber(this.value))" ${numEvent}></td>
+                        <td><input type="text" value="${formatNumber(data.uocTHNamTruoc || 0)}" data-field="uocTHNamTruoc" oninput="this.value=formatNumber(parseNumber(this.value))" ${numEvent}></td>
+                        <td><input type="number" value="${data.namPhanBo || 1}" data-field="namPhanBo" ${numEvent}></td>
+                        <td><input type="text" value="${formatNumber(data.cpPhanBo || 0)}" data-field="cpPhanBo" readonly style="background-color: #e9ecef;"></td>
+                        <td><input type="text" value="${data.capDo || ''}" data-field="capDo"></td>
+                        <td><input type="text" value="${data.ghiChu || ''}" data-field="ghiChu"></td>
+                    </tr>`;
+        };
+
+        window.addNewInputRow = () => {
+            const tbody = document.getElementById('add-task-tbody');
+            if (!tbody) return;
+            const lastRow = tbody.lastElementChild;
+            if (!lastRow) return;
+
+            const parentPath = lastRow.dataset.path; // Đây là parentPath
+            const level = lastRow.dataset.level;
+            const lastTT = lastRow.querySelector('input[data-field="tt"]').value;
+
+            let newTT;
+            if (level === 'child') {
+                newTT = String(parseInt(lastTT, 10) + 1);
+            } else { // 'grandchild'
+                const parts = lastTT.split('.');
+                const newSubId = parseInt(parts.pop(), 10) + 1;
+                newTT = `${parts.join('.')}.${newSubId}`;
+            }
+
+            // Thêm hàng mới vào cuối tbody
+            const newRowHtml = createAddFormInputRow(parentPath, { tt: newTT, namPhanBo: 1 }, level);
+            tbody.insertAdjacentHTML('beforeend', newRowHtml);
+            
+            // Tự động cuộn xuống hàng mới
+            const modalBody = tbody.closest('.modal-body');
+            if(modalBody) modalBody.scrollTop = modalBody.scrollHeight;
+        };
+
+        // Hàm createInputRow gốc bắt đầu từ đây...
+        
+	const createInputRow = (path, data, level) => {
             const isParent = level === 'parent';
             const isChild = level === 'child';
             const isGrandchild = level === 'grandchild';
@@ -1627,8 +1814,10 @@
                 return false;
             };
             const numEvent = isGrandchild ? 'onfocus="this.select()"' : '';
-            return `<tr data-path="${path}">
-                        <td><input type="text" value="${data.tt || ''}" disabled></td>
+            
+            // [SỬA LỖI] Thêm dấu backtick (`) ở đầu và cuối
+            return `<tr data-path="${path}" data-level="${level}">
+                        <td><input type="text" value="${data.tt || ''}" data-field="tt" readonly style="background-color: #e9ecef;"></td>
                         <td><input type="text" value="${data.noiDung || ''}" data-field="noiDung" ${isDisabled('noiDung') ? 'disabled' : ''}></td>
                         <td><input type="text" value="${data.donVi || ''}" data-field="donVi" ${isDisabled('donVi') ? 'disabled' : ''}></td>
                         <td><input type="text" value="${data.soLuong || ''}" data-field="soLuong" ${isDisabled('soLuong') ? 'disabled' : ''}></td>
@@ -1645,6 +1834,8 @@
                         <td><input type="text" value="${data.ghiChu || ''}" data-field="ghiChu" ${isDisabled('ghiChu') ? 'disabled' : ''}></td>
                     </tr>`;
         };
+
+
         window.handleEditClick = async (docPath, level) => {
             const isGrandchild = level === 'grandchild';
             let pathsToEdit = [docPath];
@@ -1678,7 +1869,8 @@
             document.getElementById('modalDeleteButton').style.display = 'none';
             document.getElementById('dataModal').style.display = 'block';
         };
-        window.openAddModal = async (parentPath, level) => {
+        
+window.openAddModal = async (parentPath, level) => {
             const title = level === 'child' ? 'Thêm thiết bị vào bảng' : 'Thêm công việc chi tiết';
             document.getElementById('modalTitle').innerHTML = `<h2>${title}</h2>`;
             const subCollectionName = level === 'child' ? 'công việc con' : 'công việc cháu';
@@ -1697,14 +1889,23 @@
             // [THAY ĐỔI] Thêm class 'add-edit-task-table' để áp dụng CSS riêng
             let table = createModalTable(headers, 'add-edit-task-table');
             
-            table += createInputRow(parentPath, { tt: newTT }, level);
+            // [THAY ĐỔI] Thêm tbody với ID
+            table += '<tbody id="add-task-tbody">';
+            // [THAY ĐỔI] Sử dụng hàm tạo hàng mới
+            table += createAddFormInputRow(parentPath, { tt: newTT, namPhanBo: 1 }, level);
             table += '</tbody></table>';
+
             let modalBodyHTML = '';
             if (level === 'grandchild') modalBodyHTML += '<div class="modal-note">Lưu ý: Khi nhập giá trị chi phí, hãy nhập dải số liền, không có ký tự phân tách hàng nghìn. Ví dụ nhập: 3621000</div>';
             modalBodyHTML += table;
             document.getElementById('modalBody').innerHTML = modalBodyHTML;
-            document.getElementById('modalSaveButton').onclick = () => addNewTask(parentPath, level, newTT);
-            document.getElementById('modal-footer-left').innerHTML = '';
+            
+            // [THAY ĐỔI] Trỏ nút Lưu vào hàm saveNewTasks (số nhiều)
+            document.getElementById('modalSaveButton').onclick = saveNewTasks;
+            
+            // [THAY ĐỔI] Thêm nút "Thêm hàng"
+            document.getElementById('modal-footer-left').innerHTML = '<button type="button" class="btn-info" onclick="addNewInputRow()">Thêm hàng</button>';
+            
             document.getElementById('modalSaveButton').style.display = 'block';
             document.getElementById('modalDeleteButton').style.display = 'none';
             document.getElementById('dataModal').style.display = 'block';
@@ -2236,7 +2437,8 @@
                 throw error;
             }
         };
-        window.handleProfileUploadClick = async (timestampKey) => {
+        
+	window.handleProfileUploadClick = async (timestampKey) => {
             if (!gapiReady) { alert("Dịch vụ Google chưa sẵn sàng, vui lòng thử lại sau giây lát."); return; }
             try {
                 await ensureGapiAuthenticated();
@@ -2244,13 +2446,223 @@
                 const uploadButton = document.getElementById('uploadPdfButton');
                 document.getElementById('pdf_file_input').value = '';
                 uploadModal.style.display = 'block';
-                uploadButton.onclick = () => performPdfUpload(timestampKey);
+                
+                // [THAY ĐỔI] Đặt hàm callback cho việc upload hồ sơ
+                uploadButton.onclick = () => performPdfUpload(timestampKey, async (fileLink) => {
+                    // Đây là logic gốc sau khi upload thành công
+                    statusDiv.innerText = 'Đang lưu đường link vào cơ sở dữ liệu...';
+                    const group = Object.values(executionGroups.get(timestampKey) || {}).flat();
+                    if (group.length > 0) {
+                        const batch = writeBatch(db);
+                        group.forEach(exec => batch.update(doc(db, exec.path), { hoSoLink: fileLink }));
+                        const childPathsToUpdate = new Set(group.map(exec => exec.parentChildPath));
+                         childPathsToUpdate.forEach(path => {
+                            batch.update(doc(db, path), { daThucHien: true });
+                        });
+                        await batch.commit();
+                    }
+                    closeAllModals();
+                    await fetchData(); // Cập nhật lại bảng chính
+                    statusDiv.innerText = `Tải lên và cập nhật hồ sơ thành công!`;
+                });
+                
             } catch(error) {
                 console.error("Lỗi xác thực Google:", error);
                 statusDiv.className = 'error';
                 statusDiv.innerText = 'Lỗi xác thực với Google. Vui lòng thử lại.';
             }
         };
+
+// --- [BỔ SUNG] CHỨC NĂNG KẾ HOẠCH ĐÃ DUYỆT ---
+
+        /**
+         * Lấy tham chiếu đến document lưu các kế hoạch đã duyệt cho năm hiện tại.
+         * Dữ liệu được lưu ở collection 'approved_plans' để tránh bị xóa.
+         */
+        function getApprovedPlanDocRef() {
+            return doc(db, 'approved_plans', String(currentYear));
+        }
+
+        /**
+         * Mở modal hiển thị danh sách các link Kế hoạch đã duyệt.
+         */
+        /**
+         * Mở modal hiển thị danh sách các link Kế hoạch đã duyệt.
+         * [ĐÃ SỬA] Có thể xem ngay cả khi đăng xuất.
+         */
+        window.openApprovedPlanModal = async () => {
+            // [SỬA ĐỔI] Đã xóa dòng: if (!isAuthenticated) return showAuthError();
+            // Modal này giờ có thể mở khi đã đăng xuất.
+
+            document.getElementById('approvedPlanModalTitle').innerText = `Kế hoạch đã duyệt (Năm ${currentYear})`;
+            const planListDiv = document.getElementById('approvedPlanList');
+            planListDiv.innerHTML = '<p style="text-align: center; color: #666;">Đang tải danh sách...</p>';
+            
+            try {
+                const docRef = getApprovedPlanDocRef();
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists() && docSnap.data().links && docSnap.data().links.length > 0) {
+                    const links = docSnap.data().links;
+                    let listHtml = '<ul style="list-style-type: none; padding-left: 0;">';
+                    links.forEach((link, index) => {
+                        
+                        // [SỬA ĐỔI] Chỉ hiển thị checkbox nếu đã đăng nhập
+                        const checkboxHtml = isAuthenticated 
+                            ? `<input type="checkbox" class="plan-link-checkbox" data-index="${index}" style="margin-right: 15px; transform: scale(1.2);" onchange="updatePlanLinkDeleteButton()">`
+                            : `<span style="display: inline-block; width: 30px;"></span>`; // Dùng span để giữ căn lề
+
+                        listHtml += `
+                            <li style="padding: 8px 4px; border-bottom: 1px solid #eee; display: flex; align-items: center; word-break: break-all;">
+                                ${checkboxHtml}
+                                <a href="${link.url}" target="_blank" title="${link.url}" style="text-decoration: none; color: #0056b3; font-weight: 500;">
+                                    ${link.name || link.url}
+                                </a>
+                            </li>`;
+                    });
+                    listHtml += '</ul>';
+                    planListDiv.innerHTML = listHtml;
+                } else {
+                    planListDiv.innerHTML = '<p style="text-align: center; color: #666;">Chưa có kế hoạch nào được duyệt cho năm này.</p>';
+                }
+
+            } catch (error) {
+                console.error("Lỗi khi tải Kế hoạch đã duyệt:", error);
+                planListDiv.innerHTML = `<p style="text-align: center; color: #dc3545;">Lỗi: ${error.message}</p>`;
+            }
+
+            // [SỬA ĐỔI] Chỉ hiển thị các nút hành động (thêm, xóa) nếu đã đăng nhập
+            const footerElement = document.querySelector('#approvedPlanModal .modal-footer');
+            if (isAuthenticated) {
+                footerElement.style.display = 'flex'; // Hiển thị footer
+                document.getElementById('deletePlanLinkBtn').disabled = true; // Reset nút xóa
+            } else {
+                footerElement.style.display = 'none'; // Ẩn toàn bộ footer
+            }
+            
+            document.getElementById('approvedPlanModal').style.display = 'block';
+        };
+        
+        /**
+         * Kích hoạt/Vô hiệu hóa nút "Xóa link" dựa trên việc có checkbox nào được chọn không.
+         */
+        window.updatePlanLinkDeleteButton = () => {
+            const anyChecked = document.querySelectorAll('#approvedPlanModal .plan-link-checkbox:checked').length > 0;
+            document.getElementById('deletePlanLinkBtn').disabled = !anyChecked;
+        };
+
+        /**
+         * Lưu một link (được dán hoặc upload) vào CSDL.
+         */
+        async function savePlanLink(newLink) {
+            if (!isAuthenticated) return showAuthError();
+            statusDiv.className = 'success';
+            statusDiv.innerText = 'Đang lưu link vào CSDL...';
+            try {
+                const docRef = getApprovedPlanDocRef();
+                const docSnap = await getDoc(docRef);
+                let currentLinks = [];
+                if (docSnap.exists() && docSnap.data().links) {
+                    currentLinks = docSnap.data().links;
+                }
+                currentLinks.push(newLink);
+                await setDoc(docRef, { links: currentLinks }, { merge: true });
+                
+                statusDiv.innerText = 'Đã lưu link thành công.';
+                // Tải lại danh sách trong modal
+                openApprovedPlanModal();
+            } catch (error) {
+                console.error("Lỗi khi lưu link kế hoạch:", error);
+                statusDiv.className = 'error';
+                statusDiv.innerText = `Lỗi khi lưu link: ${error.message}`;
+            }
+        }
+
+        /**
+         * Hiển thị ô prompt để người dùng dán link có sẵn.
+         */
+        window.promptForPlanLink = async () => {
+            if (!isAuthenticated) return showAuthError();
+
+            const url = prompt("Vui lòng dán đường link (URL) của tài liệu:");
+            if (!url || url.trim() === '') return; // Hủy nếu không nhập gì
+
+            let name = prompt("Nhập tên hiển thị cho link này (bỏ trống để dùng URL):");
+            if (!name || name.trim() === '') name = url;
+
+            await savePlanLink({ name: name, url: url });
+        };
+
+        /**
+         * Bắt đầu quá trình tải file mới cho Kế hoạch đã duyệt.
+         */
+        window.uploadNewPlanFile = async () => {
+            if (!isAuthenticated) return showAuthError();
+            if (!gapiReady) { alert("Dịch vụ Google chưa sẵn sàng, vui lòng thử lại sau giây lát."); return; }
+            
+            try {
+                await ensureGapiAuthenticated();
+                const uploadModal = document.getElementById('uploadPdfModal');
+                const uploadButton = document.getElementById('uploadPdfButton');
+                document.getElementById('pdf_file_input').value = '';
+                uploadModal.style.display = 'block';
+                
+                // [BỔ SUNG] Đặt hàm callback cho việc upload file Kế hoạch
+                // timestampKey là null vì nó không liên quan đến một lần thực hiện cụ thể
+                uploadButton.onclick = () => performPdfUpload(null, async (fileLink, fileName) => {
+                    // Sau khi upload thành công, lưu link vào CSDL
+                    await savePlanLink({ name: fileName, url: fileLink });
+                    closeAllModals(); // Đóng modal upload
+                    openApprovedPlanModal(); // Mở lại modal kế hoạch để thấy link mới
+                    statusDiv.innerText = `Tải lên và lưu file kế hoạch thành công!`;
+                });
+
+            } catch (error) {
+                console.error("Lỗi xác thực Google:", error);
+                statusDiv.className = 'error';
+                statusDiv.innerText = 'Lỗi xác thực với Google. Vui lòng thử lại.';
+            }
+        };
+
+        /**
+         * Xóa các link đã được chọn trong modal Kế hoạch đã duyệt.
+         */
+        window.deleteSelectedPlanLinks = async () => {
+            if (!isAuthenticated) return showAuthError();
+            
+            const checkedBoxes = document.querySelectorAll('#approvedPlanModal .plan-link-checkbox:checked');
+            if (checkedBoxes.length === 0) return;
+
+            if (!confirm(`Bạn có chắc chắn muốn xóa ${checkedBoxes.length} link kế hoạch đã chọn không?`)) return;
+            
+            try {
+                const indicesToDelete = new Set(Array.from(checkedBoxes).map(cb => parseInt(cb.dataset.index)));
+                const docRef = getApprovedPlanDocRef();
+                const docSnap = await getDoc(docRef);
+
+                if (!docSnap.exists()) {
+                     throw new Error("Không tìm thấy tài liệu để xóa.");
+                }
+
+                let currentLinks = docSnap.data().links || [];
+                // Lọc ra, chỉ giữ lại các link không có trong danh sách xóa
+                const newLinks = currentLinks.filter((_, index) => !indicesToDelete.has(index));
+                
+                await setDoc(docRef, { links: newLinks });
+                
+                statusDiv.className = 'success';
+                statusDiv.innerText = 'Đã xóa các link đã chọn.';
+                openApprovedPlanModal(); // Tải lại danh sách
+
+            } catch (error) {
+                console.error("Lỗi khi xóa link kế hoạch:", error);
+                statusDiv.className = 'error';
+                statusDiv.innerText = `Lỗi khi xóa: ${error.message}`;
+            }
+        };
+
+        // --- KẾT THÚC BỔ SUNG CHỨC NĂNG KH ĐÃ DUYỆT ---
+
         window.toggleSelection = (checkbox) => {
             const grandchildPath = checkbox.dataset.path;
             if (checkbox.checked) selectedGrandchildren.add(grandchildPath); 
