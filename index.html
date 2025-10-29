@@ -803,9 +803,10 @@
                         const linkId = doc.id;
                         if (!link.url) return;
 
-                        // Chỉ hiển thị nút Xóa khi đã đăng nhập
-                        const deleteBtnHtml = isAuthenticated ? 
-                            `<button class="btn-danger btn-action plan-link-delete-btn" onclick="deleteApprovedPlanLink('${linkId}', '${link.name || link.url}')">Xóa</button>` : '';
+                        // Chỉ hiển thị nút Xóa khi đã đăng nhập và cho phép chỉnh sửa
+                        const canDelete = isAuthenticated && editModeStatusByYear[currentYear] === true;
+const deleteBtnHtml = canDelete ? 
+    `<button class="btn-danger btn-action plan-link-delete-btn" onclick="deleteApprovedPlanLink('${linkId}', '${link.name || link.url}')">Xóa</button>` : '';
                         
                         html += `<div class="plan-link-item">
                                     <a href="${link.url}" target="_blank" title="${link.url}">${link.name || link.url}</a>
