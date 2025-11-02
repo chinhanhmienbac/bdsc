@@ -2983,17 +2983,53 @@ window.openAddModal = async (parentPath, level) => {
                     const row = rows[i];
                     const isBold = boldRows.has(i);
                     tableHtml += '<tr>';
+                    // [SỬA LỖI] Xác định các cột là SỐ THUẦN TÚY (pure number). 
+                    // Tất cả các cột khác sẽ bị ép kiểu về Text để tránh Excel tự động định dạng sai.
+                    
+                    // Các chỉ số cột (0-based) trong 16 cột baseHeaders là SỐ:
+                    const baseNumericIndices = new Set([
+                        3, // KH năm trước
+                        4, // Ước TH năm trước
+                        7, // Tần suất TH
+                        9, // Chi phí
+                        10, // Chi phí thực hiện
+                        11, // Kế hoạch còn lại
+                        12, // Năm PB
+                        13 // CP phân bổ
+                    ]);
+
+                    // Các chỉ số cột (0-based) trong khối 6 cột "Thực hiện" là SỐ:
+                    const execNumericIndices = new Set([
+                        1, // Số lượng (i)
+                        2, // Đơn giá (i)
+                        3  // Thành tiền (i)
+                    ]);
+
                     row.forEach((cell, j) => {
                         let styles = [];
                         if (isBold) {
                             styles.push('font-weight: bold;');
                         }
-                        // Check if it's a "Ngày TH" column
-                        // Base headers count = 16. Execution headers start at index 16.
-                        // Each execution block has 6 columns. The date is the first one.
-                        if (j >= 16 && (j - 16) % 6 === 0) {
+
+                        let isNumericColumn = false;
+                        if (j < 16) {
+                            // Đây là 16 cột cơ bản
+                            if (baseNumericIndices.has(j)) {
+                                isNumericColumn = true;
+                            }
+                        } else {
+                            // Đây là các cột thực hiện (lặp lại 6 cột)
+                            const execColIndex = (j - 16) % 6;
+                            if (execNumericIndices.has(execColIndex)) {
+                                isNumericColumn = true;
+                            }
+                        }
+
+                        // Nếu cột KHÔNG PHẢI là cột số, ép kiểu nó thành Text
+                        if (!isNumericColumn) {
                             styles.push("mso-number-format:'\\@'");
                         }
+
                         const styleAttr = styles.length > 0 ? ` style="${styles.join(' ')}"` : '';
                         const cellData = cell === null || cell === undefined ? '' : cell;
                         tableHtml += `<td${styleAttr}>${cellData}</td>`;
