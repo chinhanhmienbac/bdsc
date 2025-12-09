@@ -1,0 +1,1302 @@
+﻿
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Thiết Bị - PVGAS LPG</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap');
+
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; padding: 20px; }
+        .excel-sheet { background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.1); padding: 20px 30px; min-height: 100vh; position: relative; border-radius: 8px; }
+        
+        /* Logo & Fonts */
+        .site-logo { 
+            position: absolute; top: 15px; left: 15px; width: 8%; z-index: 10; 
+            transform: translate(15%, 10%); 
+        }
+
+        h1.main-title { 
+            text-align: center; font-weight: 700; text-transform: uppercase; 
+            margin-bottom: 5px; font-size: 34px; 
+            color: #217346; font-family: 'Segoe UI', sans-serif; margin-top: 10px; 
+        }
+        h2.sub-title { 
+            text-align: center; font-weight: 600; 
+            font-size: 24px; 
+            margin-bottom: 25px; color: #27ae60; font-family: 'Segoe UI', sans-serif; 
+        }
+        
+        #facilityName { border-bottom: 2px dotted #27ae60; min-width: 150px; display: inline-block; color: #333; }
+
+        /* Action Bar */
+        .action-bar { display: flex; justify-content: flex-end; align-items: center; margin-bottom: 15px; gap: 10px; flex-wrap: wrap; padding-right: 5px; }
+        .form-check-input { cursor: pointer; width: 3em; height: 1.5em; }
+        .edit-mode-label { font-weight: bold; color: #d63384; margin-right: 10px; user-select: none; font-size: 14px; }
+
+        
+       /* --- TABLE CSS CẬP NHẬT (FINAL) --- */
+        .table-container { max-height: 80vh; overflow-y: auto; border: 1px solid #000; }
+        table.excel-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+        
+        /* HEADER: Xanh dương đậm RGB(51,102,204), Chữ trắng */
+        table.excel-table th { 
+            position: sticky; top: 0; z-index: 5;
+            background-color: rgb(51, 102, 204) !important;
+            color: white !important;
+            border: 1px solid #ddd;
+            padding: 8px 4px; font-weight: bold; text-align: center; 
+            vertical-align: middle;
+            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4); 
+        }
+
+        /* DATA CELLS: Mặc định căn giữa (Giao diện Xem) */
+        table.excel-table td { 
+            border: 1px solid #ddd; 
+            padding: 6px 6px; 
+            vertical-align: middle !important; /* Mặc định căn giữa */
+        }
+
+        /* --- XỬ LÝ RIÊNG KHI Ở CHẾ ĐỘ CHỈNH SỬA --- */
+        /* Khi bảng có class 'edit-mode-on', các ô dữ liệu sẽ căn trên */
+        table.excel-table.edit-mode-on td {
+            vertical-align: top !important; 
+        }
+        /* Riêng cột STT (cột đầu tiên) vẫn giữ căn giữa cho đẹp */
+        table.excel-table.edit-mode-on td:first-child,
+        table.excel-table.edit-mode-on td.text-center {
+            vertical-align: middle !important;
+        }
+
+        /* --- MÀU NỀN --- */
+        /* Gradient trắng -> xám cho dòng dữ liệu */
+        table.excel-table tbody tr:not(.category-row) td { 
+            background: linear-gradient(180deg, #ffffff 0%, #ebedef 100%);
+        }
+        /* Hover */
+        table.excel-table tbody tr:not(.category-row):hover td { 
+            background: linear-gradient(180deg, #f8f9fa 0%, #dbe9f6 100%) !important;
+            transition: background 0.15s ease;
+        }
+        /* Dòng phân loại: Xanh lá nhạt */
+        tr.category-row td { 
+            font-weight: 700; 
+            background-color: #d1e7dd !important; 
+            color: #0f5132; 
+            vertical-align: middle; 
+            border-bottom: 1px solid #999; 
+        }
+        /* Columns */
+        .col-stt { width: 50px; text-align: center; font-weight: bold; }
+        .col-name { width: 15%; }
+        .col-data { width: auto; }
+
+        /* Buttons & Inline Edit */
+        .cell-actions { display: flex; gap: 3px; margin-bottom: 6px; justify-content: center; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 4px; opacity: 0.2; transition: opacity 0.3s; }
+        td:hover .cell-actions { opacity: 1; }
+        
+        .btn-mini { border: none; font-size: 10px; padding: 3px 6px; border-radius: 3px; cursor: pointer; color: white; font-weight: bold; transition: 0.2s; }
+        .btn-mini:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .btn-upload { background-color: #f39c12; } .btn-link { background-color: #3498db; }
+        .btn-manage { background-color: #9b59b6; } .btn-collect { background-color: #27ae60; }
+        
+        .inline-edit { width: 100%; border: 1px solid #3498db; padding: 4px; background-color: rgba(255,255,255,0.8); font-weight: 600; font-size: 13px; border-radius: 3px; }
+
+        /* Multi-link Box (Transparent to show gradient) */
+        .multi-link-box { 
+            max-height: 80px; overflow-y: auto; display: block; 
+            background-color: transparent; 
+            border: 1px solid rgba(0,0,0,0.05); 
+            padding: 2px; border-radius: 3px; 
+        }
+        .multi-link-box::-webkit-scrollbar { width: 4px; }
+        .multi-link-box::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
+
+        /* Link Item (Reverted to standard QLTB3 style) */
+        .link-item { 
+            display: block; font-size: 12px; line-height: 1.6; 
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+            border-bottom: 1px dashed rgba(0,0,0,0.1); padding: 1px 0; 
+        }
+        .link-item a { text-decoration: none; color: #0066cc; }
+        .link-item a:hover { color: #d35400; text-decoration: underline; }
+
+        /* Main Buttons */
+        .btn-excel-export { background-color: #1D6F42; color: white; }
+        .btn-excel-import { background-color: #e67e22; color: white; }
+        .btn-batch { background-color: #8e44ad; color: white; }
+        .btn-main { display: flex; align-items: center; gap: 6px; font-weight: 500; font-size: 13px; padding: 6px 12px; }
+
+        /* Modals & Loading */
+        #loadingMsg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; display: none; justify-content: center; align-items: center; flex-direction: column; color: white; }
+        .login-logo { width: 120px; display: block; margin: 0 auto 20px auto; }
+        
+        /* History Modal Table */
+		.history-year-block { 
+    margin-bottom: 20px; 
+    border: 1px solid #e0e0e0; 
+    padding: 15px; 
+    border-radius: 8px; 
+    background: #ffffff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* FIX: Tiêu đề Năm Đậm & Đỏ */
+.history-year-title { 
+    font-weight: 700 !important;  /* Bắt buộc in đậm */
+    color: #dc3545 !important;    /* Màu đỏ đậm */
+    font-size: 14px;
+    text-transform: uppercase;    /* Viết hoa cho nổi bật */
+    border-bottom: 2px solid #dc3545; /* Gạch chân màu đỏ */
+    padding-bottom: 8px; 
+    margin-bottom: 15px; 
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+        .history-detail-table { width: 100%; font-size: 12px; border-collapse: collapse; background: white; table-layout: fixed; }
+        .history-detail-table th, .history-detail-table td { border: 1px solid #ddd; padding: 6px 8px; vertical-align: middle; }
+        .history-detail-table th { background: #f8f9fa; font-weight: 700; text-align: center; }
+        .col-hist-date { width: 15%; text-align: center; } .col-hist-unit { width: 10%; text-align: center; }
+        .col-hist-price { width: 25%; text-align: right; } .col-hist-total { width: 25%; text-align: right; font-weight: bold; color: #c0392b; }
+        .col-hist-link { width: 10%; text-align: center; }
+        
+        .device-table { width: 100%; font-size: 12px; border-collapse: collapse; background: white; }
+        .device-table th, .device-table td { border: 1px solid #ddd; padding: 4px 8px; }
+        .manage-item-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; border-bottom: 1px solid #f0f0f0; padding-bottom: 8px; }
+        .manage-item-del { color: #e74c3c; cursor: pointer; }
+    
+	/* --- STYLE CHO ICON SÁCH (MỚI) --- */
+        .book-icon {
+            width: 66%;           /* Chiều rộng 2/3 ô */
+            display: block;
+            margin: 0 auto;       /* Căn giữa */
+            cursor: pointer;      /* Con trỏ bàn tay */
+            transition: transform 0.2s;
+            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.3)); /* Đổ bóng nhẹ cho đẹp */
+        }
+        .book-icon:hover {
+            transform: scale(1.1); /* Phóng to nhẹ khi di chuột */
+        }
+        
+        /* Style cho danh sách trong Modal (Read-only) */
+        .read-only-item {
+            padding: 8px 10px;
+            border-bottom: 1px dashed #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+        .read-only-item:last-child { border-bottom: none; }
+        .read-only-item a { text-decoration: none; font-weight: 600; color: #0066cc; }
+        .read-only-item a:hover { text-decoration: underline; color: #d35400; }
+	</style>
+</head>
+<body>
+
+<img src="PVGLPG.gif" alt="Logo" class="site-logo">
+
+<div id="loadingMsg">
+    <div class="spinner-border text-light mb-2" role="status"></div>
+    <div id="loadingText" style="font-size: 18px; font-weight: bold;">Đang xử lý...</div>
+</div>
+
+<div class="container-fluid">
+    <div class="excel-sheet">
+        <h1 class="main-title">QUẢN LÝ THIẾT BỊ</h1>
+        <h2 class="sub-title">TÊN CƠ SỞ: <span id="facilityName">..........................</span></h2>
+
+     <div class="action-bar" style="justify-content: space-between !important;">
+            
+            <div class="left-actions d-flex gap-2 align-items-center">
+                <button id="btnBackup" class="btn btn-sm btn-outline-dark fw-bold" onclick="backupData()">
+                    <i class="fas fa-download"></i> Backup (JSON)
+                </button>
+                <button id="btnRestore" class="btn btn-sm btn-danger fw-bold" onclick="document.getElementById('jsonInputRestore').click()" style="display: none;">
+                    <i class="fas fa-history"></i> Restore (JSON)
+                </button>
+            </div>
+
+            <div class="right-actions d-flex gap-2 align-items-center justify-content-end">
+                <button id="authBtn" class="btn btn-primary btn-sm btn-main" onclick="handleAuthClick()">
+                    <i class="fab fa-google-drive"></i> Đăng nhập Drive
+                </button>
+                <span id="authStatus" style="font-size: 12px; color: green; font-weight: bold; display: none; margin-right: 15px;">
+                    <i class="fas fa-check-circle"></i> Drive đã kết nối
+                </span>
+
+                <div id="viewModeBtns" class="d-flex gap-2">
+                    <button class="btn btn-sm btn-main btn-excel-export" onclick="exportMainData()">
+                        <i class="fas fa-file-export"></i> Xuất D.mục ra Excel
+                    </button>
+                </div>
+
+                <div id="editModeBtns" class="d-flex gap-2" style="display: none !important;">
+                    <button class="btn btn-sm btn-main btn-batch" onclick="batchCollectBDSC()">
+                        <i class="fas fa-sync-alt"></i> Cập nhật Lịch sử (All)
+                    </button>
+                    <button id="btnImportExcel" class="btn btn-sm btn-main btn-excel-import" onclick="document.getElementById('fileInputExcel').click()" style="display: none;">
+                        <i class="fas fa-file-import"></i> Nhập D.sách từ Excel
+                    </button>
+                    
+                    <button class="btn btn-sm btn-main btn-primary" onclick="addNewCategory()">
+                        <i class="fas fa-plus"></i> Thêm Phân Loại
+                    </button>
+                </div>
+
+                <div class="form-check form-switch d-flex align-items-center gap-2" style="padding-left: 45px; border-left: 1px solid #ccc; margin-left: 5px;">
+                    <input class="form-check-input" type="checkbox" id="editModeToggle">
+                    <label class="form-check-label edit-mode-label" for="editModeToggle">Chỉnh sửa</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="excel-table" id="mainTable">
+                <thead>
+                    <tr>
+                        <th class="col-stt">STT</th>
+                        <th class="col-name">Tên thiết bị / Loại</th>
+                        <th class="col-data">Tagname</th>
+                        <th class="col-data" data-name="Thông số KT">Thông số KT</th>
+                        <th class="col-data" data-name="Catalogue">Catalogue</th>
+                        <th class="col-data" data-name="Kiểm định">Kiểm định</th>
+                        <th class="col-data" data-name="Quy trình VH">Quy trình VH</th>
+                        <th class="col-data" data-name="Quy trình BD">Quy trình BD</th>
+                        <th class="col-data" data-name="Định mức">Định mức</th>
+                        <th class="col-data" data-name="Đánh giá rủi ro">ĐGRR</th>
+                        <th class="col-data" data-name="Biểu mẫu">Biểu mẫu</th>
+                        <th class="col-data" data-name="Lịch sử BDSC">Lịch sử BDSC</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade modal-login" id="loginModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="width: 350px;">
+        <div class="modal-content">
+            <div class="modal-body">
+                <img src="PVGLPG.gif" alt="Logo" class="login-logo">
+                <h5 class="text-center fw-bold mb-4 text-success">ĐĂNG NHẬP HỆ THỐNG</h5>
+                <form id="loginForm" onsubmit="handleLogin(event)">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tài khoản</label>
+                        <select class="form-select" id="loginEmail">
+                            <option value="bdsc-cnmb@pvgaslpg.com.vn">*****@pvgaslpg.com.vn</option>
+                            <option value="admin@pvgaslpg.com.vn">admin@pvgaslpg.com.vn</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Mật khẩu</label>
+                        <input type="password" class="form-control" id="loginPassword" required>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success">Đăng nhập</button>
+                        <button type="button" class="btn btn-light text-muted" onclick="closeLoginModal()">Hủy bỏ</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="manageModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white py-2">
+                <h5 class="modal-title fs-6 fw-bold">Quản lý Tài liệu</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="manageListContainer"></div>
+            </div>
+            <div class="modal-footer py-1">
+                <button type="button" class="btn btn-primary btn-sm" id="btnSaveManage" onclick="saveManageChanges()">Lưu Thay Đổi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="historyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white py-2 d-flex justify-content-between">
+                <h5 class="modal-title fs-6 fw-bold" id="historyModalTitle">Chi tiết Lịch sử</h5>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-light btn-sm text-success fw-bold" onclick="exportCurrentHistory()">
+                        <i class="fas fa-file-excel"></i> Xuất Excel
+                    </button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+            </div>
+            <div class="modal-body" id="historyModalBody"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deviceModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning py-2">
+                <h5 class="modal-title fs-6 fw-bold text-dark">Quản lý Thiết bị trong Phân loại</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="deviceModalContent">
+                    <table class="device-table" id="deviceTableList">
+                        <thead>
+                            <tr>
+                                <th style="width:50px">STT</th>
+                                <th>Tên Thiết bị</th>
+                                <th style="width:50px">Xoá</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deviceTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="mt-3">
+                    <label class="form-label fw-bold small">Thêm thiết bị mới:</label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" id="newDeviceName" class="form-control" placeholder="Nhập tên thiết bị...">
+                        <button class="btn btn-success" onclick="addNewDevice()">
+                            <i class="fas fa-plus"></i> Thêm
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<input type="file" id="fileInputExcel" accept=".xlsx, .xls" style="display: none;">
+<input type="file" id="driveUploadInput" style="display: none;">
+<input type="file" id="jsonInputRestore" accept=".json" style="display: none;">
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, get, update, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { getAuth, signInWithEmailAndPassword, setPersistence, browserSessionPersistence, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    // --- CONFIG ---
+    const firebaseConfig = {
+  apiKey: "AIzaSyDltV6zgLaOHZANarD4I87ckl0jBWY8leU",
+        authDomain: "dulieubanhang-d6156.firebaseapp.com",
+        databaseURL: "https://dulieubanhang-d6156-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "dulieubanhang-d6156",
+        storageBucket: "dulieubanhang-d6156.firebasestorage.app",
+        messagingSenderId: "588583798336",
+        appId: "1:588583798336:web:82a240fb3da2f96893c1a5",
+        measurementId: "G-7D51WBK63L"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+
+    const CLIENT_ID = "588583798336-o4gjnfqaupmmdp8mi38o9m8r4n0bbghs.apps.googleusercontent.com";
+    const FOLDER_ID = "1uyHJHfNFLIdPQbYu1uF4zliORCM6QK3P";
+    const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+    const START_YEAR = 2023; // Hãy sửa số này thành năm cũ nhất bạn có dữ liệu
+const currentYear = new Date().getFullYear(); // Lấy năm hiện tại (ví dụ: 2025)
+const TARGET_YEARS = [];
+
+// Vòng lặp tạo danh sách từ năm bắt đầu đến năm sau (để dự phòng cho tương lai gần)
+for (let y = START_YEAR; y <= currentYear + 1; y++) {
+    TARGET_YEARS.push(y);
+}
+
+    // Helpers (Declared Top)
+    window.showLoading = function(msg) { document.getElementById('loadingText').innerText = msg; document.getElementById('loadingMsg').style.display = "flex"; };
+    window.hideLoading = function() { document.getElementById('loadingMsg').style.display = "none"; };
+    window.romanToInt = function(s) { if(!s) return 0; const r = {'I':1,'V':5,'X':10,'L':50}; let n=0; for(let i=0;i<s.length;i++){ if(i+1<s.length && r[s[i]]<r[s[i+1]]) n-=r[s[i]]; else n+=r[s[i]]; } return n; };
+    // Helper: Chuyển số nguyên sang số La Mã
+    window.intToRoman = function(num) {
+        if (typeof num !== 'number') return '';
+        const lookup = {M:1000,CM:900,D:500,CD:400,C:100,XC:90,L:50,XL:40,X:10,IX:9,V:5,IV:4,I:1};
+        let roman = '';
+        for (let i in lookup) {
+            while (num >= lookup[i]) {
+                roman += i;
+                num -= lookup[i];
+            }
+        }
+        return roman;
+    };
+	
+	window.formatNum = function(n) { return n ? n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") : "-"; };
+    window.markDeleted = function(el) { el.closest('.manage-item-row').classList.add('d-none', 'marked-delete'); };
+
+    // DOM Elements
+    const elements = {
+        tableBody: document.getElementById('tableBody'),
+        facilityName: document.getElementById('facilityName'),
+        editToggle: document.getElementById('editModeToggle'),
+        authBtn: document.getElementById('authBtn'),
+        authStatus: document.getElementById('authStatus'),
+        viewBtns: document.getElementById('viewModeBtns'),
+        editBtns: document.getElementById('editModeBtns'),
+        driveInput: document.getElementById('driveUploadInput'),
+        loginModal: new bootstrap.Modal(document.getElementById('loginModal')),
+        manageModal: new bootstrap.Modal(document.getElementById('manageModal')),
+        historyModal: new bootstrap.Modal(document.getElementById('historyModal')),
+        deviceModal: new bootstrap.Modal(document.getElementById('deviceModal'))
+    };
+
+    let tokenClient, accessToken = null, localDataCache = null, localViewMode = false;
+    let currentUploadTarget = null, currentManageTarget = null, currentHistoryData = null, currentCategoryForDevice = null;
+
+    // --- 1. SESSION SECURITY (Logout on Close) ---
+    function checkSessionValidity() {
+        const sessionFlag = sessionStorage.getItem('app_active_session');
+        if (!sessionFlag) {
+            // New tab or browser restart -> Force Logout
+            signOut(auth).then(() => {
+                sessionStorage.setItem('app_active_session', 'true');
+            }).catch(() => {
+                sessionStorage.setItem('app_active_session', 'true');
+            });
+        }
+    }
+
+    window.onload = function() {
+        checkSessionValidity(); // Check session on load
+        loadAllData();
+        checkPersistentDriveAuth();
+        
+        tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: CLIENT_ID, scope: SCOPES,
+            callback: (tokenResponse) => {
+                accessToken = tokenResponse.access_token;
+                if (accessToken) {
+                    localStorage.setItem('gdrive_token', accessToken);
+                    localStorage.setItem('gdrive_expiry', Date.now() + 3500 * 1000); 
+                    updateAuthUI(true);
+                }
+            },
+        });
+		setEditMode(false);
+    };
+
+    function checkPersistentDriveAuth() {
+        const storedToken = localStorage.getItem('gdrive_token');
+        const expiry = localStorage.getItem('gdrive_expiry');
+        if (storedToken && expiry && Date.now() < parseInt(expiry)) {
+            accessToken = storedToken;
+            updateAuthUI(true);
+        }
+    }
+
+    function updateAuthUI(isLoggedIn) {
+        if(isLoggedIn) { elements.authBtn.style.display = 'none'; elements.authStatus.style.display = 'inline-block'; }
+    }
+
+    window.handleAuthClick = function() { if (!accessToken) tokenClient.requestAccessToken({prompt: 'consent'}); };
+
+    // --- FIREBASE LOGIN ---
+    elements.editToggle.addEventListener('click', (e) => {
+        if (e.target.checked) {
+            if (auth.currentUser) {
+                setEditMode(true);
+            } else {
+                e.preventDefault();
+                elements.loginModal.show();
+            }
+        } else {
+            setEditMode(false);
+        }
+    });
+
+    window.closeLoginModal = function() { elements.loginModal.hide(); elements.editToggle.checked = false; }
+
+    window.handleLogin = async function(e) {
+        e.preventDefault();
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+
+        window.showLoading("Đang đăng nhập...");
+        try {
+            await setPersistence(auth, browserSessionPersistence);
+            await signInWithEmailAndPassword(auth, email, password);
+            elements.loginModal.hide();
+            elements.editToggle.checked = true;
+            setEditMode(true);
+            document.getElementById('loginPassword').value = "";
+        } catch (error) {
+            alert("Đăng nhập thất bại: " + error.message);
+            elements.editToggle.checked = false;
+        } finally {
+            window.hideLoading();
+        }
+    };
+
+  function setEditMode(isEdit) {
+        localViewMode = isEdit;
+        const table = document.getElementById('mainTable');
+        
+        // Các nút cần điều khiển
+        const btnImport = document.getElementById('btnImportExcel');
+        const btnBackup = document.getElementById('btnBackup');
+        const btnRestore = document.getElementById('btnRestore');
+        const user = auth.currentUser;
+        const isAdmin = (user && user.email === 'admin@pvgaslpg.com.vn');
+
+        if(isEdit) {
+            // --- CHẾ ĐỘ CHỈNH SỬA ---
+            table.classList.add('edit-mode-on');
+            elements.viewBtns.style.setProperty('display', 'none', 'important');
+            elements.editBtns.style.setProperty('display', 'flex', 'important');
+            
+            // 1. Ẩn nút Backup
+            if(btnBackup) btnBackup.style.display = 'none';
+
+            // 2. Xử lý quyền Admin cho nút Restore và nút Import Excel
+            if (isAdmin) {
+                if(btnImport) btnImport.style.display = 'block';
+                if(btnRestore) btnRestore.style.display = 'block'; // Admin mới thấy Restore
+            } else {
+                if(btnImport) btnImport.style.display = 'none';
+                if(btnRestore) btnRestore.style.display = 'none';
+            }
+
+            // Logic nút Drive
+            if (accessToken) {
+                elements.authBtn.style.display = 'none';
+                elements.authStatus.style.display = 'inline-block';
+            } else {
+                elements.authBtn.style.display = 'inline-block';
+                elements.authStatus.style.display = 'none';
+            }
+
+        } else {
+            // --- CHẾ ĐỘ XEM (Mặc định) ---
+            table.classList.remove('edit-mode-on');
+            elements.viewBtns.style.setProperty('display', 'flex', 'important');
+            elements.editBtns.style.setProperty('display', 'none', 'important');
+
+            // 1. Hiện nút Backup
+            if(btnBackup) btnBackup.style.display = 'block';
+            
+            // 2. Ẩn nút Restore
+            if(btnRestore) btnRestore.style.display = 'none';
+
+            // Ẩn các nút Admin/Drive
+            elements.authBtn.style.display = 'none';
+            elements.authStatus.style.display = 'none';
+            if(btnImport) btnImport.style.display = 'none';
+        }
+        renderTable(localDataCache);
+    }
+
+    // --- DATA RENDERING ---
+    function loadAllData() {
+        window.showLoading("Đang tải dữ liệu...");
+        Promise.all([
+            get(ref(db, 'settings/tenCoSo')),
+            get(ref(db, 'Quanlythietbi'))
+        ]).then((results) => {
+            const name = results[0].val();
+            localDataCache = results[1].val();
+            elements.facilityName.textContent = name ? name : "..........................";
+            renderTable(localDataCache);
+        }).catch((error) => { console.error(error); alert("Lỗi tải dữ liệu."); })
+          .finally(() => window.hideLoading());
+    }
+
+    function renderTable(data) {
+        elements.tableBody.innerHTML = "";
+        if (!data) { elements.tableBody.innerHTML = "<tr><td colspan='12' class='text-center'>Chưa có dữ liệu</td></tr>"; return; }
+
+        const categories = Object.keys(data).sort((a, b) => window.romanToInt(a) - window.romanToInt(b));
+
+        categories.forEach(catKey => {
+            const catData = data[catKey];
+            const rowCat = document.createElement('tr');
+            rowCat.className = "category-row";
+            
+            if (localViewMode) {
+                rowCat.innerHTML = `<td class="col-stt">${catKey}</td>
+                                    <td colspan="9">${catData.TenPhanLoai || ""}</td>
+                                    <td colspan="2" class="text-center align-middle">
+                                        <button class="btn btn-warning btn-sm fw-bold" style="font-size:11px; padding: 2px 5px;" onclick="openDeviceModal('${catKey}')">
+                                            <i class="fas fa-cog"></i> QL Thiết bị
+                                        </button>
+                                    </td>`;
+            } else {
+                rowCat.innerHTML = `<td class="col-stt">${catKey}</td><td colspan="11">${catData.TenPhanLoai || ""}</td>`;
+            }
+            elements.tableBody.appendChild(rowCat);
+
+            const itemKeys = Object.keys(catData).filter(k => !isNaN(k)).sort((a,b) => a - b);
+            
+            itemKeys.forEach(itemKey => {
+                const item = catData[itemKey];
+                const rowItem = document.createElement('tr');
+
+                const createCell = (value, fieldName, isUploadable = false) => {
+                    // 1. Cột Lịch sử BDSC (Giữ nguyên)
+                    if (fieldName === 'LichSuBDSC') {
+                        let content = "";
+                        if (typeof value === 'object' && value !== null) {
+                            content = `<button class="btn-mini btn-link" onclick="viewHistoryDetail('${catKey}', '${itemKey}')"><i class="fas fa-eye"></i> Xem Chi Tiết</button>`;
+                        } else {
+                            if (value && value.toString().startsWith('http')) content = `<a href="${value}" target="_blank">Xem Link</a>`;
+                            else content = value || "";
+                        }
+                        if (localViewMode) {
+                            return `<div class="cell-actions">
+                                        <button class="btn-mini btn-collect" onclick="collectBDSC('${catKey}', '${itemKey}', '${item.Tagname}')"><i class="fas fa-magic"></i> Thu thập</button>
+                                    </div>` + content;
+                        }
+                        return content;
+                    }
+
+                    // 2. Cột Tên và Tagname (Giữ nguyên logic Edit nội tuyến)
+                    if (fieldName === 'TenThietBi' || fieldName === 'Tagname') {
+                        if (localViewMode) {
+                            return `<input type="text" class="inline-edit" value="${value || ''}" 
+                                    onchange="updateInline('${catKey}', '${itemKey}', '${fieldName}', this.value)"
+                                    onkeydown="if(event.key === 'Enter') this.blur()">`;
+                        }
+                        return value || "";
+                    }
+
+                    // --- [MỚI] XỬ LÝ HIỂN THỊ HÌNH ẢNH CUỐN SÁCH Ở CHẾ ĐỘ XEM ---
+                    if (!localViewMode && isUploadable) {
+                        // Kiểm tra xem có dữ liệu không
+                        let hasData = false;
+                        if (Array.isArray(value) && value.length > 0) hasData = true;
+                        else if (typeof value === 'object' && value.url) hasData = true;
+                        else if (typeof value === 'string' && value.trim() !== '') hasData = true;
+
+                        // Nếu có dữ liệu -> Hiển thị hình ảnh
+                        if (hasData) {
+                            return `<img src="sach.png" 
+                                    class="book-icon" 
+                                    title="Nhấn để xem tài liệu"
+                                    onclick="handleFileView('${catKey}', '${itemKey}', '${fieldName}')">`;
+                        }
+                        // Nếu rỗng -> Trả về rỗng (chạy xuống logic dưới trả về renderMultiLinkList rỗng)
+                    }
+                    // -------------------------------------------------------------
+
+                    // 3. Logic hiển thị cũ (dùng cho Chế độ sửa hoặc khi không có dữ liệu ở chế độ xem)
+                    let htmlContent = renderMultiLinkList(value);
+                    if (localViewMode && isUploadable) {
+                         const toolbar = `
+                            <div class="cell-actions">
+                                <button class="btn-mini btn-upload" title="Upload" onclick="triggerUpload('${catKey}', '${itemKey}', '${fieldName}')"><i class="fas fa-cloud-upload-alt"></i></button>
+                                <button class="btn-mini btn-link" title="Thêm Link" onclick="triggerManualLink('${catKey}', '${itemKey}', '${fieldName}')"><i class="fas fa-plus"></i></button>
+                                <button class="btn-mini btn-manage" title="Sửa/Xoá" onclick="openManageModal('${catKey}', '${itemKey}', '${fieldName}')"><i class="fas fa-edit"></i></button>
+                            </div>`;
+                        return toolbar + htmlContent;
+                    } 
+                    return htmlContent;
+                };
+
+                rowItem.innerHTML = `
+                    <td class="text-center fw-bold text-muted">${itemKey}</td>
+                    <td>${createCell(item.TenThietBi, 'TenThietBi')}</td>
+                    <td>${createCell(item.Tagname, 'Tagname', false)}</td> 
+                    <td>${createCell(item.ThongSoKT, 'ThongSoKT', true)}</td>
+                    <td>${createCell(item.Catalogue, 'Catalogue', true)}</td>
+                    <td>${createCell(item.KiemDinh, 'KiemDinh', true)}</td>
+                    <td>${createCell(item.QuyTrinhVH, 'QuyTrinhVH', true)}</td>
+                    <td>${createCell(item.QuyTrinhBD, 'QuyTrinhBD', true)}</td>
+                    <td>${createCell(item.DinhMuc, 'DinhMuc', true)}</td>
+                    <td>${createCell(item.DGRR, 'DGRR', true)}</td>
+                    <td>${createCell(item.BieuMau, 'BieuMau', true)}</td>
+                    <td>${createCell(item.LichSuBDSC, 'LichSuBDSC')}</td>
+                `;
+                elements.tableBody.appendChild(rowItem);
+            });
+        });
+    }
+	
+	// --- HÀM XỬ LÝ KHI CLICK VÀO HÌNH SÁCH ---
+    window.handleFileView = function(catKey, itemKey, fieldName) {
+        let data = localDataCache[catKey][itemKey][fieldName];
+        
+        // Chuẩn hóa dữ liệu về mảng
+        let items = [];
+        if (Array.isArray(data)) {
+            items = data;
+        } else if (typeof data === 'object' && data.url) {
+            items = [data];
+        } else if (typeof data === 'string' && data.trim() !== '') {
+            items = [{ name: "Tài liệu cũ", url: data }];
+        }
+
+        if (items.length === 0) return; // Không có gì để mở
+
+        if (items.length === 1) {
+            // Trường hợp 1: Chỉ có 1 link -> Mở luôn tab mới
+            window.open(items[0].url, '_blank');
+        } else {
+            // Trường hợp 2: Có nhiều link -> Mở Modal (dạng chỉ xem)
+            const container = document.getElementById('manageListContainer');
+            container.innerHTML = "";
+            
+            // Render danh sách
+            items.forEach(item => {
+                const displayName = item.name || "File không tên";
+                const div = document.createElement('div');
+                div.className = "read-only-item";
+                div.innerHTML = `
+                    <span><i class="fas fa-book text-muted me-2"></i> ${displayName}</span>
+                    <a href="${item.url}" target="_blank">Mở <i class="fas fa-external-link-alt"></i></a>
+                `;
+                container.appendChild(div);
+            });
+
+            // Ẩn nút "Lưu" vì đây là chế độ xem
+            const btnSave = document.getElementById('btnSaveManage');
+            if(btnSave) btnSave.style.display = 'none';
+
+            // Đổi tiêu đề modal
+            document.querySelector('#manageModal .modal-title').innerText = "Danh sách tài liệu";
+            
+            elements.manageModal.show();
+        }
+    };
+	
+
+    // --- OTHER FUNCTIONS ---
+    window.openDeviceModal = function(catKey) {
+        currentCategoryForDevice = catKey;
+        const tbody = document.getElementById('deviceTableBody');
+        tbody.innerHTML = "";
+        const catData = localDataCache[catKey];
+        const itemKeys = Object.keys(catData).filter(k => !isNaN(k)).sort((a,b) => a - b);
+        itemKeys.forEach(key => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td class="text-center fw-bold">${key}</td><td>${catData[key].TenThietBi || "(Chưa đặt tên)"}</td><td class="text-center"><button class="btn btn-danger btn-sm" style="font-size: 10px;" onclick="deleteDevice('${catKey}', '${key}')"><i class="fas fa-trash"></i></button></td>`;
+            tbody.appendChild(tr);
+        });
+        document.getElementById('newDeviceName').value = "";
+        elements.deviceModal.show();
+    };
+
+    window.addNewDevice = async function() {
+        if(!currentCategoryForDevice) return;
+        const name = document.getElementById('newDeviceName').value.trim();
+        if(!name) { alert("Vui lòng nhập tên thiết bị"); return; }
+        const catData = localDataCache[currentCategoryForDevice];
+        const itemKeys = Object.keys(catData).filter(k => !isNaN(k)).map(k => parseInt(k));
+        const newId = itemKeys.length > 0 ? Math.max(...itemKeys) + 1 : 1;
+        window.showLoading("Đang thêm...");
+        try {
+            await set(ref(db, `Quanlythietbi/${currentCategoryForDevice}/${newId}`), { TenThietBi: name, Tagname: "" });
+            if(!localDataCache[currentCategoryForDevice]) localDataCache[currentCategoryForDevice] = {};
+            localDataCache[currentCategoryForDevice][newId] = { TenThietBi: name };
+            openDeviceModal(currentCategoryForDevice); renderTable(localDataCache);
+        } catch(err) { alert("Lỗi: " + err.message); } finally { window.hideLoading(); }
+    };
+
+// --- HÀM THÊM PHÂN LOẠI MỚI (TỰ ĐỘNG SINH MÃ LA MÃ) ---
+    window.addNewCategory = async function() {
+        let nextKey = "I"; // Mặc định là I nếu chưa có dữ liệu
+
+        // Logic tìm số La Mã tiếp theo
+        if (localDataCache && Object.keys(localDataCache).length > 0) {
+            let maxVal = 0;
+            // Duyệt qua tất cả các Key hiện có để tìm số lớn nhất
+            Object.keys(localDataCache).forEach(key => {
+                const val = window.romanToInt(key);
+                if (val > maxVal) maxVal = val;
+            });
+            // Cộng thêm 1 và chuyển lại thành số La Mã
+            nextKey = window.intToRoman(maxVal + 1);
+        }
+
+        // Chỉ cần hỏi Tên phân loại (vì Mã đã tự động sinh)
+        const catName = prompt(`Hệ thống đang tạo mục thứ: ${nextKey}\nNhập TÊN Hệ thống thiết bị hoặc Phân Loại mới (Ví dụ: HỆ THỐNG ĐIỆN):`);
+        
+        if (!catName) return; // Người dùng ấn hủy hoặc để trống
+
+        window.showLoading("Đang tạo phân loại " + nextKey + "...");
+        try {
+            // Gửi lên Firebase
+            await set(ref(db, `Quanlythietbi/${nextKey}`), { TenPhanLoai: catName });
+            
+            // Cập nhật Cache
+            if (!localDataCache) localDataCache = {};
+            localDataCache[nextKey] = { TenPhanLoai: catName };
+
+            renderTable(localDataCache);
+            // alert("Đã thêm phân loại " + nextKey + " thành công!"); // Có thể bỏ alert cho đỡ phiền
+        } catch (err) {
+            alert("Lỗi: " + err.message);
+        } finally {
+            window.hideLoading();
+        }
+    };
+
+
+    window.deleteDevice = async function(catKey, itemKey) {
+        if(!confirm(`Bạn chắc chắn muốn xoá thiết bị STT ${itemKey}?`)) return;
+        window.showLoading("Đang xoá...");
+        try {
+            await remove(ref(db, `Quanlythietbi/${catKey}/${itemKey}`));
+            delete localDataCache[catKey][itemKey];
+            openDeviceModal(catKey); renderTable(localDataCache);
+        } catch(err) { alert("Lỗi: " + err.message); } finally { window.hideLoading(); }
+    };
+
+    window.openManageModal = function(catKey, itemKey, fieldName) {
+        currentManageTarget = { catKey, itemKey, fieldName };
+        const container = document.getElementById('manageListContainer'); container.innerHTML = "";
+        
+        // --- [MỚI] Đảm bảo nút Lưu và Tiêu đề hiển thị đúng cho chế độ Quản lý ---
+        const btnSave = document.getElementById('btnSaveManage');
+        if(btnSave) btnSave.style.display = 'block'; // Hiện nút lưu
+        document.querySelector('#manageModal .modal-title').innerText = "Quản lý Tài liệu";
+        // -----------------------------------------------------------------------
+
+        let data = localDataCache[catKey][itemKey][fieldName];
+        let items = [];
+        if (data) { if (typeof data === 'string') items = [{ name: "Link cũ", url: data }]; else if (Array.isArray(data)) items = [...data]; else if (typeof data === 'object') items = Object.values(data); }
+        
+        if(items.length === 0) container.innerHTML = "<div class='text-center text-muted'>Trống</div>";
+        else {
+            items.forEach((item, index) => {
+                const displayName = item.name || "File";
+                const row = document.createElement('div'); row.className = "manage-item-row";
+                row.innerHTML = `<input type="text" class="form-control form-control-sm" value="${displayName}" id="linkName-${index}"><a href="${item.url}" target="_blank"><i class="fas fa-external-link-alt"></i></a><i class="fas fa-trash-alt manage-item-del" onclick="markDeleted(this)"></i><input type="hidden" id="linkUrl-${index}" value="${item.url}"><input type="hidden" id="linkCreated-${index}" value="${item.created || Date.now()}">`;
+                container.appendChild(row);
+            });
+        }
+        elements.manageModal.show();
+    };
+
+    window.saveManageChanges = async function() {
+        if (!currentManageTarget) return;
+        const { catKey, itemKey, fieldName } = currentManageTarget;
+        const rows = document.querySelectorAll('#manageListContainer .manage-item-row');
+        const newData = [];
+        rows.forEach((row, index) => {
+            if (row.classList.contains('marked-delete')) return;
+            const name = row.querySelector(`#linkName-${index}`).value;
+            const url = row.querySelector(`#linkUrl-${index}`).value;
+            const created = row.querySelector(`#linkCreated-${index}`).value;
+            if (url) newData.push({ name: name || "File", url: url, created: parseInt(created) });
+        });
+        window.showLoading("Đang lưu...");
+        try {
+            await set(ref(db, `Quanlythietbi/${catKey}/${itemKey}/${fieldName}`), newData);
+            if (!localDataCache[catKey][itemKey]) localDataCache[catKey][itemKey] = {};
+            localDataCache[catKey][itemKey][fieldName] = newData;
+            renderTable(localDataCache); elements.manageModal.hide();
+        } catch(err) { alert(err.message); } finally { window.hideLoading(); }
+    };
+
+  window.viewHistoryDetail = function(catKey, itemKey) {
+        currentHistoryData = localDataCache[catKey][itemKey]['LichSuBDSC'];
+        const devName = localDataCache[catKey][itemKey]['TenThietBi'];
+        const container = document.getElementById('historyModalBody'); 
+        container.innerHTML = "";
+        document.getElementById('historyModalTitle').innerText = `Lịch sử BDSC: ${devName}`;
+
+        if(!currentHistoryData) { container.innerHTML = "Trống"; elements.historyModal.show(); return; }
+        
+        Object.keys(currentHistoryData).sort().reverse().forEach(year => {
+            // YÊU CẦU 1: Tính tổng tiền của năm
+            let yearTotal = 0;
+            Object.values(currentHistoryData[year]).forEach(t => {
+                if(t.details) {
+                    Object.values(t.details).forEach(d => {
+                        yearTotal += Number(d.thanhTien || 0);
+                    });
+                }
+            });
+
+            // Hiển thị tiêu đề Năm kèm Tổng tiền
+            // Căn lề phải margin-right: 11% để khớp tương đối với cột Thành Tiền (cột Link chiếm 10%)
+            let html = `<div class="history-year-block">
+                <div class="history-year-title d-flex justify-content-between align-items-center">
+                    <span>NĂM ${year}</span>
+                    <span style="color: #c0392b; margin-right: 11%; font-size: 14px;">
+                        TỔNG: ${window.formatNum(yearTotal)}
+                    </span>
+                </div>`;
+            
+            Object.values(currentHistoryData[year]).forEach(t => {
+                html += `<div class="mb-2"><strong>${t.noiDung}</strong>`;
+                if(t.details) {
+                    html += `<table class="history-detail-table">
+                                <thead><tr>
+                                    <th class="col-hist-date">Ngày</th>
+                                    <th class="col-hist-unit">SL</th>
+                                    <th class="col-hist-price">Đơn giá</th>
+                                    <th class="col-hist-total">Thành tiền</th>
+                                    <th class="col-hist-link">HS</th>
+                                </tr></thead><tbody>`;
+                    Object.values(t.details).forEach(d => {
+                        html += `<tr>
+                                    <td class="text-center">${d.ngayThucHien}</td>
+                                    <td class="text-center">${d.dvt}</td>
+                                    <td class="text-end">${window.formatNum(d.donGia)}</td>
+                                    <td class="text-end fw-bold">${window.formatNum(d.thanhTien)}</td>
+                                    <td class="text-center">${d.hoSoLink ? '<a href="'+d.hoSoLink+'" target="_blank"><i class="fas fa-file-alt"></i></a>' : '-'}</td>
+                                 </tr>`;
+                    });
+                    html += `</tbody></table>`;
+                }
+                html += `</div>`;
+            });
+            container.innerHTML += html + "</div>";
+        });
+        elements.historyModal.show();
+    };
+
+    window.updateInline = function(c, i, f, v) { update(ref(db, `Quanlythietbi/${c}/${i}`), {[f]:v}); localDataCache[c][i][f]=v; };
+    
+    
+	window.exportMainData = function() {
+        if (!localDataCache) return;
+        const rows = [["STT", "Tên thiết bị", "Tagname", "Thông số KT", "Catalogue", "Kiểm định", "Quy trình VH", "Quy trình BD", "Định mức", "ĐGRR", "Biểu mẫu"]];
+        Object.keys(localDataCache).sort((a,b)=>window.romanToInt(a)-window.romanToInt(b)).forEach(catKey => {
+            rows.push([catKey, localDataCache[catKey].TenPhanLoai]); 
+            const items = localDataCache[catKey];
+            Object.keys(items).filter(k=>!isNaN(k)).sort((a,b)=>a-b).forEach(key => {
+                const i = items[key];
+                const getVal = (v) => (typeof v === 'string') ? v : (Array.isArray(v) ? v.map(x=>x.url).join(';') : "");
+                rows.push([key, i.TenThietBi, i.Tagname, getVal(i.ThongSoKT), getVal(i.Catalogue), getVal(i.KiemDinh), getVal(i.QuyTrinhVH), getVal(i.QuyTrinhBD), getVal(i.DinhMuc), getVal(i.DGRR), getVal(i.BieuMau)]);
+            });
+        });
+        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "DS"); XLSX.writeFile(wb, "Backup.xlsx");
+    };
+	  // Import Data (Merge Logic)
+    
+	// --- HÀM XỬ LÝ NHẬP EXCEL (PHIÊN BẢN CHỈ LẤY TÊN & TAGNAME) ---
+   // --- HÀM XỬ LÝ NHẬP EXCEL (CẬP NHẬT CẢ TÊN PHÂN LOẠI) ---
+    window.processMergeExcel = async function(jsonData) {
+        if (!jsonData || jsonData.length < 2) {
+            alert("File Excel không có dữ liệu hoặc thiếu dòng tiêu đề!");
+            window.hideLoading();
+            return;
+        }
+
+        // 1. XỬ LÝ TIÊU ĐỀ (DÒNG 0) ĐỂ TÌM VỊ TRÍ CỘT
+        const headers = jsonData[0].map(h => h ? h.toString().toLowerCase().trim() : "");
+
+        // Tìm cột Tên (Dùng chung cho Tên thiết bị và Tên phân loại)
+        const nameColIdx = headers.findIndex(h => 
+            h === "tên thiết bị" || h === "tên thiết bị / loại"
+        );
+
+        // Tìm cột Tagname
+        const tagColIdx = headers.findIndex(h => 
+            h === "tagname" || h === "tag name"
+        );
+
+        if (nameColIdx === -1 && tagColIdx === -1) {
+            alert("Lỗi: Không tìm thấy cột 'Tên thiết bị' hoặc 'Tagname' hợp lệ.\nVui lòng kiểm tra lại dòng tiêu đề.");
+            window.hideLoading();
+            return;
+        }
+
+        const updates = {};
+        let currentCatKey = "";
+        let updateCount = 0;
+
+        // 2. DUYỆT DỮ LIỆU TỪ DÒNG 1
+        for (let i = 1; i < jsonData.length; i++) {
+            const row = jsonData[i];
+            const stt = row[0] ? row[0].toString().trim() : "";
+            
+            if (!stt) continue;
+
+            const isItem = !isNaN(stt); // True = Thiết bị (1,2..), False = Phân loại (I, II..)
+
+            if (!isItem) {
+                // ==> PHÂN LOẠI (Category) - Ví dụ: I, II
+                currentCatKey = stt; 
+                
+                // [MỚI] Lấy tên từ cột "Tên thiết bị" để cập nhật TenPhanLoai
+                if (nameColIdx !== -1 && row[nameColIdx] !== undefined) {
+                    const catName = row[nameColIdx].toString().trim();
+                    if (catName) { // Chỉ cập nhật nếu có dữ liệu
+                        updates[`Quanlythietbi/${currentCatKey}/TenPhanLoai`] = catName;
+                        updateCount++;
+                    }
+                }
+            } else {
+                // ==> THIẾT BỊ (Item) - Ví dụ: 1, 2
+                if (!currentCatKey) continue;
+
+                const itemKey = parseInt(stt);
+                const basePath = `Quanlythietbi/${currentCatKey}/${itemKey}`;
+                let hasRowUpdate = false;
+
+                // Cập nhật Tên thiết bị
+                if (nameColIdx !== -1 && row[nameColIdx] !== undefined) {
+                    const val = row[nameColIdx].toString().trim();
+                    updates[`${basePath}/TenThietBi`] = val;
+                    hasRowUpdate = true;
+                }
+
+                // Cập nhật Tagname
+                if (tagColIdx !== -1 && row[tagColIdx] !== undefined) {
+                    const val = row[tagColIdx].toString().trim();
+                    updates[`${basePath}/Tagname`] = val;
+                    hasRowUpdate = true;
+                }
+
+                if (hasRowUpdate) updateCount++;
+            }
+        }
+
+        // 3. GỬI CẬP NHẬT
+        if (Object.keys(updates).length > 0) {
+            try {
+                await update(ref(db), updates);
+                await loadAllData();
+                alert(`Đã cập nhật thành công ${updateCount} mục (bao gồm Phân loại & Thiết bị)!`);
+            } catch (err) {
+                console.error(err);
+                alert("Lỗi lưu dữ liệu: " + err.message);
+            }
+        } else {
+            alert("Không tìm thấy dữ liệu phù hợp để cập nhật.");
+        }
+        
+        window.hideLoading();
+    };
+	
+	document.getElementById('fileInputExcel').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+        showLoading("Đang xử lý nhập liệu...");
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ""});
+                processMergeExcel(jsonData);
+            } catch (err) { alert(err.message); hideLoading(); }
+        };
+        reader.readAsArrayBuffer(file);
+        e.target.value = ""; // Reset
+    });
+	
+
+    window.collectBDSC = async function(catKey, itemKey, tagName) {
+        if (!tagName) { alert("Chưa có Tagname!"); return; }
+        window.showLoading("Đang quét...");
+        try {
+            const lockedSnapshot = await get(ref(db, 'settings/global/lockedYears'));
+            const lockedYears = lockedSnapshot.val() || {};
+            const activeYears = TARGET_YEARS.filter(y => lockedYears[y] !== true);
+            let collectedData = {}; let found = false;
+            for (let year of activeYears) {
+                const snapshot = await get(ref(db, `congViecMe${year}`));
+                if (!snapshot.exists()) continue;
+                const sourceMap = { [year]: snapshot.val() };
+                const res = searchHistoryInMemory(sourceMap, tagName);
+                if(res) { collectedData[year] = res[year]; found = true; }
+            }
+            if (found) {
+                const current = localDataCache[catKey][itemKey].LichSuBDSC || {};
+                Object.assign(current, collectedData);
+                await update(ref(db, `Quanlythietbi/${catKey}/${itemKey}`), { LichSuBDSC: current });
+                localDataCache[catKey][itemKey]['LichSuBDSC'] = current;
+                renderTable(localDataCache);
+                alert("Đã thu thập!");
+            } else alert("Không tìm thấy dữ liệu mới.");
+        } catch (e) { alert(e.message); } finally { window.hideLoading(); }
+    };
+
+    window.batchCollectBDSC = async function() {
+        if(!confirm("Cập nhật TOÀN BỘ?")) return;
+        window.showLoading("Đang xử lý...");
+        try {
+            const lockedSnapshot = await get(ref(db, 'settings/global/lockedYears'));
+            const lockedYears = lockedSnapshot.val() || {};
+            const activeYears = TARGET_YEARS.filter(y => lockedYears[y] !== true);
+            const sourceData = {};
+            for(let year of activeYears) {
+                const snap = await get(ref(db, `congViecMe${year}`));
+                if(snap.exists()) sourceData[year] = snap.val();
+            }
+            const updates = {};
+            for(const catKey in localDataCache) {
+                const items = localDataCache[catKey];
+                for(const itemKey in items) {
+                    if(isNaN(itemKey)) continue;
+                    const item = items[itemKey];
+                    if(!item.Tagname) continue;
+                    const found = searchHistoryInMemory(sourceData, item.Tagname);
+                    if(found) {
+                        const current = item.LichSuBDSC || {};
+                        Object.assign(current, found);
+                        updates[`Quanlythietbi/${catKey}/${itemKey}/LichSuBDSC`] = current;
+                    }
+                }
+            }
+            if(Object.keys(updates).length > 0) { await update(ref(db), updates); await loadAllData(); alert("Xong!"); } 
+            else alert("Không có dữ liệu mới.");
+        } catch(e) { alert(e.message); } finally { window.hideLoading(); }
+    };
+
+    function searchHistoryInMemory(sourceData, tagName) {
+        let result = {}; let hasData = false;
+        for(const [year, yearData] of Object.entries(sourceData)) {
+            for(const gData of Object.values(yearData)) {
+                if(!gData.children) continue;
+                for(const cData of Object.values(gData.children)) {
+                    if(!cData.grandchildren) continue;
+                    for(const [grandId, grData] of Object.entries(cData.grandchildren)) {
+                        if(grData.tagName === tagName && grData.daThucHien === true && grData.greatGrandchildren) {
+                            if(!result[year]) result[year] = {};
+                            for(const [ggId, ggData] of Object.entries(grData.greatGrandchildren)) {
+                                if(ggData.executions) {
+                                    const entryId = `${grandId}_${ggId}`;
+                                    const details = {};
+                                    for(const [k, v] of Object.entries(ggData.executions)) { if(!isNaN(k) && typeof v === 'object') details[k] = v; }
+                                    result[year][entryId] = { noiDung: ggData.noiDung || "N/A", details: details };
+                                    hasData = true;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        return hasData ? result : null;
+    }
+
+    window.triggerUpload = function(c,i,f) { if(!accessToken) { alert("Vui lòng nhấn nút 'Đăng nhập Drive' trước!"); return; } currentUploadTarget={c,i,f}; elements.driveInput.click(); };
+    elements.driveInput.addEventListener('change', async(e)=>{
+        const f=e.target.files[0]; if(!f) return;
+        const {c,i,f:fd} = currentUploadTarget;
+        const name = prompt("Nhập tên hiển thị cho file này:", f.name); if(!name) return;
+        window.showLoading("Uploading...");
+        const meta = { 'name': f.name, 'mimeType': f.type, 'parents': [FOLDER_ID] };
+        const form = new FormData(); form.append('metadata', new Blob([JSON.stringify(meta)], {type:'application/json'})); form.append('file', f);
+        try {
+            const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
+                method:'POST', headers:{'Authorization':'Bearer '+accessToken}, body:form});
+            const res = await r.json();
+            let arr = localDataCache[c][i][fd] || []; if(!Array.isArray(arr)) arr = arr.url ? [arr] : [];
+            arr.push({name: name, url: res.webViewLink, created: Date.now()});
+            await set(ref(db, `Quanlythietbi/${c}/${i}/${fd}`), arr);
+            localDataCache[c][i][fd] = arr; renderTable(localDataCache);
+        } catch(e){ alert(e.message); } finally { window.hideLoading(); elements.driveInput.value=""; }
+    });
+
+    window.triggerManualLink = async function(c,i,f) {
+        const u = prompt("Dán đường link tài liệu của bạn vào đây:"); if(!u) return; const n = prompt("Nhập tên hiển thị cho link này:"); if(!n) return;
+        let arr = localDataCache[c][i][f] || []; if(!Array.isArray(arr)) arr = arr.url ? [arr] : [];
+        arr.push({name:n, url:u, created: Date.now()});
+        await set(ref(db, `Quanlythietbi/${c}/${i}/${f}`), arr); localDataCache[c][i][f] = arr; renderTable(localDataCache);
+    };
+
+    window.exportCurrentHistory = function() {
+        if(!currentHistoryData) return;
+        const rows = [["Năm", "Nội dung", "Ngày", "SL", "Đơn giá", "Thành tiền", "Link"]];
+        const flat = [];
+        Object.keys(currentHistoryData).forEach(y => {
+            Object.values(currentHistoryData[y]).forEach(t => {
+                if(t.details) Object.values(t.details).forEach(d => flat.push({y, c:t.noiDung, ...d}));
+            });
+        });
+        flat.sort((a,b) => (a.ngayThucHien||"").localeCompare(b.ngayThucHien||""));
+        flat.forEach(i => rows.push([i.y, i.c, i.ngayThucHien, i.dvt, i.donGia, i.thanhTien, i.hoSoLink]));
+        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "History"); XLSX.writeFile(wb, "History.xlsx");
+    };
+
+    // --- REVERTED TOOLTIP LOGIC (Use 'title' attribute) ---
+    function renderMultiLinkList(d) {
+        if(!d || typeof d !== 'object' || (!Array.isArray(d) && !d.url)) return "";
+        let items = Array.isArray(d) ? [...d].reverse() : [d];
+        if(!Array.isArray(d) && d.noiDung) return ""; 
+        if(items.length===0) return "";
+        let h = '<div class="multi-link-box">';
+        items.forEach(l => { 
+            // Use browser native tooltip (title)
+            if(l.url) h+=`<div class="link-item"><i class="fas fa-caret-right text-muted" style="font-size:10px;"></i> <a href="${l.url}" target="_blank" title="${l.name||"File"}">${l.name||"File"}</a></div>`; 
+        });
+        return h + '</div>';
+    }
+	
+	// --- CHỨC NĂNG BACKUP (XUẤT JSON) ---
+    window.backupData = function() {
+        if (!localDataCache) {
+            alert("Chưa có dữ liệu để sao lưu!");
+            return;
+        }
+        
+        // Chuyển dữ liệu thành chuỗi JSON đẹp (indent 2 spaces)
+        const jsonStr = JSON.stringify(localDataCache, null, 2);
+        const blob = new Blob([jsonStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        
+        // Tạo link ảo để tải về
+        const a = document.createElement('a');
+        a.href = url;
+        const date = new Date().toISOString().slice(0,10);
+        a.download = `Backup_QuanLyThietBi_${date}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    // --- CHỨC NĂNG RESTORE (PHỤC HỒI TỪ JSON) ---
+    // Bắt sự kiện chọn file JSON
+    document.getElementById('jsonInputRestore').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Cảnh báo quan trọng
+        const confirmMsg = "CẢNH BÁO: Hành động này sẽ XOÁ BỎ toàn bộ dữ liệu hiện tại và thay thế bằng dữ liệu trong file backup.\n\nBạn có chắc chắn muốn tiếp tục không?";
+        if (!confirm(confirmMsg)) {
+            e.target.value = ""; // Reset input
+            return;
+        }
+
+        window.showLoading("Đang phục hồi dữ liệu...");
+        const reader = new FileReader();
+        reader.onload = async function(event) {
+            try {
+                const jsonData = JSON.parse(event.target.result);
+                
+                // Kiểm tra sơ bộ cấu trúc (tùy chọn)
+                if (typeof jsonData !== 'object' || jsonData === null) {
+                    throw new Error("File JSON không hợp lệ!");
+                }
+
+                // Gửi lên Firebase (Set đè lên node Quanlythietbi)
+                await set(ref(db, 'Quanlythietbi'), jsonData);
+                
+                // Tải lại dữ liệu
+                await loadAllData();
+                alert("Phục hồi dữ liệu thành công!");
+
+            } catch (err) {
+                console.error(err);
+                alert("Lỗi khi phục hồi: " + err.message);
+            } finally {
+                window.hideLoading();
+                e.target.value = ""; // Reset input
+            }
+        };
+        reader.readAsText(file);
+    });
+	
+</script>
+</body>
+</html>
