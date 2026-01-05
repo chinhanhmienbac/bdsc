@@ -90,6 +90,8 @@
         .btn-action { padding: 5px 10px; font-size: 14px; margin-right: 5px;}
 
         input[type="file"] { border: 1px solid #ccc; padding: 8px; border-radius: 4px; }
+		
+	/* Thiết lập cho bảng dữ liệu */
         #taskList { margin-top: 20px; border-collapse: collapse; width: 100%; table-layout: fixed; }
         #taskList th, #taskList td {
             border: 1px solid #ddd; padding: 10px; text-align: left;
@@ -121,7 +123,16 @@
         
         /* Cấp 3 (1, 2...): Mặc định đậm (nếu là cha), nền sáng hơn nữa */
         .task-grandchild td { font-weight: bold; background-color: #f2f4f6; }
-        
+		.task-grandchild .col-tagname {
+            font-style: normal !important;
+			font-weight: normal !important;
+			color: #d63384; /* Màu hồng tím để nổi bật tag */
+			}
+		.task-grandchild .col-ghichu {
+            font-style: normal !important;
+			font-weight: normal !important;
+			}
+			
         /* Cấp 3 (1, 2...) NHƯNG LÀ LÁ (Không có con): Chữ thường */
         .task-grandchild.is-parent-leaf td { font-weight: normal; }
 
@@ -243,7 +254,7 @@
         }
 
         #yearSelect {
-            padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px;
+            padding: 8px 0px 8px 4px; border: 1px solid #ccc; border-radius: 4px;
             font-size: 14px; background-color: white; cursor: pointer;
         }
         #yearSelect:focus {
@@ -568,7 +579,7 @@
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
             <img src="PVGLPG.gif" alt="Logo" style="width: 100px; height: auto;">
             <h1 style="color: #008037; font-weight: bold; text-transform: uppercase; text-align: center; flex-grow: 1;">
-                LẬP VÀ THEO DÕI KẾ HOẠCH<br>BẢO DƯỠNG SỬA CHỮA
+                LẬP VÀ THEO DÕI KẾ HOẠCH<br>BẢO DƯỠNG SỬA CHỮA
             </h1>
             <div style="width: 150px;"></div>
         </div>
@@ -834,16 +845,16 @@
 
     <script type="module">
     // Thêm hai hàm chuyển đổi vào đầu script
-    function convertTTForStorage(tt) {
+    window.convertTTForStorage = function(tt) {
         return String(tt).replace(/\./g, ',');
-    }
+    };
 
-    function convertTTForDisplay(tt) {
+    window.convertTTForDisplay = function(tt) {
         return String(tt).replace(/,/g, '.');
-    }
+    };
 
 // === BẮT ĐẦU MÃ MỚI: HÀM HỖ TRỢ SỐ LA MÃ ===
-    function numberToRoman(num) {
+    window.numberToRoman = function(num) {
         const romanMap = [
             { value: 1000, numeral: 'M' },
             { value: 900, numeral: 'CM' },
@@ -868,9 +879,9 @@
             }
         }
         return result;
-    }
+    };
 
-    function romanToNumber(roman) {
+    window.romanToNumber = function(roman) {
         if (!roman) return 0;
         const romanMap = { 'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000 };
         let result = 0;
@@ -885,7 +896,7 @@
             }
         }
         return result;
-    }
+    };
     // === KẾT THÚC MÃ MỚI ===
 	
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
@@ -930,7 +941,7 @@ let gisInited = false;
 
 let cachedEquipmentList = null; // Khởi tạo là null
 
-async function loadEquipmentList() {
+  window.loadEquipmentList = async function() {
     // Cơ chế Cache: Nếu đã có dữ liệu trong RAM thì dùng luôn, không tải lại
     if (cachedEquipmentList !== null) return;
 
@@ -987,7 +998,7 @@ async function loadEquipmentList() {
         cachedEquipmentList = []; 
         statusDiv.innerText = '';
     }
-}
+};
 
     // =======================================================
 // === CÁC HÀM HELPER CHO LOGIC NHẬP LIỆU MỚI (V4) =======
@@ -1082,13 +1093,6 @@ const hasHeaderForField = (keys, headersSet) => {
     return false;
 };
 
-// --- Đảm bảo các hàm helper khác này cũng tồn tại ở global scope ---
-// (Bạn có thể đã có chúng từ mã nguồn gốc)
-// function convertTTForStorage(tt) { ... }
-// function convertTTForDisplay(tt) { ... }
-// const parseNumber = (str) => { ... };
-// const parseFormattedNumber = (str) => { ... };
-// function getParentCollectionName() { ... }
 
 // =======================================================
 // === KẾT THÚC KHỐI HELPER =============================
@@ -1118,9 +1122,9 @@ const parseNumber = (str) => {
         return isNaN(result) ? 0 : result;
     };
 
-    function getParentCollectionName() {
+    window.getParentCollectionName = function() {
         return `congViecMe${currentYear}`;
-    }
+    };
 
 // === CÁC HÀM HELPER CHO LOGIC IMPORT MỚI ===
 
@@ -1128,7 +1132,7 @@ const parseNumber = (str) => {
  * Hàm chuẩn hóa TT: Loại bỏ khoảng trắng thừa, chuyển dấu phẩy thành dấu chấm,
  * loại bỏ dấu chấm ở cuối câu (ví dụ "1." -> "1").
  */
-function normalizeTT(rawTT) {
+window.normalizeTT = function(rawTT) {
     if (!rawTT) return '';
     return String(rawTT)
         .trim()                  // Xóa khoảng trắng đầu cuối
@@ -1136,7 +1140,7 @@ function normalizeTT(rawTT) {
         .replace(/,/g, '.')      // Chuyển phẩy thành chấm (VD: "1,1" -> "1.1")
         .replace(/\.$/, '')      // Xóa dấu chấm cuối cùng (VD: "A." -> "A")
         .replace(/^\./, '');     // Xóa dấu chấm đầu tiên (nếu có)
-}
+};
 
 /**
  * Hàm xác định cấp độ của TT dựa trên Regex (I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII|XIII|XIV|XV|XVI|XVII|XVIII|XIX|XX|XXI|XXII|XXIII|XXIV|XXV|XXVI|XXVII|XXVIII|XXIX|XXX|XXXI|XXXII|XXXIII|XXXIV|XXXV|XXXVI|XXXVII|XXXVIII|XXXIX)
@@ -1147,7 +1151,7 @@ function normalizeTT(rawTT) {
 /**
  * Hàm xác định cấp độ của TT - PHIÊN BẢN SỬ DỤNG DẤU SAO (*)
  */
-function detectLevel(tt) {
+	window.detectLevel = function(tt) {
     if (!tt) return 'unknown';
 
     // 1. Cấp 1 (Parent): A, B, C...
@@ -1186,10 +1190,10 @@ function detectLevel(tt) {
     if (isLevel3_Integer.test(tt)) return 'grandchild';
 
     return 'unknown';
-}
+};
 
 
-function buildImportUpdates_Merge(jsonData, headers) {
+	window.buildImportUpdates_Merge = function(jsonData, headers) {
     console.log('=== START Smart Import Logic (Format: Asterisk *) ===');
     const updates = {};
     const rootPath = getParentCollectionName();
@@ -1381,7 +1385,7 @@ function buildImportUpdates_Merge(jsonData, headers) {
 
     console.log(`=== END Smart Import (Asterisk). Total updates: ${Object.keys(updates).length} ===`);
     return updates;
-}
+};
 
 // 1. Hàm mở Modal nhập mật khẩu (Thay thế prompt)
     window.openAdminAuthModal = function() {
@@ -1435,7 +1439,7 @@ function buildImportUpdates_Merge(jsonData, headers) {
     });
 
     // 3. Hàm hiển thị giao diện Admin (Controls)
-    function showAdminControls() {
+    window.showAdminControls = function() {
         document.getElementById('unlockButton').style.display = 'none';
         document.getElementById('adminControls').style.display = 'block';
         
@@ -1446,7 +1450,7 @@ function buildImportUpdates_Merge(jsonData, headers) {
         
         // Logic ràng buộc: Nếu đang KHÓA thì disable nút Edit Mode
         document.getElementById('editModeCheckbox').disabled = (lockedYears[currentYear] === true);
-    }
+    };
 
     // 4. [MỚI] Hàm Toggle Khóa Năm
     window.toggleYearLock = async function(isLocked) {
@@ -1531,7 +1535,7 @@ const deleteBtnHtml = canEdit ?
             console.error("Lỗi khi tải Kế hoạch đã duyệt:", error);
             linksContainer.innerHTML = `<p class="empty-text" style="color: red;">Lỗi tải dữ liệu: ${error.message}</p>`;
         }
-    }
+    };
 
     /**
      * Xóa một link Kế hoạch đã duyệt khỏi CSDL.
@@ -1553,7 +1557,7 @@ const deleteBtnHtml = canEdit ?
             statusDiv.className = 'error';
             statusDiv.innerText = `Lỗi: ${error.message}`;
         }
-    }
+    };
 
     /**
      * Mở modal lựa chọn cách thêm link (dán/tải file).
@@ -1565,7 +1569,7 @@ const deleteBtnHtml = canEdit ?
         document.getElementById('approvedPlanModal').style.display = 'none';
         // Mở modal lựa chọn
         document.getElementById('addPlanLinkModal').style.display = 'block';
-    }
+    };
 
     /**
      * Mở modal để dán link thủ công.
@@ -1578,7 +1582,7 @@ const deleteBtnHtml = canEdit ?
         document.getElementById('pastedLinkUrl').value = '';
         document.getElementById('pasteLinkModal').style.display = 'block';
         document.getElementById('pastedLinkName').focus();
-    }
+    };
 
     /**
      * Lưu link được dán thủ công vào CSDL.
@@ -1626,7 +1630,7 @@ const deleteBtnHtml = canEdit ?
             saveButton.disabled = false;
             saveButton.textContent = 'Lưu link';
         }
-    }
+    };
 
     /**
      * Bắt đầu quy trình tải file Kế hoạch lên Google Drive.
@@ -1658,7 +1662,7 @@ const deleteBtnHtml = canEdit ?
             // Lỗi đã được xử lý và hiển thị bởi requestGoogleAuth()
             console.error('Không thể tải lên do lỗi xác thực Google:', error);
         }
-    }
+    };
 
     /**
      * Hàm xử lý việc tải file Kế hoạch (được gọi từ modal #uploadPdfModal).
@@ -1757,7 +1761,7 @@ const deleteBtnHtml = canEdit ?
 
 // Hàm gọi lại sau khi nhận token
     // Hàm gọi lại sau khi nhận token
-    function tokenResponseCallback(resp) {
+    window.tokenResponseCallback = function(resp) {
         if (resp.error !== undefined) {
             statusDiv.className = 'error';
             statusDiv.innerText = `Lỗi xác thực Google: ${resp.error}`;
@@ -1769,11 +1773,11 @@ const deleteBtnHtml = canEdit ?
         // ======================
         // Cập nhật giao diện (nếu chưa được cập nhật bởi luồng promise)
         // updateSigninStatus(true); // Có thể không cần nếu requestGoogleAuth xử lý
-    }
+    };
 
     // Hàm xử lý việc yêu cầu xác thực
    // Hàm xử lý việc yêu cầu xác thực
-    async function requestGoogleAuth() {
+    window.requestGoogleAuth = async function() {
         return new Promise((resolve, reject) => {
              if (!gapiReady || !gisInited || !tokenClient) {
                  statusDiv.className = 'error';
@@ -1816,7 +1820,7 @@ const deleteBtnHtml = canEdit ?
              
              tokenClient.requestAccessToken({ prompt: 'consent' }); 
         });
-    }
+    };
 	
 	
 
@@ -1825,17 +1829,37 @@ const deleteBtnHtml = canEdit ?
         const yearSelect = document.getElementById('yearSelect');
         const currentYearValue = new Date().getFullYear();
         const nextYear = currentYearValue + 1;
+        
         yearSelect.innerHTML = '';
+        
+        // 1. Tạo danh sách các năm động (như cũ: Năm hiện tại + 1 năm sau + 3 năm trước)
         const years = [currentYearValue, nextYear];
         for (let i = currentYearValue - 1; i >= currentYearValue - 3; i--) {
             years.unshift(i);
         }
+        
+        // 2. [THÊM MỚI] Chèn năm 2000 vào đầu mảng để làm Sample
+        // Dùng unshift để đưa nó lên vị trí đầu tiên
+        years.unshift(2000); 
+
+        // 3. Tạo thẻ <option>
         years.forEach(year => {
             const option = document.createElement('option');
             option.value = year;
-            option.textContent = year;
+            
+            // Tùy chỉnh hiển thị: Nếu là 2000 thì hiện thêm chữ "(Sample)" cho dễ hiểu
+            if (year === 2000) {
+                option.textContent = "2000 (Test)";
+                option.style.color = "blue"; // Tô màu xanh cho nổi bật (tuỳ chọn)
+             //   option.style.fontWeight = "bold";
+            } else {
+                option.textContent = year;
+            }
+            
             yearSelect.appendChild(option);
         });
+
+        // 4. Mặc định vẫn chọn năm hiện tại khi load trang
         currentYear = currentYearValue;
         yearSelect.value = currentYearValue;
     };
@@ -2271,38 +2295,47 @@ window.recalculateAllCostsAndReload = async function(showConfirm = true) {
             traverseToLeaves(allData[pid], `${getParentCollectionName()}/${pid}`);
         }
 
-        const aggregateFromChildren = (parentNode, childCollectionName) => {
-            let sumCP = 0, sumTH = 0, sumKHPrev = 0, sumTHPrev = 0, sumCPPhanBo = 0, sumCpCap1 = 0;
-            let anyExecuted = false;
+        // Tìm đoạn khai báo aggregateFromChildren bên trong recalculateAllCostsAndReload
+const aggregateFromChildren = (parentNode, childCollectionName) => {
+    let sumCP = 0, sumTH = 0, sumKHPrev = 0, sumTHPrev = 0, sumCPPhanBo = 0, sumCpCap1 = 0;
+    let anyExecuted = false;
+    
+    if (parentNode[childCollectionName]) {
+        for (const key in parentNode[childCollectionName]) {
+            const child = parentNode[childCollectionName][key];
             
-            if (parentNode[childCollectionName]) {
-                for (const key in parentNode[childCollectionName]) {
-                    const child = parentNode[childCollectionName][key];
-                    sumCP += (child.chiPhi || 0);
-                    sumTH += (child.chiPhiThucHien || 0);
-                    sumKHPrev += (child.khNamTruoc || 0);
-                    sumTHPrev += (child.thucHienNamTruoc || 0);
-                    sumCPPhanBo += (parseFloat(child.chiPhiPhanBo) || 0);
-                    sumCpCap1 += (child.cpCap1 || 0);
-
-                    if (child.daThucHien || (child.executions && Object.keys(child.executions).length > 0)) {
-                         anyExecuted = true;
-                    }
-                    if (child.children || child.grandchildren || child.greatGrandchildren) {
-                         if(child.daThucHien) anyExecuted = true;
-                    }
-                }
+            // === [LOGIC MỚI]: Bỏ qua tính toán nếu Cấp độ là PS ===
+            const isPS = String(child.capDo || '').trim().toUpperCase() === 'PS';
+            
+            if (!isPS) {
+                sumCP += (child.chiPhi || 0);
+                sumTH += (child.chiPhiThucHien || 0);
+                sumKHPrev += (child.khNamTruoc || 0);
+                sumTHPrev += (child.thucHienNamTruoc || 0);
+                sumCPPhanBo += (parseFloat(child.chiPhiPhanBo) || 0);
+                sumCpCap1 += (child.cpCap1 || 0);
             }
-            return { 
-                chiPhi: sumCP, 
-                chiPhiThucHien: sumTH, 
-                khNamTruoc: sumKHPrev, 
-                thucHienNamTruoc: sumTHPrev, 
-                daThucHien: anyExecuted,
-                chiPhiPhanBo: sumCPPhanBo,
-                cpCap1: sumCpCap1 
-            };
-        };
+            // ====================================================
+
+            // Logic kiểm tra "đã thực hiện" vẫn giữ nguyên để hiển thị trạng thái
+            if (child.daThucHien || (child.executions && Object.keys(child.executions).length > 0)) {
+                 anyExecuted = true;
+            }
+            if (child.children || child.grandchildren || child.greatGrandchildren) {
+                 if(child.daThucHien) anyExecuted = true;
+            }
+        }
+    }
+    return { 
+        chiPhi: sumCP, 
+        chiPhiThucHien: sumTH, 
+        khNamTruoc: sumKHPrev, 
+        thucHienNamTruoc: sumTHPrev, 
+        daThucHien: anyExecuted,
+        chiPhiPhanBo: sumCPPhanBo,
+        cpCap1: sumCpCap1 
+    };
+};
 
         const aggregateNodeRecursively = (node, path) => {
             if (node.children) Object.keys(node.children).forEach(k => aggregateNodeRecursively(node.children[k], `${path}/children/${k}`));
@@ -2345,7 +2378,7 @@ window.recalculateAllCostsAndReload = async function(showConfirm = true) {
  * HÀM HELPER MỚI
  * Trả về một đối tượng chứa các trường cần set về 'null' cho một nút cha.
  */
-function getCleanupFieldsForParentNode(path) {
+	window.getCleanupFieldsForParentNode = function(path) {
     return {
         [`${path}/donVi`]: null,
         [`${path}/soLuong`]: null,
@@ -2353,7 +2386,7 @@ function getCleanupFieldsForParentNode(path) {
         [`${path}/tanSuatTH`]: null
         // Chúng ta giữ lại 'dvThucHien' và 'capDo' vì chúng có thể hữu ích
     };
-}
+};
 
     window.logoutUser = async function() {
         if(confirm('Bạn có muốn đăng xuất và quay về chế độ chỉ xem không?')) {
@@ -3132,15 +3165,24 @@ window.openDeleteAllDataModal = function() {
 
     window.toggleEditMode = async function(isChecked) {
         if (!isAuthenticated) {
+            // Nếu chưa đăng nhập, hoàn tác checkbox và báo lỗi
             document.getElementById('editModeCheckbox').checked = !isChecked;
             return showAuthError();
         }
         try {
-            const settingsRef = ref(db, 'settings/global');
-            await update(settingsRef, { editModeStatus: { [currentYear]: isChecked } });
+            // === [CẢI TIẾN]: Update theo đường dẫn chi tiết để không ghi đè các năm khác ===
+            const updates = {};
+            // Chỉ định rõ đường dẫn sâu đến tận năm cần sửa
+            updates[`settings/global/editModeStatus/${currentYear}`] = isChecked;
+
+            // Gọi update trên root (ref(db)) với object updates chứa đường dẫn đầy đủ
+            await update(ref(db), updates);
+            
         } catch (error) {
             console.error("Lỗi khi cập nhật trạng thái mở khóa:", error);
             alert("Đã có lỗi xảy ra khi lưu trạng thái. Vui lòng thử lại.");
+            // Hoàn tác checkbox nếu lỗi
+            document.getElementById('editModeCheckbox').checked = !isChecked;
         }
     };
 
@@ -3273,177 +3315,8 @@ window.saveTasks = async function() {
         }
     };
 
-// === CẬP NHẬT: HÀM saveNewTasks (Xử lý Lưu nhiều dòng từ Modal Thêm mới) ===
-  window.saveNewTasks = async function(parentPath, level) {
-        if (!isAuthenticated) return showAuthError();
-        const saveButton = document.getElementById('modalSaveButton');
-        try {
-            saveButton.disabled = true; saveButton.textContent = 'Đang lưu...';
-            
-            const updates = {};
-            const parentUpdates = {}; 
-            const rows = document.querySelectorAll("#dataModal .modal-table tbody tr");
-            
-            if (rows.length === 0) {
-                 throw new Error("Không có dòng nào để lưu.");
-            }
 
-            const pathsToRecalculate = new Set();
-            const justificationPathsToRecalculate = new Set();
-
-            let subCollectionName;
-            if (level === 'child') subCollectionName = 'children';
-            else if (level === 'grandchild') subCollectionName = 'grandchildren';
-            else if (level === 'greatGrandchild') subCollectionName = 'greatGrandchildren';
-            else if (level === 'greatGreatGrandchild') subCollectionName = 'greatGreatGrandchildren';
-            else if (level === 'justification') subCollectionName = 'justifications';
-            else if (level === 'subJustification') subCollectionName = 'subJustifications';
-            else {
-                console.error("Level không hợp lệ:", level);
-                return;
-            }
-
-            const parentRef = ref(db, parentPath);
-            const parentSnap = await get(parentRef);
-            const parentData = parentSnap.exists() ? parentSnap.val() : {};
-
-            for (const row of rows) {
-                const newData = {};
-                const ttInput = row.querySelector('input[data-field="tt"]');
-                if (!ttInput) continue;
-                
-                const newTT = convertTTForStorage(ttInput.value);
-
-                row.querySelectorAll('input[data-field], select[data-field]').forEach(input => {
-                    const field = input.dataset.field;
-                    if (field === 'tt') return; 
-
-                    if (level === 'justification' || level === 'subJustification') {
-                        // --- CẬP NHẬT: Thêm ghiChu vào danh sách lấy dữ liệu ---
-                        if (['noiDung', 'donVi', 'ghiChu'].includes(field)) {
-                            newData[field] = input.value;
-                        } else if (['soLuong', 'donGia'].includes(field)) {
-                            newData[field] = parseFormattedNumber(input.value);
-                        }
-                    } else {
-                        if (field === 'tanSuatTH') {
-                            if (input.value.trim() === '') {
-                                newData[field] = 1; 
-                            } else {
-                                const value = parseInt(input.value, 10);
-                                newData[field] = isNaN(value) || value < 0 ? 0 : value;
-                            }
-                        } 
-                        else if (field === 'namPhanBo') {
-                             if (input.value.trim() === '' || input.value == 0) newData[field] = 1;
-                             else newData[field] = parseFormattedNumber(input.value);
-                        }
-                        else if (['chiPhi', 'khNamTruoc', 'thucHienNamTruoc'].includes(field)) {
-                            newData[field] = parseFormattedNumber(input.value);
-                        } else {
-                            newData[field] = input.value;
-                        }
-                    }
-                });
-
-                newData.tt = newTT; 
-                const newDocPath = `${parentPath}/${subCollectionName}/${newTT}`;
-
-               if (level === 'justification' || level === 'subJustification') {
-                    const soLuong = newData.soLuong || 0;
-                    const donGia = newData.donGia || 0;
-                    newData.chiPhi = soLuong * donGia;
-
-                    let leafNodePath = parentPath;
-                    if (level === 'subJustification') {
-                        leafNodePath = parentPath.substring(0, parentPath.indexOf('/justifications/'));
-                    }
-                    justificationPathsToRecalculate.add(leafNodePath);
-                    pathsToRecalculate.add(leafNodePath); 
-
-                } else {
-                    newData.isHidden = false;
-                    newData.chiPhi = newData.chiPhi || 0;
-                    newData.chiPhiThucHien = 0;
-                    newData.keHoachConLai = newData.chiPhi;
-                    newData.khNamTruoc = newData.khNamTruoc || 0;
-                    newData.thucHienNamTruoc = newData.thucHienNamTruoc || 0;
-                    newData.tgBatDau = newData.tgBatDau || '';
-                    newData.tgHoanThanh = newData.tgHoanThanh || '';
-                    
-                    if (['greatGrandchild', 'greatGreatGrandchild'].includes(level)) {
-                        const nam = newData.namPhanBo || 1; 
-                        newData.chiPhiPhanBo = Math.round(newData.chiPhi / nam);
-                    } else {
-                        newData.chiPhiPhanBo = 0; 
-                    }
-
-                    pathsToRecalculate.add(newDocPath);
-                }
-
-                if (!newData.noiDung) {
-                    alert(`Nội dung cho mục ${convertTTForDisplay(newTT)} không được để trống!`);
-                    throw new Error("Validation failed");
-                }
-
-                updates[newDocPath] = newData;
-
-                if (level === 'subJustification' && !parentUpdates[`${parentPath}/hasSubJustifications`]) {
-                    parentUpdates[`${parentPath}/hasSubJustifications`] = true;
-                    parentUpdates[`${parentPath}/soLuong`] = '';
-                    parentUpdates[`${parentPath}/donGia`] = '';
-                }
-
-                if (level === 'greatGreatGrandchild' && !parentUpdates[`${parentPath}/hasChildren`]) {
-                    if (parentData && !parentData.hasChildren) {
-                        const execSnapshot = await get(ref(db, `${parentPath}/executions`));
-                        const justSnapshot = await get(ref(db, `${parentPath}/justifications`));
-                        if ((execSnapshot.exists() && Object.keys(execSnapshot.val()).length > 0) || 
-                            (justSnapshot.exists() && Object.keys(justSnapshot.val()).length > 0)) {
-                            alert(`Lỗi: Không thể thêm công việc con vào mục ${parentData.tt} vì nó đã được thực hiện hoặc đã có giải trình.`);
-                            throw new Error("Cannot add child to executed/justified item");
-                        }
-                        parentUpdates[`${parentPath}/hasChildren`] = true;
-                        parentUpdates[`${parentPath}/chiPhi`] = 0;
-                        parentUpdates[`${parentPath}/chiPhiThucHien`] = 0;
-                        parentUpdates[`${parentPath}/keHoachConLai`] = 0;
-                        parentUpdates[`${parentPath}/soLuong`] = '';
-                        parentUpdates[`${parentPath}/donVi`] = '';
-                        parentUpdates[`${parentPath}/namPhanBo`] = '';
-                        parentUpdates[`${parentPath}/chiPhiPhanBo`] = 0;
-                    } else {
-                        parentUpdates[`${parentPath}/hasChildren`] = true;
-                    }
-                }
-            } 
-
-            Object.assign(updates, parentUpdates);
-            await update(ref(db), updates);
-
-            if (justificationPathsToRecalculate.size > 0) {
-                await recalculateCostsAfterJustificationChange(Array.from(justificationPathsToRecalculate));
-            }
-            if (pathsToRecalculate.size > 0) {
-                await recalculateCostsForParents(Array.from(pathsToRecalculate));
-            }
-            
-            closeAllModals();
-            await fetchData();
-            statusDiv.className = 'success';
-            statusDiv.innerText = `Đã thêm thành công ${rows.length} mục mới.`;
-
-        } catch (error) {
-            console.error("Lỗi khi lưu nhiều mục mới:", error);
-            statusDiv.className = 'error';
-            statusDiv.innerText = `Lỗi khi lưu: ${error.message}`;
-        } finally {
-            saveButton.disabled = false;
-            saveButton.textContent = 'Lưu thay đổi';
-        }
-    };
-
-    // === CẬP NHẬT: HÀM addNewTask (Xử lý thêm 1 dòng đơn lẻ - Thường dùng cho context menu) ===
-  /// === CẬP NHẬT: HÀM addNewTask (Thêm logic null cho Tần suất) ===
+  /// === CẬP NHẬT: HÀM saveNewTask (Thêm logic null cho Tần suất) ===
 window.saveNewTasks = async function(parentPath, level) {
         if (!isAuthenticated) return showAuthError();
         const saveButton = document.getElementById('modalSaveButton');
@@ -4029,7 +3902,7 @@ window.saveExecutionEdits = async function() {
         } catch (e) {
             console.error("Lỗi khi thêm dòng mới vào modal:", e);
         }
-    }
+    };
     // === KẾT THÚC: HÀM MỚI ĐỂ THÊM DÒNG VÀO MODAL ===
 
   
@@ -4263,7 +4136,7 @@ window.saveExecutionEdits = async function() {
     /**
      * Hàm đệ quy cập nhật trạng thái visual của các cấp cha (Indeterminate)
      */
-    function updateAncestors(currentPath) {
+    window.updateAncestors = function(currentPath) {
         // Tìm đường dẫn cha bằng cách cắt bỏ 2 phần cuối (VD: .../children/ID)
         // Regex: Tìm pattern "/[collection]/[id]" ở cuối chuỗi và loại bỏ nó
         const parentPathMatch = currentPath.match(/^(.*)\/[^\/]+\/[^\/]+$/);
@@ -4318,7 +4191,7 @@ window.saveExecutionEdits = async function() {
             // Tiếp tục đệ quy lên cấp ông/cố
             updateAncestors(parentPath);
         }
-    }
+    };
 
     window.scrollToTop = function() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -4333,7 +4206,7 @@ window.saveExecutionEdits = async function() {
  * Đệ quy "khô" qua toàn bộ dữ liệu để tìm số lần thực hiện tối đa.
  * Cần thiết để biết tạo bao nhiêu cột header.
  */
-function findMaxExecutions(nodes) {
+	window.findMaxExecutions = function(nodes) {
     let maxExec = 0;
     if (!nodes) return 0;
 
@@ -4360,7 +4233,7 @@ function findMaxExecutions(nodes) {
         // === KẾT THÚC SỬA LỖI ===
     }
     return maxExec;
-}
+};
 
 
 /**
@@ -4369,7 +4242,7 @@ function findMaxExecutions(nodes) {
  * Trả về mảng các HÀNG (row index) của các giải trình con để SUM.
  */
 
-function processJustificationForExcel(justificationNode, parentTT, level, ctx) {
+	window.processJustificationForExcel = function(justificationNode, parentTT, level, ctx) {
     const r = ctx.currentRow;
     
     // === [SỬA LỖI]: Đưa khai báo justStyle lên đầu hàm ===
@@ -4441,7 +4314,7 @@ function processJustificationForExcel(justificationNode, parentTT, level, ctx) {
     }
     
     return [r];
-}
+};
 
 
 
@@ -4450,7 +4323,7 @@ function processJustificationForExcel(justificationNode, parentTT, level, ctx) {
  * Xử lý đệ quy các mục CÔNG VIỆC và ghi vào worksheet.
  * Trả về mảng các HÀNG (row index) của các mục con để SUM.
  */
-function processNodeForExcel(node, path, level, ctx) {
+	window.processNodeForExcel = function(node, path, level, ctx) {
     const r = ctx.currentRow;
     let childRows = [];
     let justificationRows = [];
@@ -4620,14 +4493,14 @@ ctx.ws[ctx.COLS.TG_BATDAU + r] = { t: tgBatDauType, v: tgBatDauValue };
     }
     
     return [r];
-}
+};
 
 /**
  * HÀM LÕI MỚI (Helper function)
  * Tách logic tạo worksheet ra khỏi hàm export
  * Hàm này sẽ được cả exportPlainDataExcel và exportToClipboard sử dụng
  */
-async function generateWorksheetWithFormulas(includeJustifications) {
+   window.generateWorksheetWithFormulas = async function(includeJustifications) {
     const parentQuery = ref(db, getParentCollectionName());
     const parentSnapshot = await get(parentQuery);
     if (!parentSnapshot.exists()) { throw new Error('Không có dữ liệu để xuất.'); }
@@ -4640,7 +4513,7 @@ async function generateWorksheetWithFormulas(includeJustifications) {
 
     // --- THÊM CỘT 'CP Cấp 1' ---
     const baseHeaders = [
-        'TT', 'Đầu việc/Dự án', 'Tag Name', 'ĐV th.hiện', 'KH năm trước', 'Thực hiện năm trước', 
+        'TT', 'Nội dung công việc', 'Tag Name', 'ĐV th.hiện', 'KH năm trước', 'Thực hiện năm trước', 
         'Tần suất TH', 'Đ.vị tính', 'Số lượng', 'Đơn giá (GT)', 'Chi phí KH', 
         'Chi phí thực hiện', 'Kế hoạch còn lại', 
         'Năm phân bổ', 'CP phân bổ', 
@@ -4669,7 +4542,7 @@ async function generateWorksheetWithFormulas(includeJustifications) {
     
     // --- THÊM MAPPING CHO CỘT MỚI ---
     const colNameMap = {
-        'TT': 'TT', 'Đầu việc/Dự án': 'NOI_DUNG',
+        'TT': 'TT', 'Nội dung công việc': 'NOI_DUNG',
 		'Tag Name': 'TAG_NAME',
 		'ĐV th.hiện': 'DV_THUCHIEN',
         'KH năm trước': 'KH_NAM_TRUOC', 'Thực hiện năm trước': 'TH_NAM_TRUOC',
@@ -4711,7 +4584,7 @@ async function generateWorksheetWithFormulas(includeJustifications) {
     ws['!ref'] = XLSX.utils.encode_range(range);
 
     return { wb, ws, finalHeaders };
-}
+};
 
 /**
  * HÀM CẬP NHẬT: (Nút 1)
@@ -4840,7 +4713,7 @@ window.exportToClipboard = async function() {
 // === HÀM exportFormattedExcel_HTML ĐẦY ĐỦ (ĐÃ SỬA THỨ TỰ CỘT) ===
 
 // === HÀM XUẤT EXCEL (CẬP NHẬT: EXCEL 1 ĐỦ CỘT NHƯNG KHÔNG GIẢI TRÌNH) ===
-window.exportFormattedExcel_HTML = async function() {
+	window.exportFormattedExcel_HTML = async function() {
     try {
         statusDiv.className = 'success';
         statusDiv.innerText = 'Đang chuẩn bị dữ liệu...';
@@ -4876,7 +4749,7 @@ window.exportFormattedExcel_HTML = async function() {
 
                 const row = {
                     'TT': convertTTForDisplay(node.tt),
-                    'Đầu việc/Dự án': node.noiDung || '',
+                    'Nội dung công việc': node.noiDung || '',
 					'Tag Name': node.tagName || '',
                     'ĐV th.hiện': node.dvThucHien || '',
                     'KH năm trước': node.khNamTruoc === 0 ? 0 : (node.khNamTruoc || ''),
@@ -4952,7 +4825,7 @@ window.exportFormattedExcel_HTML = async function() {
                 justifications.forEach(just => {
                     const justRow = {
                         'TT': convertTTForDisplay(just.tt),
-                        'Đầu việc/Dự án': just.noiDung || '',
+                        'Nội dung công việc': just.noiDung || '',
 						'Tag Name': '',
                         'ĐV th.hiện': '', 'KH năm trước': '', 'Thực hiện năm trước': '', 'Tần suất TH': '',
                         'Đ.vị tính': just.donVi || '',
@@ -4978,7 +4851,7 @@ window.exportFormattedExcel_HTML = async function() {
                         subJustifications.forEach(subJust => {
                             const subJustRow = {
                                 'TT': convertTTForDisplay(subJust.tt),
-                                'Đầu việc/Dự án': subJust.noiDung || '',
+                                'Nội dung công việc': subJust.noiDung || '',
                                 'ĐV th.hiện': '', 'KH năm trước': '', 'Thực hiện năm trước': '', 'Tần suất TH': '',
                                 'Đ.vị tính': subJust.donVi || '',
                                 'Số lượng': subJust.soLuong === 0 ? 0 : (subJust.soLuong || ''),
@@ -5002,7 +4875,7 @@ window.exportFormattedExcel_HTML = async function() {
 
         statusDiv.innerText = 'Đang tạo bảng HTML để xuất...';
 
-        const baseHeadersFull = ['TT', 'Đầu việc/Dự án', 'Tag Name', 'ĐV th.hiện', 'KH năm trước', 'Thực hiện năm trước', 'Tần suất TH', 'Đ.vị tính', 'Số lượng', 'Đơn giá (GT)', 'Chi phí KH', 'Chi phí thực hiện', 'Kế hoạch còn lại', 'Năm phân bổ', 'CP phân bổ', 'Cấp độ', 'CP Cấp 1', 'Thời điểm TH', 'TG hoàn thành', 'Ghi chú'];
+        const baseHeadersFull = ['TT', 'Nội dung công việc', 'Tag Name', 'ĐV th.hiện', 'KH năm trước', 'Thực hiện năm trước', 'Tần suất TH', 'Đ.vị tính', 'Số lượng', 'Đơn giá (GT)', 'Chi phí KH', 'Chi phí thực hiện', 'Kế hoạch còn lại', 'Năm phân bổ', 'CP phân bổ', 'Cấp độ', 'CP Cấp 1', 'Thời điểm TH', 'TG hoàn thành', 'Ghi chú'];
         const baseHeadersSimplified = baseHeadersFull.filter(h => !['Đơn giá (GT)', 'KH năm trước', 'Thực hiện năm trước', 'Thời điểm TH', 'TG hoàn thành', 'Ghi chú'].includes(h));
         const executionHeadersOrdered = [];
         for (let i = 1; i <= maxLanThucHien; i++) {
@@ -5277,13 +5150,13 @@ window.exportFormattedExcel_HTML = async function() {
     };
 
     // CÁC HÀM HỖ TRỢ KHÔNG CẦN GLOBAL
-    function showAuthError() {
+    window.showAuthError = function() {
         statusDiv.className = 'error';
         statusDiv.innerText = 'Lỗi: Bạn cần xác thực để thực hiện hành động này. Vui lòng "Đăng nhập".';
         setTimeout(() => { if (statusDiv.innerText && statusDiv.innerText.includes('Bạn cần xác thực')) { statusDiv.innerText = ''; } }, 6000);
-    }
+    };
 
-    function updateButtonStates() {
+    window.updateButtonStates = function() {
       
        // 1. Kiểm tra xem năm hiện tại có bị KHÓA không
         const isYearLocked = lockedYears[currentYear] === true;
@@ -5339,7 +5212,7 @@ window.exportFormattedExcel_HTML = async function() {
                 allRows.forEach(row => row.style.display = '');
             }
         }
-    }
+    };
 
     const recalculateExecutionCost = async (leafNodePath) => {
         const execSnapshot = await get(ref(db, `${leafNodePath}/executions`));
@@ -5440,7 +5313,7 @@ window.exportFormattedExcel_HTML = async function() {
     const formatNumber = (num) => num?.toLocaleString('vi-VN') || '0';
 
 // === BẮT ĐẦU: HÀM HELPER MỚI ĐỂ TĂNG TT ===
- function incrementTT(displayTT) {
+   window.incrementTT = function(displayTT) {
     try {
         // --- LOGIC MỚI: XỬ LÝ DẤU SAO (*) ---
         // Ví dụ: 2*1 -> 2*2, 3.2*5 -> 3.2*6
@@ -5489,10 +5362,10 @@ window.exportFormattedExcel_HTML = async function() {
     }
     
     return displayTT + "_new";
-}
+};
     // === KẾT THÚC: HÀM HELPER MỚI ĐỂ TĂNG TT ===
 
-    function initializeGoogleClients() {
+    window.initializeGoogleClients = function() {
         // Khởi tạo GAPI Client (Drive API)
         gapi.load('client', async () => {
             try {
@@ -5523,9 +5396,9 @@ window.exportFormattedExcel_HTML = async function() {
             statusDiv.className = 'error';
             statusDiv.innerText = 'Lỗi kết nối tới dịch vụ xác thực Google.';
         }
-    }
+    };
 
-    function ensureGapiAuthenticated() {
+    window.ensureGapiAuthenticated = function() {
         return new Promise((resolve, reject) => {
             if (gapi.client.getToken()) return resolve(gapi.client.getToken());
             tokenClient.requestAccessToken({ prompt: '' });
@@ -5535,97 +5408,147 @@ window.exportFormattedExcel_HTML = async function() {
                 tokenClient.callback = () => {};
             };
         });
-    }
+    };
 
 
 
-    const calculateCosts = (tree) => {
+    // Hàm tính toán chi phí theo cấu trúc cây (Tree)
+// Đã tích hợp logic: Nếu task con có capDo là 'PS' thì không cộng dồn lên cha
+const calculateCosts = (tree) => {
     tree.forEach(parent => {
-        let parentChiPhi = 0, parentChiPhiThucHien = 0, parentKhNamTruoc = 0;
+        // Khởi tạo biến tổng cho Cấp 1 (Parent)
+        let parentChiPhi = 0;
+        let parentChiPhiThucHien = 0;
+        let parentKhNamTruoc = 0;
+        let parentThucHienNamTruoc = 0;
+        let parentChiPhiPhanBo = 0;
+
         (parent.children || []).forEach(child => {
-            let childChiPhi = 0, childChiPhiThucHien = 0, childKhNamTruoc = 0;
+            // Khởi tạo biến tổng cho Cấp 2 (Child)
+            let childChiPhi = 0;
+            let childChiPhiThucHien = 0;
+            let childKhNamTruoc = 0;
+            let childThucHienNamTruoc = 0;
+            let childChiPhiPhanBo = 0;
+
             (child.grandchildren || []).forEach(grandchild => {
-                let grandchildChiPhi = 0, grandchildChiPhiThucHien = 0, grandchildKhNamTruoc = 0;
+                // Khởi tạo biến tổng cho Cấp 3 (Grandchild)
+                let grandchildChiPhi = 0;
+                let grandchildChiPhiThucHien = 0;
+                let grandchildKhNamTruoc = 0;
+                let grandchildThucHienNamTruoc = 0;
+                let grandchildChiPhiPhanBo = 0;
+
                 (grandchild.greatGrandchildren || []).forEach(ggc => {
+                    // --- XỬ LÝ CẤP 4 (GreatGrandchild) ---
+                    
+                    // 1. Kiểm tra xem có Cấp 5 (GreatGreatGrandchildren) không
                     if ((ggc.greatGreatGrandchildren || []).length > 0) {
                         ggc.data.hasChildren = true;
                         
-                        // THÊM MỚI: Tính chi phí cho lá cấp 5 (ggggc) từ giải trình của nó
-                        ggc.greatGreatGrandchildren.forEach(ggggc => {
-                            // Tính tổng chi phí từ giải trình (cả cấp 1 và cấp 2) của lá cấp 5
-                            let justificationChiPhi = 0;
-                            if (ggggc.justifications && ggggc.justifications.length > 0) {
-                                ggggc.justifications.forEach(just => {
-                                    // NẾU CÓ GIẢI TRÌNH CẤP 2: tính tổng chi phí của các giải trình cấp 2
-                                    if (just.subJustifications && just.subJustifications.length > 0) {
-                                        justificationChiPhi += just.subJustifications.reduce(
-                                            (sum, subJust) => sum + (subJust.data.chiPhi || 0), 0
-                                        );
-                                    } else {
-                                        // NẾU KHÔNG CÓ GIẢI TRÌNH CẤP 2: lấy chi phí của giải trình cấp 1
-                                        justificationChiPhi += just.data.chiPhi || 0;
-                                    }
-                                });
-                                ggggc.data.chiPhi = justificationChiPhi; // Ghi đè chiPhi của lá cấp 5
-                            }
+                        // Nếu có con cấp 5, tính tổng từ cấp 5 lên cấp 4
+                        let ggcChiPhi = 0;
+                        let ggcChiPhiThucHien = 0;
+                        // (Thường cấp 5 ít dùng nhưng giữ logic để đảm bảo đầy đủ)
+                        ggc.greatGreatGrandchildren.forEach(gggc => {
+                             ggcChiPhi += (gggc.data.chiPhi || 0);
+                             ggcChiPhiThucHien += (gggc.data.chiPhiThucHien || 0);
                         });
-
-                        const ggcChiPhi = ggc.greatGreatGrandchildren.reduce((s, gggc) => s + (gggc.data.chiPhi || 0), 0);
-                        const ggcChiPhiThucHien = ggc.greatGreatGrandchildren.reduce((s, gggc) => s + (gggc.data.chiPhiThucHien || 0), 0);
-                        const ggcKhNamTruoc = ggc.greatGreatGrandchildren.reduce((s, gggc) => s + (gggc.data.khNamTruoc || 0), 0);
                         ggc.data.chiPhi = ggcChiPhi;
                         ggc.data.chiPhiThucHien = ggcChiPhiThucHien;
-                        ggc.data.khNamTruoc = ggcKhNamTruoc;
+
                     } else {
-                        // Đây là lá cấp 4. Tính chi phí từ giải trình của nó (cả cấp 1 và cấp 2)
-                        let justificationChiPhi = 0;
-                        if (ggc.justifications && ggc.justifications.length > 0) {
-                            ggc.justifications.forEach(just => {
-                                // NẾU CÓ GIẢI TRÌNH CẤP 2: tính tổng chi phí của các giải trình cấp 2
-                                if (just.subJustifications && just.subJustifications.length > 0) {
-                                    justificationChiPhi += just.subJustifications.reduce(
-                                        (sum, subJust) => sum + (subJust.data.chiPhi || 0), 0
-                                    );
-                                } else {
-                                    // NẾU KHÔNG CÓ GIẢI TRÌNH CẤP 2: lấy chi phí của giải trình cấp 1
-                                    justificationChiPhi += just.data.chiPhi || 0;
-                                }
-                            });
-                            ggc.data.chiPhi = justificationChiPhi; // Ghi đè chiPhi của lá cấp 4
-                        }
+                        // Nếu là node lá (Leaf)
                         ggc.data.hasChildren = false;
+
+                        // Kiểm tra nếu có giải trình (Justifications) thì tính tổng giải trình
+                        if (ggc.justifications && ggc.justifications.length > 0) {
+                             let justificationChiPhi = 0;
+                             ggc.justifications.forEach(j => {
+                                 let subCost = j.chiPhi || 0;
+                                 // Nếu giải trình có giải trình con
+                                 if (j.subJustifications) {
+                                     let subTotal = 0;
+                                     Object.values(j.subJustifications).forEach(sub => subTotal += (sub.chiPhi || 0));
+                                     subCost = subTotal;
+                                 }
+                                 justificationChiPhi += subCost;
+                             });
+                             // Gán tổng chi phí giải trình vào chi phí của Task
+                             ggc.data.chiPhi = justificationChiPhi; 
+                        }
                     }
+
+                    // 2. Tính toán nội bộ cho Cấp 4 (Kế hoạch còn lại)
                     if (ggc.data) {
                         ggc.data.keHoachConLai = (ggc.data.chiPhi || 0) - (ggc.data.chiPhiThucHien || 0);
-                        grandchildChiPhi += ggc.data.chiPhi || 0;
-                        grandchildChiPhiThucHien += ggc.data.chiPhiThucHien || 0;
-                        grandchildKhNamTruoc += ggc.data.khNamTruoc || 0;
+                    }
+
+                    // 3. === LOGIC QUAN TRỌNG: KIỂM TRA CẤP ĐỘ PS ===
+                    // Lấy giá trị cấp độ, xóa khoảng trắng và chuyển về chữ hoa
+                    const isGgcPS = String(ggc.data.capDo || '').trim().toUpperCase() === 'PS';
+
+                    // 4. Cộng dồn lên Cấp 3 (Grandchild)
+                    // CHỈ CỘNG NẾU KHÔNG PHẢI LÀ 'PS'
+                    if (!isGgcPS) {
+                        grandchildChiPhi += (ggc.data.chiPhi || 0);
+                        grandchildChiPhiThucHien += (ggc.data.chiPhiThucHien || 0);
+                        grandchildKhNamTruoc += (ggc.data.khNamTruoc || 0);
+                        grandchildThucHienNamTruoc += (ggc.data.thucHienNamTruoc || 0);
+                        grandchildChiPhiPhanBo += (parseFloat(ggc.data.chiPhiPhanBo) || 0);
                     }
                 });
+
+                // --- CẬP NHẬT DỮ LIỆU CẤP 3 (Grandchild) ---
                 if (grandchild.data) {
                     grandchild.data.chiPhi = grandchildChiPhi;
                     grandchild.data.chiPhiThucHien = grandchildChiPhiThucHien;
                     grandchild.data.khNamTruoc = grandchildKhNamTruoc;
+                    grandchild.data.thucHienNamTruoc = grandchildThucHienNamTruoc;
+                    grandchild.data.chiPhiPhanBo = grandchildChiPhiPhanBo;
+                    
+                    // Tính còn lại cho cấp 3
                     grandchild.data.keHoachConLai = grandchildChiPhi - grandchildChiPhiThucHien;
                 }
+
+                // Cộng dồn Cấp 3 lên Cấp 2 (Child)
+                // (Ở cấp này chưa áp dụng logic PS, trừ khi bạn muốn mở rộng thêm)
                 childChiPhi += grandchildChiPhi;
                 childChiPhiThucHien += grandchildChiPhiThucHien;
                 childKhNamTruoc += grandchildKhNamTruoc;
+                childThucHienNamTruoc += grandchildThucHienNamTruoc;
+                childChiPhiPhanBo += grandchildChiPhiPhanBo;
             });
+
+            // --- CẬP NHẬT DỮ LIỆU CẤP 2 (Child) ---
             if (child.data) {
                 child.data.chiPhi = childChiPhi;
                 child.data.chiPhiThucHien = childChiPhiThucHien;
                 child.data.khNamTruoc = childKhNamTruoc;
+                child.data.thucHienNamTruoc = childThucHienNamTruoc;
+                child.data.chiPhiPhanBo = childChiPhiPhanBo;
+
+                // Tính còn lại cho cấp 2
                 child.data.keHoachConLai = childChiPhi - childChiPhiThucHien;
             }
+
+            // Cộng dồn Cấp 2 lên Cấp 1 (Parent)
             parentChiPhi += childChiPhi;
             parentChiPhiThucHien += childChiPhiThucHien;
             parentKhNamTruoc += childKhNamTruoc;
+            parentThucHienNamTruoc += childThucHienNamTruoc;
+            parentChiPhiPhanBo += childChiPhiPhanBo;
         });
+        
+        // --- CẬP NHẬT DỮ LIỆU CẤP 1 (Parent) ---
         if (parent.data) {
             parent.data.chiPhi = parentChiPhi;
             parent.data.chiPhiThucHien = parentChiPhiThucHien;
             parent.data.khNamTruoc = parentKhNamTruoc;
+            parent.data.thucHienNamTruoc = parentThucHienNamTruoc;
+            parent.data.chiPhiPhanBo = parentChiPhiPhanBo;
+
+            // Tính còn lại cho cấp 1
             parent.data.keHoachConLai = parentChiPhi - parentChiPhiThucHien;
         }
     });
@@ -5662,7 +5585,7 @@ window.exportFormattedExcel_HTML = async function() {
         return table;
     };
 
-const createInputRow = (path, data, level, context = {}) => {
+	const createInputRow = (path, data, level, context = {}) => {
         const isGrandchild = level === 'grandchild';
 		const isJustification = level === 'justification';
         const isSubJustification = level === 'subJustification';
@@ -5888,16 +5811,15 @@ const createInputRow = (path, data, level, context = {}) => {
 
     /**
      * Hàm nội bộ để bỏ chọn con (dùng cho nút "Chọn tất cả" ở đầu bảng)
-     * Giữ nguyên dạng function cục bộ như mã nguồn gốc
      */
-    function clearChildrenCheckboxes(parentCheckbox) {
+    window.clearChildrenCheckboxes = function(parentCheckbox) {
         // Đảm bảo cha đã bỏ chọn trước khi gọi logic lan truyền
         if (parentCheckbox.checked) {
             parentCheckbox.checked = false;
         }
         // Tái sử dụng logic của toggleSelection để bỏ chọn toàn bộ con cháu
         window.toggleSelection(parentCheckbox);
-    }
+    };
 
     window.onscroll = function() {
         const btn = document.getElementById("scrollToTopBtn");
@@ -6045,23 +5967,31 @@ const recalculateSingleParentCost = async (parentPath, childrenField = null, fie
             khNamTruoc: 0, 
             thucHienNamTruoc: 0,
             chiPhiPhanBo: 0,
-            cpCap1: 0 // Tổng CP Cấp 1
+            cpCap1: 0 
         };
 
         if (typeof childrenData === 'object' && childrenData !== null) {
             for (const childId in childrenData) {
                 if (typeof childrenData[childId] === 'object' && childrenData[childId] !== null) {
                     const child = childrenData[childId];
-                    total.chiPhi += child.chiPhi || 0;
-                    total.chiPhiThucHien += child.chiPhiThucHien || 0;
-                    total.khNamTruoc += child.khNamTruoc || 0;
-                    total.thucHienNamTruoc += child.thucHienNamTruoc || 0;
-                    total.chiPhiPhanBo += (parseFloat(child.chiPhiPhanBo) || 0);
-                    // Cộng dồn từ con
-                    total.cpCap1 += (child.cpCap1 || 0);
+                    
+                    // === [LOGIC MỚI]: Bỏ qua nếu Cấp độ là PS ===
+                    const isPS = String(child.capDo || '').trim().toUpperCase() === 'PS';
+                    
+                    if (!isPS) {
+                        total.chiPhi += child.chiPhi || 0;
+                        total.chiPhiThucHien += child.chiPhiThucHien || 0;
+                        total.khNamTruoc += child.khNamTruoc || 0;
+                        total.thucHienNamTruoc += child.thucHienNamTruoc || 0;
+                        total.chiPhiPhanBo += (parseFloat(child.chiPhiPhanBo) || 0);
+                        total.cpCap1 += (child.cpCap1 || 0);
+                    }
+                    // ============================================
                 }
             }
         }
+        
+        // ... (Phần code update fieldsToRecalculate bên dưới giữ nguyên) ...
         
         fieldsToRecalculate.forEach(field => {
             if (field === 'keHoachConLai') return;
@@ -6072,6 +6002,7 @@ const recalculateSingleParentCost = async (parentPath, childrenField = null, fie
             }
         });
 
+        // Tính lại Kế hoạch còn lại cho cha
         const newChiPhi = updates[`${parentPath}/chiPhi`] !== undefined ? updates[`${parentPath}/chiPhi`] : (parentData.chiPhi || 0);
         const newChiPhiThucHien = updates[`${parentPath}/chiPhiThucHien`] !== undefined ? updates[`${parentPath}/chiPhiThucHien`] : (parentData.chiPhiThucHien || 0);
         const newKeHoachConLai = newChiPhi - newChiPhiThucHien;
@@ -6346,7 +6277,7 @@ const recalculateSingleParentCost = async (parentPath, childrenField = null, fie
 };
 
 
-    async function ensureYearCollectionExists(year) {
+    window.ensureYearCollectionExists = async function(year) {
         const collectionName = `congViecMe${year}`;
         try {
             const testQuery = ref(db, collectionName);
@@ -6357,14 +6288,14 @@ const recalculateSingleParentCost = async (parentPath, childrenField = null, fie
         } catch (error) {
             console.log(`Collection cho năm ${year} chưa tồn tại, sẽ được tạo khi có dữ liệu`);
         }
-    }
+    };
 
     const planningPasswords = {
         'all': '2662', 'A': '8726', 'B': '8646', 'C': '8734',
         'D': '8663', 'E': '8853', 'F': '3822'
     };
 
-    function openPlanningModeModal() {
+    window.openPlanningModeModal = function() {
         const modal = document.getElementById('planningModeModal');
         const optionsContainer = document.getElementById('planningModeOptions');
         optionsContainer.innerHTML = '';
@@ -6389,7 +6320,7 @@ const recalculateSingleParentCost = async (parentPath, childrenField = null, fie
         });
 
         modal.style.display = 'block';
-    }
+    };
 
     window.promptForPlanningPassword = function(selectionId, selectionText) {
         const correctPassword = planningPasswords[selectionId];
@@ -6414,9 +6345,9 @@ const recalculateSingleParentCost = async (parentPath, childrenField = null, fie
     window.closePlanningModal = function() {
         document.getElementById('planningModeToggle').checked = false;
         document.getElementById('planningModeModal').style.display = 'none';
-    }
+    };
 
-    function activatePlanningModeForSelection(selectionId) {
+    window.activatePlanningModeForSelection = function(selectionId) {
         const taskList = document.getElementById('taskList');
         planningModeByYear[currentYear] = true;
 
@@ -6434,9 +6365,111 @@ const recalculateSingleParentCost = async (parentPath, childrenField = null, fie
         });
 
         document.getElementById('planningModeModal').style.display = 'none';
-    }
+    };
 
+    // ============================================================
+    // TÍNH NĂNG CAO CẤP: PASTE TỪ EXCEL VÀO MODAL
+    // ============================================================
     
+    document.addEventListener('paste', function(e) {
+        // 1. Chỉ kích hoạt khi đang ở trong Modal Dữ liệu (#dataModal) và con trỏ ở trong bảng
+        const target = e.target;
+        const modalTable = target.closest('#dataModal .modal-table');
+        
+        if (!modalTable || (!target.matches('input') && !target.matches('select') && !target.matches('textarea'))) {
+            return;
+        }
+
+        // 2. Lấy dữ liệu từ Clipboard
+        const clipboardData = (e.clipboardData || window.clipboardData).getData('text');
+        if (!clipboardData) return;
+
+        e.preventDefault(); // Ngăn hành động paste mặc định (dồn cục vào 1 ô)
+
+        // 3. Phân tích dữ liệu (Excel dùng \t cho cột và \n cho dòng)
+        // Loại bỏ dòng trống cuối cùng nếu có
+        const rows = clipboardData.split(/\r\n|\n|\r/).filter((row, index, array) => {
+            return !(index === array.length - 1 && row.trim() === '');
+        });
+        
+        if (rows.length === 0) return;
+
+        // 4. Xác định vị trí con trỏ hiện tại
+        const currentRow = target.closest('tr');
+        const allRows = Array.from(modalTable.querySelectorAll('tbody tr'));
+        const startRowIndex = allRows.indexOf(currentRow);
+
+        // Lấy tất cả các ô nhập liệu trong dòng hiện tại để xác định chỉ số cột
+        // Lưu ý: Chỉ lấy các ô input/select/textarea hiển thị được (không lấy hidden)
+        const getInputsInRow = (tr) => Array.from(tr.querySelectorAll('input:not([type="hidden"]), select, textarea'));
+        
+        const inputsInCurrentRow = getInputsInRow(currentRow);
+        const startColIndex = inputsInCurrentRow.indexOf(target);
+
+        if (startRowIndex === -1 || startColIndex === -1) return;
+
+        let missingRows = 0;
+        let missingCols = 0;
+
+        // 5. Duyệt qua dữ liệu và đổ vào bảng
+        rows.forEach((rowString, i) => {
+            const cells = rowString.split('\t');
+            const targetRowIndex = startRowIndex + i;
+
+            // Kiểm tra thiếu dòng
+            if (targetRowIndex >= allRows.length) {
+                missingRows++;
+                return; // Bỏ qua dòng này
+            }
+
+            const targetRow = allRows[targetRowIndex];
+            const targetInputs = getInputsInRow(targetRow);
+
+            cells.forEach((cellData, j) => {
+                const targetColIndex = startColIndex + j;
+
+                // Kiểm tra thiếu cột (hoặc ô bị disabled)
+                if (targetColIndex >= targetInputs.length) {
+                    if (i === 0) missingCols++; // Chỉ đếm cột thiếu ở dòng đầu tiên để báo cáo
+                    return;
+                }
+
+                const inputEl = targetInputs[targetColIndex];
+
+                // Chỉ paste vào ô không bị khóa
+                if (inputEl && !inputEl.disabled) {
+                    // Xử lý dữ liệu thô: Xóa ngoặc kép nếu Excel thêm vào (khi có xuống dòng)
+                    let cleanValue = cellData.trim();
+                    if (cleanValue.startsWith('"') && cleanValue.endsWith('"')) {
+                        cleanValue = cleanValue.slice(1, -1).replace(/""/g, '"');
+                    }
+
+                    // Gán giá trị
+                    inputEl.value = cleanValue;
+
+                    // QUAN TRỌNG: Kích hoạt sự kiện để các hàm tính toán/định dạng hoạt động
+                    inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+                    inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+                    
+                    // Nếu là ô số, trigger thêm focus/blur để format lại tiền tệ (nếu cần)
+                    if (inputEl.dataset.field && ['chiPhi', 'donGia', 'soLuong', 'khNamTruoc', 'thucHienNamTruoc'].includes(inputEl.dataset.field)) {
+                         // Giả lập hành vi người dùng nhập xong và blur ra ngoài để format số
+                         // Logic trong oninput="this.value=formatNumber..." sẽ chạy nhờ Event 'input' ở trên
+                    }
+                }
+            });
+        });
+
+        // 6. Cảnh báo nếu thiếu dòng/cột
+        if (missingRows > 0 || missingCols > 0) {
+            let msg = 'CẢNH BÁO: Dữ liệu Paste vượt quá kích thước bảng!\n';
+            if (missingRows > 0) msg += `- Thiếu ${missingRows} dòng bên dưới.\n`;
+            if (missingCols > 0) msg += `- Thiếu cột hoặc vượt quá số ô nhập liệu bên phải.\n`;
+            msg += '\nVui lòng thêm đủ dòng trước khi Paste hoặc kiểm tra lại vị trí đặt con trỏ.';
+            alert(msg);
+        }
+    });
+	
  // XỬ LÝ AUTH STATE
     onAuthStateChanged(auth, async (user) => {
         const authButton = document.getElementById('authButton');
@@ -6583,21 +6616,22 @@ const recalculateSingleParentCost = async (parentPath, childrenField = null, fie
         let summaryIntervalId = null; // Biến để lưu ID của interval
 
         // Hàm để bắt đầu tính summary và đặt lịch chạy định kỳ
-        function startSummaryInterval() {
+        
+		window.startSummaryInterval = function() {
              if (summaryIntervalId) clearInterval(summaryIntervalId); // Xóa interval cũ nếu đang chạy
              // Chạy tính toán lần đầu (nên đợi fetchData xong)
              // calculateSummaryData(); // Chạy ngay có thể gây lỗi nếu fetchData chưa xong
              // Đặt lịch chạy định kỳ 5 phút một lần
              summaryIntervalId = setInterval(calculateSummaryData, 300000);
-        }
+        };
 
         // Hàm dừng tính summary định kỳ (ví dụ khi đăng xuất)
-        function stopSummaryInterval() {
+        window.stopSummaryInterval = function() {
             if (summaryIntervalId) {
                 clearInterval(summaryIntervalId);
                 summaryIntervalId = null;
             }
-        }
+        };
         // --- Kết thúc quản lý calculateSummaryData ---
 
 
@@ -6663,7 +6697,7 @@ const recalculateSingleParentCost = async (parentPath, childrenField = null, fie
 /**
  * Xử lý sự kiện nhấn phím Enter (lưu) và Escape (hủy)
  */
-function handleInputKeydown(event) {
+	window.handleInputKeydown = function(event) {
     // Nếu là ô nhập nhiều dòng (TEXTAREA)
     if (event.target.tagName === 'TEXTAREA') {
         if (event.key === 'Enter') {
@@ -6688,12 +6722,13 @@ function handleInputKeydown(event) {
             event.target.blur(); // Hủy
         }
     }
-}
+};
 
 /**
  * Hàm sửa nội tuyến nâng cấp: Hỗ trợ Input, Textarea và Select (cho TagName)
  */
-async function makeCellEditable(event) { // Thêm async để chờ load danh sách
+   window.makeCellEditable = async function(event) {
+   // Thêm async để chờ load danh sách
     const td = event.target.closest('.editable-cell');
     if (!td) return;
 
@@ -6797,7 +6832,7 @@ async function makeCellEditable(event) { // Thêm async để chờ load danh s�
     input.focus();
     // Chỉ bôi đen nếu là input text (select không có hàm select())
     if (input.select) input.select();
-}
+};
 
 
 
@@ -6809,7 +6844,7 @@ async function makeCellEditable(event) { // Thêm async để chờ load danh s�
  * Lưu hoặc hủy bỏ chỉnh sửa nội tuyến (CHỈ CHẠY KHI BLUR).
  * Đã nâng cấp để xử lý Năm phân bổ mặc định = 1.
  */
-async function saveInlineEdit(event) {
+   window.saveInlineEdit = async function(event) {
     const input = event.target;
     if (!input.parentNode) return; 
 
@@ -6876,7 +6911,7 @@ async function saveInlineEdit(event) {
         statusDiv.innerText = `Lỗi: ${error.message}`;
         try { td.innerHTML = originalValue; } catch (e) {}
     }
-}
+};
 
 // HÀM FETCHDATA CHÍNH (cần được định nghĩa sau cùng vì phụ thuộc vào nhiều hàm khác)
  window.fetchData = async function() {
@@ -7250,7 +7285,7 @@ parentData.tgBatDau = parentSummary.totalExecutedLeafNodesCap1 || 0;
  /**
      * HÀM HỖ TRỢ: ĐIỀU HƯỚNG BẰNG PHÍM MŨI TÊN (ĐÃ SỬA LỖI XUNG ĐỘT BỘ GÕ TIẾNG VIỆT)
      */
-    function enableArrowKeyNavigation(modalId) {
+    window.enableArrowKeyNavigation = function(modalId) {
         const modal = document.getElementById(modalId);
         if (!modal) return;
 
@@ -7378,7 +7413,7 @@ parentData.tgBatDau = parentSummary.totalExecutedLeafNodesCap1 || 0;
             input.removeEventListener('keydown', handleKeydown);
             input.addEventListener('keydown', handleKeydown);
         });
-    }
+    };
 
 </script>
 
