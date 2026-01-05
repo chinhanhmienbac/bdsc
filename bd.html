@@ -1,0 +1,322 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lập và theo dõi Kế hoạch BDSC</title>
+    
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
+    <script src="xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <div id="login-container">
+        <div id="login-box">
+            <span class="close-button" onclick="closeLoginModal()">&times;</span>
+
+            <img src="PVGLPG.gif" alt="Logo" style="width: 120px; height: auto; margin-bottom: 20px;">
+            <h2>Đăng nhập Hệ thống</h2>
+            <form id="login-form">
+                <input type="text" id="email"
+                       value="bdsc***@pvgaslpg*****"
+                       data-real-email="bdsc-cnmb@pvgaslpg.com.vn"
+                       readonly
+                       style="background-color: #e9ecef; cursor: not-allowed; text-align: center; color: #495057;">
+                <input type="password" id="password" placeholder="Mật khẩu" required autofocus>
+                <button type="submit" class="btn-primary">Đăng nhập</button>
+                <p id="login-error" style="display: none;"></p>
+            </form>
+        </div>
+    </div>
+
+    <div id="container">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+            <img src="PVGLPG.gif" alt="Logo" style="width: 100px; height: auto;">
+            <h1 style="color: #008037; font-weight: bold; text-transform: uppercase; text-align: center; flex-grow: 1;">
+                LẬP VÀ THEO DÕI KẾ HOẠCH<br>BẢO DƯỠNG SỬA CHỮA
+            </h1>
+            <div style="width: 150px;"></div>
+        </div>
+
+        <div class="button-group" style="padding-bottom: 10px; border-bottom: 1px solid #eee;">
+            <div>
+                <button class="btn-secondary" onclick="recalculateAllCostsAndReload()">Tải lại & Tính toán lại</button>
+                <button class="btn-primary" onclick="openDataManagementModal()">Quản lý Dữ liệu</button>
+
+                <button id="authButton" class="btn-info" onclick="promptForAuthentication()">Đăng nhập</button>
+                <button id="logoutButton" class="btn-warning" style="display: none;" onclick="logoutUser()">Đăng xuất</button>
+                <button id="deleteSelectedBtn" class="btn-danger" onclick="deleteSelectedTasks()" disabled>Xoá mục đã chọn</button>
+                <button id="exportExcel1Btn" class="btn-success" onclick="exportToExcel(1)">Xuất Excel 1</button>
+                <button id="exportExcel2Btn" class="btn-success" onclick="exportToExcel(2)" disabled>Xuất Excel 2</button>
+            </div>
+        </div>
+        <div id="status"></div>
+
+       <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+    <h2 id="mainHeaderTitle">CHƯA CÓ TÊN CƠ SỞ</h2>
+     <div> <label for="yearSelect" style="margin-right: 10px; font-weight: bold;">Năm:</label>
+                <select id="yearSelect" onchange="changeYear(this.value)"></select>
+                
+                <button id="approvedPlanBtn" class="btn-secondary" onclick="openApprovedPlanModal()" style="margin-left: 10px;">KH đã duyệt</button>
+             </div>
+        </div>
+
+        <div class="button-group" style="margin-bottom: 15px; justify-content: space-between;">
+             <div>
+                <button id="multiExecuteBtn" class="btn-info" onclick="openMultiExecutionModal()" disabled>Thực hiện công việc đã chọn</button>
+                <button id="searchExecutionBtn" class="btn-primary" onclick="openSearchModal()">Tra cứu thực hiện</button>
+             </div>
+             <div style="display: flex; align-items: center;">
+                <label for="planningModeToggle" style="margin-right: 10px; font-weight: bold;">Mở giao diện xây dựng kế hoạch</label>
+                <input type="checkbox" id="planningModeToggle" onchange="togglePlanningColumns(this.checked)" disabled>
+             </div>
+        </div>
+
+        <div id="summarySection"></div>
+
+        <table id="taskList">
+            <thead>
+                <tr>
+                    <th style="width: 2%;"><input type="checkbox" onchange="toggleAllCheckboxes(this)"></th>
+                    <th class="col-tt" style="width: 3%;">TT</th>
+                    <th class="col-noidung">Nội dung công việc</th>
+					<th class="col-tagname">Tag Name</th>
+                    <th class="col-dv-thuchien" style="width: 5%;">ĐV thực hiện</th>
+                    
+                    <th class="text-right col-kh-nam-truoc" style="width: 7%;">KH năm trước</th>
+                    <th class="text-right col-th-nam-truoc" style="width: 7%;">Thực hiện năm trước</th>
+                    
+                    <th class="col-donvi">Đ.vị tính</th>
+                    <th class="col-soluong">Số lượng</th>
+                    <th class="col-tansuat-th">Tần suất TH</th>
+                    <th class="text-right col-chiphi">Chi phí KH</th>
+                    <th class="text-right col-chiphi-thuchien" style="width: 6%;">Chi phí thực hiện</th>
+                    <th class="text-right col-kehoach-conlai" style="width: 6%;">Kế hoạch còn lại</th>
+                    <th class="col-nam-phanbo">Năm PB</th>
+                    <th class="col-chiphi-phanbo">CP phân bổ</th>
+					
+					<th class="col-capdo">Cấp độ</th>
+<th class="col-cp-cap1">CP Cấp 1</th>
+                    <th class="col-tg-batdau" style="width: 4%;">Thời điểm TH</th>
+                    <th class="col-tg-hoanthanh" style="width: 4%;">TG hoàn thành</th>
+
+                    <th class="col-ghichu">Ghi chú</th>
+                    <th class="col-hoso" style="width: 3%;">Hồ sơ</th>
+                    <th style="width: 5%;" class="col-action">Hành động</th>
+                </tr>
+            </thead>
+            <tbody id="taskListBody"></tbody>
+        </table>
+    </div>
+
+    <!-- Các modal giữ nguyên như file gốc -->
+    <div id="dataModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeAllModals()">&times;</span>
+            <div id="modalTitle"></div>
+            <div id="modalBody"></div>
+            <div class="modal-footer">
+                <div id="modal-footer-left" style="float: left;"></div>
+                <button id="modalDeleteButton" class="btn-danger" style="display: none; float: left;">Xóa</button>
+                <button id="modalSaveButton" class="btn-success">Lưu thay đổi</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="dataManagementModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close-button" onclick="closeAllModals()">&times;</span>
+            <h2>Quản lý Dữ liệu</h2>
+            <div style="margin-top: 20px;">
+                <h3>Nhập dữ liệu từ file Excel</h3>
+                <input type="file" id="excelFile" accept=".xlsx, .xls">
+                <p><small><i>Chú ý: để chương trình nhận đúng dữ liệu, hãy định dạng các dữ liệu số trong file Excel ở định dạng General.</i></small></p>
+                <button class="btn-primary" onclick="importData()" style="margin-top: 10px;">Nhập dữ liệu</button>
+            </div>
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ccc;">
+                <h3>Xóa toàn bộ dữ liệu</h3>
+                <p style="color: #dc3545;"><strong>Cảnh báo:</strong> Hành động này không thể hoàn tác.</p>
+                <button class="btn-danger" onclick="openDeleteAllDataModal()">Xoá tất cả</button>
+            </div>
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ccc;">
+                <h3>Quyền Admin</h3>
+                <button id="unlockButton" class="btn-warning" onclick="openAdminAuthModal()">Admin/Cấp phép chỉnh sửa</button>
+                
+                <div id="adminControls" style="display: none; margin-top: 15px; text-align: left;">
+                    
+                    <div style="margin-bottom: 10px;">
+                        <input type="checkbox" id="editModeCheckbox" onchange="toggleEditMode(this.checked)" style="width: auto;">
+                        <label for="editModeCheckbox" style="font-weight: bold; color: #007bff;">Cho phép sửa đổi, thêm, xóa dữ liệu</label>
+                    </div>
+
+                    <div style="margin-bottom: 10px; padding: 10px; background-color: #fff3cd; border: 1px solid #ffeeba; border-radius: 4px;">
+                        <input type="checkbox" id="lockYearCheckbox" onchange="toggleYearLock(this.checked)" style="width: auto;">
+                        <label for="lockYearCheckbox" style="font-weight: bold; color: #dc3545;">KHÓA HOÀN TOÀN DỮ LIỆU NĂM <span id="lockYearLabel"></span></label>
+                        <br>
+                        <small style="margin-left: 20px; color: #856404;">(Khi khóa: Không thể thực hiện công việc, tự động tắt chế độ sửa đổi)</small>
+                    </div>
+
+                </div>
+            </div>
+        
+		
+		</div>
+    </div>
+
+    <div id="deleteAllDataModal" class="modal">
+        <div class="modal-content delete-confirm-modal">
+            <span class="close-button" onclick="closeAllModals()">&times;</span>
+            <h2>Xác nhận xóa toàn bộ dữ liệu</h2>
+            <p style="color: #dc3545; font-weight: bold;">CẢNH BÁO: Bạn sắp xóa TOÀN BỘ dữ liệu. Hành động này không thể hoàn tác.</p>
+            <p>Vui lòng nhập đầy đủ thông tin đăng nhập để xác nhận:</p>
+            <div>
+                <input type="text" id="deleteConfirmEmail" placeholder="Email đăng nhập">
+                <input type="password" id="deleteConfirmPassword" placeholder="Mật khẩu">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeAllModals()">Hủy</button>
+                <button class="btn-danger" onclick="confirmDeleteAllData()">Xác nhận xóa toàn bộ</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="uploadPdfModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close-button" onclick="closeAllModals()">&times;</span>
+            <h2 id="uploadPdfModalTitle">Tải lên Hồ sơ PDF</h2>
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center mt-4">
+                 <input type="file" id="pdf_file_input" accept=".pdf" class="block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold
+                    file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+            </div>
+            <div class="modal-footer">
+                <button id="uploadPdfButton" class="btn-primary">Tải Lên</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="exportOptionsModal" class="modal">
+        <div class="modal-content export-options-modal">
+            <span class="close-button" onclick="closeAllModals()">&times;</span>
+            <h2>Tùy chọn Xuất file Excel</h2>
+            <p>Vui lòng chọn định dạng file bạn muốn xuất:</p>
+            
+            <div style="display: flex; justify-content: space-around; margin-top: 20px; gap: 15px; flex-wrap: wrap;">
+                
+                <button class="btn-primary" style="flex: 1; min-width: 200px; padding: 15px;" onclick="exportPlainDataExcel()">
+                    1. File Excel (.xlsx)
+                    <br><small>(Có công thức, không định dạng màu)</small>
+                </button>
+                
+                <button class="btn-success" style="flex: 1; min-width: 200px; padding: 15px;" onclick="exportFormattedExcel_HTML()">
+                    2. File Excel 97 (.xls)
+                    <br><small>(Có chữ đậm nhạt, có màu, không công thức)</small>
+                </button>
+                
+                <button class="btn-info" style="flex: 1; min-width: 200px; padding: 15px;" onclick="exportToClipboard()">
+                    3. Sao chép vào Clipboard
+                    <br><small>(Dữ liệu có công thức, để dán thủ công vào Excel)</small>
+                </button>
+                </div>
+        </div>
+    </div>
+
+    <div id="planningModeModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close-button" onclick="closePlanningModal()">&times;</span>
+            <h2>Chọn phạm vi xem Kế hoạch</h2>
+            <p>Vui lòng chọn dữ liệu bạn muốn hiển thị ở chế độ lập kế hoạch:</p>
+            <div id="planningModeOptions" style="margin-top: 20px; max-height: 40vh; overflow-y: auto;">
+            </div>
+        </div>
+    </div>
+
+    <div id="summaryDetailModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeAllModals()">&times;</span>
+            <h2>Chi tiết thực hiện theo từng đơn vị năm <span id="summaryDetailYear"></span></h2>
+            <div id="summaryDetailContent" class="summary-details-grid">
+            </div>
+        </div>
+    </div>
+<div id="approvedPlanModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <span class="close-button" onclick="closeAllModals()">&times;</span>
+            <h2>Kế hoạch đã duyệt năm <span id="approvedPlanYear"></span></h2>
+            <div id="approvedPlanLinks" style="margin-top: 20px; max-height: 60vh; overflow-y: auto;">
+                </div>
+            <div class="modal-footer">
+                <button id="addPlanLinkBtn" class="btn-primary" onclick="openAddPlanLinkModal()">Nhập QĐ</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="addPlanLinkModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close-button" onclick="closeAllModals()">&times;</span>
+            <h2>Thêm Kế hoạch đã duyệt</h2>
+            <p>Vui lòng chọn phương thức:</p>
+            <div style="display: flex; justify-content: space-around; margin-top: 20px; gap: 15px;">
+                <button class="btn-primary" style="flex: 1; padding: 15px;" onclick="openPasteLinkModal()">1. Dán link có sẵn</button>
+                <button class="btn-success" style="flex: 1; padding: 15px;" onclick="startPlanUploadFlow()">2. Tải file từ máy tính</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="pasteLinkModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close-button" onclick="closeAllModals()">&times;</span>
+            <h2>Dán link tài liệu</h2>
+            <div style="margin-top: 20px;">
+                <input type="text" id="pastedLinkName" placeholder="Tên hiển thị (ví dụ: Quyết định 123)" style="width: 100%; box-sizing: border-box;">
+                <input type="url" id="pastedLinkUrl" placeholder="https://..." style="width: 100%; box-sizing: border-box;">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-success" onclick="savePastedLink()">Lưu link</button>
+            </div>
+        </div>
+    </div>
+
+      <div id="adminPasswordModal" class="modal">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <span class="close-button" onclick="closeAllModals()">&times;</span>
+            <h3>Xác thực quyền Admin</h3>
+            <p>Vui lòng nhập mật khẩu quản trị:</p>
+            <input type="password" id="adminPasswordInput" placeholder="Mật khẩu..." style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
+            <div style="text-align: right;">
+                <button class="btn-secondary" onclick="closeAllModals()">Hủy</button>
+                <button class="btn-primary" onclick="submitAdminPassword()">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+	
+
+<button id="scrollToTopBtn" title="Lên đầu trang" onclick="scrollToTop()">&uarr;</button>
+
+    <div style="text-align: center; padding: 20px; color: #888; font-size: 12px;">
+      Contact: hai.nm@pvgaslpg.com.vn
+    </div>
+
+    <script>
+        // Gán vào window để file script.js có thể đọc được
+        window.firebaseConfig = {
+            apiKey: "AIzaSyDltV6zgLaOHZANarD4I87ckl0jBWY8leU",
+            authDomain: "dulieubanhang-d6156.firebaseapp.com",
+            databaseURL: "https://dulieubanhang-d6156-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "dulieubanhang-d6156",
+            storageBucket: "dulieubanhang-d6156.firebasestorage.app",
+            messagingSenderId: "588583798336",
+            appId: "1:588583798336:web:82a240fb3da2f96893c1a5",
+            measurementId: "G-7D51WBK63L"
+        };
+    </script>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
