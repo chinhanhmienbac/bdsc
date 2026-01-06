@@ -553,6 +553,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="chart.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+	// Thêm App Check
+	<script src="https://www.google.com/recaptcha/enterprise.js?render=6LfEaEEsAAAAABSt3hka1kshXWCrR3uR0gHxhJua"></script>
+ 
 </head>
 <body>
 
@@ -903,7 +907,7 @@
     import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
     import { getDatabase, ref, set, get, update, remove, child, push, query, orderByChild, equalTo, onValue, off } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
 // Thêm dòng khởi tạo App Check trước khi gọi database
-//		import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
+		import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
     const firebaseConfig = {
   apiKey: "AIzaSyDltV6zgLaOHZANarD4I87ckl0jBWY8leU",
   authDomain: "dulieubanhang-d6156.firebaseapp.com",
@@ -916,10 +920,10 @@
     };
     const app = initializeApp(firebaseConfig);
 // Khởi tạo App Check
-// const appCheck = initializeAppCheck(app, {
-//  provider: new ReCaptchaEnterpriseProvider('6LfEaEEsAAAAABSt3hka1kshXWCrR3uR0gHxhJua'),
-//  isTokenAutoRefreshEnabled: true // Tự động làm mới token khi hết hạn
-// });
+ const appCheck = initializeAppCheck(app, {
+  provider: new ReCaptchaEnterpriseProvider('6LfEaEEsAAAAABSt3hka1kshXWCrR3uR0gHxhJua'),
+  isTokenAutoRefreshEnabled: true // Tự động làm mới token khi hết hạn
+ });
 		
     const auth = getAuth(app);
     const db = getDatabase(app);
