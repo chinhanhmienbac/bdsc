@@ -902,7 +902,8 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
     import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
     import { getDatabase, ref, set, get, update, remove, child, push, query, orderByChild, equalTo, onValue, off } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
-
+// Thêm dòng khởi tạo App Check trước khi gọi database
+		import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
     const firebaseConfig = {
   apiKey: "AIzaSyDltV6zgLaOHZANarD4I87ckl0jBWY8leU",
   authDomain: "dulieubanhang-d6156.firebaseapp.com",
@@ -914,6 +915,12 @@
   measurementId: "G-7D51WBK63L"
     };
     const app = initializeApp(firebaseConfig);
+// Khởi tạo App Check
+const appCheck = initializeAppCheck(app, {
+  provider: new ReCaptchaEnterpriseProvider('6LfEaEEsAAAAABSt3hka1kshXWCrR3uR0gHxhJua'),
+  isTokenAutoRefreshEnabled: true // Tự động làm mới token khi hết hạn
+});
+		
     const auth = getAuth(app);
     const db = getDatabase(app);
 
