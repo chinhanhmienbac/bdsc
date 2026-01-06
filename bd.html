@@ -304,7 +304,10 @@
     </div>
 
     <script>
-        // Gán vào window để file script.js có thể đọc được
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app-check.js";
+		
+		// Gán vào window để file script.js có thể đọc được
         window.firebaseConfig = {
             apiKey: "AIzaSyDltV6zgLaOHZANarD4I87ckl0jBWY8leU",
             authDomain: "dulieubanhang-d6156.firebaseapp.com",
@@ -315,8 +318,19 @@
             appId: "1:588583798336:web:82a240fb3da2f96893c1a5",
             measurementId: "G-7D51WBK63L"
         };
+
+		  // 1. Khởi tạo Firebase
+  const app = initializeApp(firebaseConfig);
+
+  // 2. Khởi tạo App Check - ĐÂY LÀ NƠI BẠN DÙNG SITE KEY
+  const appCheck = initializeAppCheck(app, {
+    provider: new ReCaptchaEnterpriseProvider('6LfEaEEsAAAAABSt3hka1kshXWCrR3uR0gHxhJua'), 
+    isTokenAutoRefreshEnabled: true
+  });
+
     </script>
 
     <script type="module" src="script.js"></script>
 </body>
+
 </html>
