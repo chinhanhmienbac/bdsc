@@ -321,7 +321,7 @@
   const app = initializeApp(firebaseConfig);
 
   // 2. Khởi tạo App Check - ĐÂY LÀ NƠI BẠN DÙNG SITE KEY
-  const appCheck = initializeAppCheck(app, {
+  window.appCheck = initializeAppCheck(app, {
     provider: new ReCaptchaEnterpriseProvider('6LfEaEEsAAAAABSt3hka1kshXWCrR3uR0gHxhJua'), 
     isTokenAutoRefreshEnabled: true
   });
@@ -332,5 +332,6 @@
 </body>
 
 </html>
+
 
 
