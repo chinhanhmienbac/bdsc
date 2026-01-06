@@ -53,8 +53,8 @@
     };
     // === KẾT THÚC MÃ MỚI ===
 	
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app-check.js";
+//    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+// import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app-check.js";
     import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
     import { getDatabase, ref, set, get, update, remove, child, push, query, orderByChild, equalTo, onValue, off } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
 
@@ -66,7 +66,7 @@ if (!firebaseConfig) {
     console.error("Lỗi: Không tìm thấy firebaseConfig. Hãy kiểm tra file HTML.");
 }
     const app = initializeApp(firebaseConfig);
-const appCheck = window.appCheck;
+// const appCheck = window.appCheck;
     const auth = getAuth(app);
     const db = getDatabase(app);
 
@@ -6567,5 +6567,6 @@ parentData.tgBatDau = parentSummary.totalExecutedLeafNodesCap1 || 0;
             input.addEventListener('keydown', handleKeydown);
         });
     };
+
 
 
