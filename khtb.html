@@ -387,20 +387,27 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, set, get, update, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
     import { getAuth, signInWithEmailAndPassword, setPersistence, browserSessionPersistence, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
 
     // --- CONFIG ---
     const firebaseConfig = {
-  apiKey: "AIzaSyDltV6zgLaOHZANarD4I87ckl0jBWY8leU",
-        authDomain: "dulieubanhang-d6156.firebaseapp.com",
-        databaseURL: "https://dulieubanhang-d6156-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "dulieubanhang-d6156",
-        storageBucket: "dulieubanhang-d6156.firebasestorage.app",
-        messagingSenderId: "588583798336",
-        appId: "1:588583798336:web:82a240fb3da2f96893c1a5",
-        measurementId: "G-7D51WBK63L"
+  apiKey: "AIzaSyAJEQqsEOBMcgXBe2JQwne0obz8JgyQoZs",
+  authDomain: "khbdsc.firebaseapp.com",
+  databaseURL: "https://khbdsc-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "khbdsc",
+  storageBucket: "khbdsc.firebasestorage.app",
+  messagingSenderId: "46883062471",
+  appId: "1:46883062471:web:f6ccc6abf5d8785e51b4e2",
+  measurementId: "G-17H1H45NWK"
     };
 
     const app = initializeApp(firebaseConfig);
+// Khởi tạo App Check - ĐÂY LÀ NƠI BẠN DÙNG SITE KEY
+  window.appCheck = initializeAppCheck(app, {
+    provider: new ReCaptchaEnterpriseProvider('6Ldl4UIsAAAAAJHqtzZeGxXmfNzFNGd5vf-s4QkK'), 
+    isTokenAutoRefreshEnabled: true
+  });
+
     const db = getDatabase(app);
     const auth = getAuth(app);
 
@@ -1299,4 +1306,5 @@ for (let y = START_YEAR; y <= currentYear + 1; y++) {
 	
 </script>
 </body>
+
 </html>
