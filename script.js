@@ -53,10 +53,10 @@
     };
     // === KẾT THÚC MÃ MỚI ===
 	
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
- import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app-check.js";
-    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-    import { getDatabase, ref, set, get, update, remove, child, push, query, orderByChild, equalTo, onValue, off } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, EmailAuthProvider, reauthenticateWithCredential, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getDatabase, ref, set, get, update, remove, child, push, query, orderByChild, equalTo, onValue, off } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
    // Lấy cấu hình từ file HTML (thông qua biến toàn cục window)
 const firebaseConfig = window.firebaseConfig;
@@ -6567,6 +6567,7 @@ parentData.tgBatDau = parentSummary.totalExecutedLeafNodesCap1 || 0;
             input.addEventListener('keydown', handleKeydown);
         });
     };
+
 
 
 
