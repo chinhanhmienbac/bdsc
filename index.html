@@ -467,28 +467,20 @@
 
         // --- 2. KHỞI TẠO FIREBASE APPS ---
         const appDV = initializeApp(configDV, "appDV"); 
-window.appCheck = initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider('6Ldl4UIsAAAAAJHqtzZeGxXmfNzFNGd5vf-s4QkK'), 
-    isTokenAutoRefreshEnabled: true
-  });
-		
         const appHP = initializeApp(configHP, "appHP");
-		window.appCheck = initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider('6Ldl4UIsAAAAAJHqtzZeGxXmfNzFNGd5vf-s4QkK'), 
-    isTokenAutoRefreshEnabled: true
-  });
-        const appHN = initializeApp(configHN, "appHN");
-        window.appCheck = initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider('6Ldl4UIsAAAAAJHqtzZeGxXmfNzFNGd5vf-s4QkK'), 
-    isTokenAutoRefreshEnabled: true
-  });
+		const appHN = initializeApp(configHN, "appHN");
         const appND = initializeApp(configND, "appND");
-		window.appCheck = initializeAppCheck(app, {
+		const appKD = initializeApp(configKD, "appKD");
+		
+window.appCheck = initializeAppCheck(appDV, {
     provider: new ReCaptchaV3Provider('6Ldl4UIsAAAAAJHqtzZeGxXmfNzFNGd5vf-s4QkK'), 
     isTokenAutoRefreshEnabled: true
   });
-		const appKD = initializeApp(configKD, "appKD");
-window.appCheck = initializeAppCheck(app, {
+		window.appCheck = initializeAppCheck(appHP, {
+    provider: new ReCaptchaV3Provider('6Ldl4UIsAAAAAJHqtzZeGxXmfNzFNGd5vf-s4QkK'), 
+    isTokenAutoRefreshEnabled: true
+  });
+		window.appCheck = initializeAppCheck(appHN, {
     provider: new ReCaptchaV3Provider('6Ldl4UIsAAAAAJHqtzZeGxXmfNzFNGd5vf-s4QkK'), 
     isTokenAutoRefreshEnabled: true
   });
@@ -848,6 +840,7 @@ window.appCheck = initializeAppCheck(app, {
 </body>
 
 </html>
+
 
 
 
