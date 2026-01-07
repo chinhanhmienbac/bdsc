@@ -404,7 +404,7 @@ import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com
     const app = initializeApp(firebaseConfig);
 // Khởi tạo App Check - ĐÂY LÀ NƠI BẠN DÙNG SITE KEY
   window.appCheck = initializeAppCheck(app, {
-    provider: new ReCaptchaEnterpriseProvider('6Ldl4UIsAAAAAJHqtzZeGxXmfNzFNGd5vf-s4QkK'), 
+    provider: new ReCaptchaV3Provider('6Ldl4UIsAAAAAJHqtzZeGxXmfNzFNGd5vf-s4QkK'), 
     isTokenAutoRefreshEnabled: true
   });
 
@@ -1308,3 +1308,4 @@ for (let y = START_YEAR; y <= currentYear + 1; y++) {
 </body>
 
 </html>
+
