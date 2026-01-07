@@ -443,8 +443,10 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-        import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+		import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
+
 
         // --- 1. CẤU HÌNH 5 DATABASE ---
         const configDV = { apiKey: "AIzaSyDltV6zgLaOHZANarD4I87ckl0jBWY8leU",
@@ -470,7 +472,11 @@
         
         const appND = initializeApp(configND, "appND");
 		const appKD = initializeApp(configKD, "appKD");
-
+window.appCheck = initializeAppCheck(app, {
+    provider: new ReCaptchaV3Provider('6Ldl4UIsAAAAAJHqtzZeGxXmfNzFNGd5vf-s4QkK'), 
+    isTokenAutoRefreshEnabled: true
+  });
+		
         const dbDV = getDatabase(appDV);
         const dbHP = getDatabase(appHP);
         const dbHN = getDatabase(appHN);
@@ -826,4 +832,5 @@
 </body>
 
 </html>
+
 
