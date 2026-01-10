@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -6,400 +6,101 @@
     <title>Tổng hợp QL thiết bị và BDSC</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            margin: 0;
-            background-color: #f4f4f9;
-            line-height: 1.6;
-            padding: 20px;
-        }
-
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        /* --- Controls --- */
-        .header-controls {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 25px;
-            padding: 15px;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .header-controls label {
-            font-weight: bold;
-            margin-right: 10px;
-            font-size: 16px;
-        }
-
-        #yearSelect {
-            padding: 8px 12px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 16px;
-            background-color: white;
-            cursor: pointer;
-        }
-
-        .btn-summary {
-            position: absolute;
-            right: 20px;
-            padding: 10px 20px;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            transition: background-color 0.2s;
-        }
-
-        .btn-summary:hover {
-            background-color: #218838;
-        }
-
-        /* --- Layout Grid System --- */
-        .main-layout {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            max-width: 1800px;
-            margin: 0 auto;
-        }
-
-        .row {
-            display: flex;
-            gap: 60px;
-            width: 100%;
-            justify-content: center;
-        }
+        /* --- GIỮ NGUYÊN CSS GỐC CỦA BẠN --- */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; background-color: #f4f4f9; line-height: 1.6; padding: 20px; }
+        h1 { color: #333; text-align: center; margin-bottom: 30px; }
+        .header-controls { display: flex; justify-content: center; align-items: center; margin-bottom: 25px; padding: 15px; background-color: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); position: sticky; top: 0; z-index: 100; }
+        .header-controls label { font-weight: bold; margin-right: 10px; font-size: 16px; }
+        #yearSelect { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; background-color: white; cursor: pointer; }
+        .btn-summary { position: absolute; right: 20px; padding: 10px 20px; background-color: #28a745; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: background-color 0.2s; }
+        .btn-summary:hover { background-color: #218838; }
         
-        .row-2-cols .unit-column { width: 25%; }
-        .row-3-cols .unit-column { width: 25%; }
-
-        /* --- Unit Block Style --- */
-        .unit-column {
-            background-color: transparent;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .unit-header {
-            background-color: #0056b3;
-            color: white;
-            padding: 0;
-            text-align: center;
-            border-radius: 8px;
-            font-weight: bold;
-            text-transform: uppercase;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            transition: background-color 0.3s ease;
-        }
-
-        .unit-header:hover {
-            background-color: #004494;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.25);
-        }
-
-        .unit-header a {
-            display: block;
-            width: 100%;
-            height: 100%;
-            padding: 10px;
-            color: white;
-            text-decoration: none;
-            box-sizing: border-box;
-            cursor: pointer; /* Đảm bảo con trỏ chuột hiển thị dạng click */
-        }
-
-        .link-icon {
-            font-size: 0.9em;
-            margin-left: 8px;
-            opacity: 0.8;
-        }
-
-        .unit-content {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            min-height: 200px;
-        }
-
-        /* --- Individual Chart Card Style --- */
-        .summary-parent-card {
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 15px;
-            background-color: #fff;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-            display: flex;
-            flex-direction: column;
-            width: 100%; 
-            box-sizing: border-box;
-        }
-
-        .summary-parent-card h3 {
-            margin-top: 0;
-            color: #007bff;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 8px;
-            font-size: 1.1rem;
-            text-align: center;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .summary-charts-container {
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid #eee;
-        }
-
-        .chart-wrapper {
-            width: 48%;
-            text-align: center;
-        }
-
-        .chart-wrapper p {
-            font-size: 12px;
-            margin-top: 5px;
-            font-weight: bold;
-            color: #555;
-        }
-
-        /* --- Status Messages --- */
-        .status-msg {
-            text-align: center;
-            font-style: italic;
-            padding: 20px;
-            color: #666;
-        }
+        /* Layout & Unit Styles */
+        .main-layout { display: flex; flex-direction: column; gap: 20px; max-width: 1800px; margin: 0 auto; }
+        .row { display: flex; gap: 60px; width: 100%; justify-content: center; }
+        .row-2-cols .unit-column { width: 25%; } /* Giữ kích thước cũ */
+        .row-3-cols .unit-column { width: 25%; } /* Giữ kích thước cũ */
+        
+        .unit-column { background-color: transparent; display: flex; flex-direction: column; gap: 15px; }
+        .unit-header { background-color: #0056b3; color: white; padding: 0; text-align: center; border-radius: 8px; font-weight: bold; text-transform: uppercase; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: background-color 0.3s ease; }
+        .unit-header:hover { background-color: #004494; transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.25); }
+        .unit-header a { display: block; width: 100%; height: 100%; padding: 10px; color: white; text-decoration: none; box-sizing: border-box; cursor: pointer; }
+        .link-icon { font-size: 0.9em; margin-left: 8px; opacity: 0.8; }
+        .unit-content { display: flex; flex-direction: column; gap: 15px; min-height: 200px; }
+        
+        /* Chart Card */
+        .summary-parent-card { border: 1px solid #ddd; border-radius: 8px; padding: 15px; background-color: #fff; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); display: flex; flex-direction: column; width: 100%; box-sizing: border-box; }
+        .summary-parent-card h3 { margin-top: 0; color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 8px; font-size: 0.9rem; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .summary-charts-container { display: flex; justify-content: space-around; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; }
+        .chart-wrapper { width: 48%; text-align: center; }
+        .chart-wrapper p { font-size: 12px; margin-top: 5px; font-weight: bold; color: #555; }
+        
+        /* Status & Modal */
+        .status-msg { text-align: center; font-style: italic; padding: 20px; color: #666; }
         .status-msg.error { color: #dc3545; }
         .status-msg.success { color: #28a745; }
-
-        /* --- Modal Styles --- */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            width: 90%;
-            max-width: 1000px;
-            max-height: 90vh;
-            overflow-y: auto;
-            position: relative;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-
-        /* Style riêng cho modal điều hướng nhỏ gọn hơn */
-        .modal-nav-content {
-            max-width: 500px;
-            text-align: center;
-        }
-
-        .modal-close {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            font-size: 24px;
-            font-weight: bold;
-            color: #666;
-            cursor: pointer;
-        }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 1000px; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .modal-nav-content { max-width: 500px; text-align: center; }
+        .modal-close { position: absolute; top: 10px; right: 15px; font-size: 24px; font-weight: bold; color: #666; cursor: pointer; }
         .modal-close:hover { color: #000; }
-
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-
-        .data-table th, .data-table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: center;
-            font-size: 14px;
-        }
-
-        .data-table th {
-            background-color: #0056b3;
-            color: white;
-            vertical-align: middle;
-        }
-
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .data-table th, .data-table td { border: 1px solid #ddd; padding: 8px; text-align: center; font-size: 14px; }
+        .data-table th { background-color: #0056b3; color: white; vertical-align: middle; }
         .data-table tr:nth-child(even) { background-color: #f2f2f2; }
-        .data-table tr:hover { background-color: #ddd; }
-        
         .text-left { text-align: left !important; }
         .font-bold { font-weight: bold; }
-
-        /* --- Nút điều hướng trong Modal --- */
-        .nav-options {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin-top: 20px;
-            margin-bottom: 10px;
-        }
+        .nav-options { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; margin-bottom: 10px; }
+        .nav-btn { padding: 15px 20px; font-size: 18px; border: none; border-radius: 8px; cursor: pointer; transition: transform 0.1s, box-shadow 0.2s; font-weight: bold; color: white; text-transform: uppercase; }
+        .nav-btn:active { transform: scale(0.98); }
+        .btn-bdsc { background-color: #007bff; }
+        .btn-bdsc:hover { background-color: #0056b3; }
+        .btn-thietbi { background-color: #fd7e14; }
+        .btn-thietbi:hover { background-color: #e36d0c; }
         
-        .nav-btn {
-            padding: 15px 20px;
-            font-size: 18px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: transform 0.1s, box-shadow 0.2s;
-            font-weight: bold;
-            color: white;
-            text-transform: uppercase;
-        }
+        /* Button Support */
+        .btn-support { position: absolute; left: 20px; padding: 10px 20px; background-color: #17a2b8; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: background-color 0.2s; }
+        .btn-support:hover { background-color: #138496; }
+        .support-list { list-style: none; padding: 0; margin: 0; }
+        .support-list li { margin-bottom: 10px; border-bottom: 1px solid #eee; }
+        .support-list a { display: block; padding: 12px 15px; color: #333; text-decoration: none; font-size: 16px; font-weight: 500; transition: background-color 0.2s, color 0.2s; border-radius: 5px; }
+        .support-list a:hover { background-color: #f1f8ff; color: #0056b3; padding-left: 20px; }
+        .support-icon { margin-right: 10px; color: #17a2b8; }
 
-        .nav-btn:active {
-            transform: scale(0.98);
-        }
-
-        .btn-bdsc {
-            background-color: #007bff; /* Xanh dương */
-        }
-        .btn-bdsc:hover {
-            background-color: #0056b3;
-        }
-
-        .btn-thietbi {
-            background-color: #fd7e14; /* Màu cam */
-        }
-        .btn-thietbi:hover {
-            background-color: #e36d0c;
-        }
-
-        /* --- Responsive --- */
         @media (max-width: 1200px) {
             .row { flex-wrap: wrap; }
-            .row-2-cols .unit-column, 
-            .row-3-cols .unit-column {
-                width: 100%;
-            }
-            .header-controls {
-                flex-direction: column;
-                gap: 10px;
-            }
-            .btn-summary {
-                position: static;
-                width: 100%;
-            }
+            .row-2-cols .unit-column, .row-3-cols .unit-column { width: 100%; }
+            .header-controls { flex-direction: column; gap: 10px; }
+            .btn-summary, .btn-support { position: static; width: 100%; margin-top: 10px; }
         }
     </style>
 </head>
 <body>
 
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-            <img src="PVGLPG.gif" alt="Logo" style="width: 100px; height: auto;">
-            <h1 style="color: #008037; font-weight: bold; text-transform: uppercase; text-align: center; flex-grow: 1;">
-                TỔNG HỢP QUẢN LÝ THIẾT BỊ VÀ BDSC
-            </h1>
-            <div style="width: 100px;"></div> 
+        <img src="PVGLPG.gif" alt="Logo" style="width: 100px; height: auto;">
+        <h1 style="color: #008037; font-weight: bold; text-transform: uppercase; text-align: center; flex-grow: 1;">
+            TỔNG HỢP QUẢN LÝ THIẾT BỊ VÀ BDSC
+        </h1>
+        <div style="width: 100px;"></div> 
     </div>
 
     <div class="header-controls">
+        <button class="btn-support" onclick="openSupportModal()">Hỗ trợ</button>
         <div style="display: flex; align-items: center;">
             <label for="yearSelect">Chọn năm dữ liệu:</label>
             <select id="yearSelect"></select>
             <div id="global-status" style="margin-left: 20px; font-weight: bold; color: #007bff;"></div>
         </div>
-
         <button class="btn-summary" onclick="openSummaryModal()">Xem tổng hợp năm</button>
     </div>
 
-    <div class="main-layout">
-        <div class="row row-2-cols">
-            <div class="unit-column">
-                <div class="unit-header">
-                    <a href="javascript:void(0)" onclick="openNavigationModal('bd.html', 'TỔNG KHO MIỀN BẮC')" title="Chọn chức năng">
-                        TỔNG KHO MIỀN BẮC <span class="link-icon">↗</span>
-                    </a>
-                </div>
-                <div id="container-dv" class="unit-content">
-                    <div class="status-msg">Đang chờ dữ liệu...</div>
-                </div>
-            </div>
-            <div class="unit-column">
-                <div class="unit-header">
-                     <a href="javascript:void(0)" onclick="openNavigationModal('kh.html', 'TỔNG KHO HẢI PHÒNG')" title="Chọn chức năng">
-                        TỔNG KHO HẢI PHÒNG <span class="link-icon">↗</span>
-                    </a>
-                </div>
-                <div id="container-hp" class="unit-content">
-                    <div class="status-msg">Đang chờ dữ liệu...</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row row-3-cols">
-            <div class="unit-column">
-                <div class="unit-header">
-                     <a href="javascript:void(0)" onclick="openNavigationModal('kh.html', 'TRẠM NẠP HÀ NỘI')" title="Chọn chức năng">
-                        TRẠM NẠP HÀ NỘI <span class="link-icon">↗</span>
-                    </a>
-                </div>
-                <div id="container-hn" class="unit-content">
-                    <div class="status-msg">Đang chờ dữ liệu...</div>
-                </div>
-            </div>
-            
-            <div class="unit-column">
-                <div class="unit-header">
-                     <a href="javascript:void(0)" onclick="openNavigationModal('kh.html', 'TRẠM NẠP NAM ĐỊNH')" title="Chọn chức năng">
-                        TRẠM NẠP NAM ĐỊNH <span class="link-icon">↗</span>
-                    </a>
-                </div>
-                <div id="container-nd" class="unit-content">
-                    <div class="status-msg">Đang chờ dữ liệu...</div>
-                </div>
-            </div>
-			<div class="unit-column">
-                <div class="unit-header">
-                     <a href="javascript:void(0)" onclick="openNavigationModal('kh.html', 'TT SSKĐ NAM ĐỊNH')" title="Chọn chức năng">
-                        TT SSKĐ NAM ĐỊNH <span class="link-icon">↗</span>
-                    </a>
-                </div>
-                <div id="container-kd" class="unit-content">
-                    <div class="status-msg">Đang chờ dữ liệu...</div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <div class="main-layout" id="mainLayout"></div>
 
     <div id="summaryModal" class="modal-overlay">
         <div class="modal-content">
             <span class="modal-close" onclick="closeSummaryModal()">&times;</span>
             <h2 style="text-align: center; color: #0056b3;">BẢNG TỔNG HỢP SỐ LIỆU NĂM <span id="modalYear"></span></h2>
-            
             <table class="data-table">
                 <thead>
                     <tr>
@@ -409,18 +110,12 @@
                         <th colspan="3">Giải ngân chi phí (VNĐ)</th>
                     </tr>
                     <tr>
-                        <th>Tổng</th>
-                        <th>Đã làm</th>
-                        <th>%</th>
-                        <th>Tổng</th>
-                        <th>Đã chi</th>
-                        <th>%</th>
+                        <th>Tổng</th><th>Đã làm</th><th>%</th>
+                        <th>Tổng</th><th>Đã chi</th><th>%</th>
                     </tr>
                 </thead>
-                <tbody id="summaryTableBody">
-                    </tbody>
-                <tfoot id="summaryTableFoot" style="font-weight: bold; background-color: #e9ecef;">
-                    </tfoot>
+                <tbody id="summaryTableBody"></tbody>
+                <tfoot id="summaryTableFoot" style="font-weight: bold; background-color: #e9ecef;"></tfoot>
             </table>
         </div>
     </div>
@@ -430,79 +125,142 @@
             <span class="modal-close" onclick="closeNavModal()">&times;</span>
             <h2 id="navTitle" style="color: #0056b3; margin-top: 0;">Lựa chọn chức năng</h2>
             <p id="navSubtitle" style="color: #666; margin-bottom: 20px;"></p>
-            
             <div class="nav-options">
-                <button class="nav-btn btn-bdsc" onclick="performNavigation('bdsc')">
-                    1. Kế hoạch BDSC
-                </button>
-                <button class="nav-btn btn-thietbi" onclick="performNavigation('tb')">
-                    2. Quản lý thiết bị
-                </button>
+                <button class="nav-btn btn-bdsc" onclick="performNavigation('bdsc')">1. Kế hoạch BDSC</button>
+                <button class="nav-btn btn-thietbi" onclick="performNavigation('tb')">2. Quản lý thiết bị</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="supportModal" class="modal-overlay">
+        <div class="modal-content modal-nav-content">
+            <span class="modal-close" onclick="closeSupportModal()">×</span>
+            <h2 style="color: #17a2b8; margin-top: 0; text-align: center;">CÔNG CỤ HỖ TRỢ</h2>
+            <div id="supportContainer" style="text-align: left; margin-top: 20px;">
+                <p style="text-align: center;">Đang tải dữ liệu...</p>
             </div>
         </div>
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 		import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
 
-
-        // --- 1. CẤU HÌNH 5 DATABASE ---
-        const configDV = { apiKey: "AIzaSyDltV6zgLaOHZANarD4I87ckl0jBWY8leU",
-  authDomain: "dulieubanhang-d6156.firebaseapp.com",
-  databaseURL: "https://dulieubanhang-d6156-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "dulieubanhang-d6156", appId: "1:588583798336:web:82a240fb3da2f96893c1a5" };
-        const configHP = { apiKey: "AIzaSyAJEQqsEOBMcgXBe2JQwne0obz8JgyQoZs",
-  authDomain: "khbdsc.firebaseapp.com",
-  databaseURL: "https://khbdsc-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "khbdsc",
-  storageBucket: "khbdsc.firebasestorage.app",
-  messagingSenderId: "46883062471",
-  appId: "1:46883062471:web:f6ccc6abf5d8785e51b4e2" };
-        const configHN = { apiKey: "AIzaSyCwPifGgnorA6rXYE_gCGViN8jkWazkW-I", authDomain: "bdsc-hn.firebaseapp.com", databaseURL: "https://bdsc-hn-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "bdsc-hn", appId: "1:1064432135631:web:12927d01e88a11fb57f6ba" };
-        
-        const configND = { apiKey: "AIzaSyC6zogfxHV3zYs80GgQJ0HpLVxr_m3ArwU", authDomain: "bdsc-nd.firebaseapp.com", databaseURL: "https://bdsc-nd-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "bdsc-nd", appId: "1:58759284467:web:d33a542cee40ee36cf1986" };
-		const configKD = { apiKey: "AIzaSyDsjrZPhlbK8gpgmQza9sShmiAUptxhQn0", authDomain: "bdsc-kd.firebaseapp.com", databaseURL: "https://bdsc-kd-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "bdsc-kd", appId: "1:167446714761:web:617fe3666d9599cf486958" };
-
-        // --- 2. KHỞI TẠO FIREBASE APPS ---
-        const appDV = initializeApp(configDV, "appDV"); 
-        const appHP = initializeApp(configHP, "appHP");
-		const appHN = initializeApp(configHN, "appHN");
-        const appND = initializeApp(configND, "appND");
-		const appKD = initializeApp(configKD, "appKD");
-		
-window.appCheck = initializeAppCheck(appDV, {
-    provider: new ReCaptchaV3Provider('6Ldl4UIsAAAAAJHqtzZeGxXmfNzFNGd5vf-s4QkK'), 
-    isTokenAutoRefreshEnabled: true
-  });
-		window.appCheck = initializeAppCheck(appHP, {
-    provider: new ReCaptchaV3Provider('6Ldl4UIsAAAAAJHqtzZeGxXmfNzFNGd5vf-s4QkK'), 
-    isTokenAutoRefreshEnabled: true
-  });
-		window.appCheck = initializeAppCheck(appHN, {
-    provider: new ReCaptchaV3Provider('6Ldl4UIsAAAAAJHqtzZeGxXmfNzFNGd5vf-s4QkK'), 
-    isTokenAutoRefreshEnabled: true
-  });
-		
-        const dbDV = getDatabase(appDV);
-        const dbHP = getDatabase(appHP);
-        const dbHN = getDatabase(appHN);
-        
-        const dbND = getDatabase(appND);
-		const dbKD = getDatabase(appKD);
-
-        // Danh sách Unit có thêm tên hiển thị đầy đủ cho bảng
-        const units = [
-            { id: 'dv', db: dbDV, containerId: 'container-dv', name: 'TỔNG KHO MIỀN BẮC' },
-            { id: 'hp', db: dbHP, containerId: 'container-hp', name: 'TỔNG KHO HẢI PHÒNG' },
-            { id: 'hn', db: dbHN, containerId: 'container-hn', name: 'TRẠM NẠP HÀ NỘI' },
-            
-            { id: 'nd', db: dbND, containerId: 'container-nd', name: 'TRẠM NẠP NAM ĐỊNH' },
-			{ id: 'kd', db: dbKD, containerId: 'container-kd', name: 'TT SSKĐ NAM ĐỊNH' }
+        // ==============================================================
+        // 1. MẢNG CẤU HÌNH TẬP TRUNG (CHỈ CẦN SỬA Ở ĐÂY)
+        // ==============================================================
+        const listConfigs = [
+            {
+                id: 'dv',
+                name: 'TỔNG KHO MIỀN BẮC',
+                fileName: 'dv.html', // File gốc để điều hướng
+                config: { apiKey: "AIzaSyDv2uEv6L_0G4g_V8VxNJDMu3_AhvhqjBE", authDomain: "bdsc-dv.firebaseapp.com", databaseURL: "https://bdsc-dv-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "bdsc-dv", appId: "1:194375535653:web:fac116dcbb01d4a09883cc" }
+            },
+            {
+                id: 'hp',
+                name: 'TỔNG KHO HẢI PHÒNG',
+                fileName: 'hp.html',
+                config: { apiKey: "AIzaSyDl1ns6-XBsTI1MEteS3AjeTYZ3rbL_yRc", authDomain: "bdsc-hp.firebaseapp.com", databaseURL: "https://bdsc-hp-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "bdsc-hp", appId: "1:602300297635:web:1991f9caff76cf7744ea16" }
+            },
+            {
+                id: 'hn',
+                name: 'TRẠM NẠP HÀ NỘI',
+                fileName: 'hn.html',
+                config: { apiKey: "AIzaSyCwPifGgnorA6rXYE_gCGViN8jkWazkW-I", authDomain: "bdsc-hn.firebaseapp.com", databaseURL: "https://bdsc-hn-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "bdsc-hn", appId: "1:1064432135631:web:12927d01e88a11fb57f6ba" }
+            },
+            {
+                id: 'nd',
+                name: 'TRẠM NẠP NAM ĐỊNH',
+                fileName: 'nd.html',
+                config: { apiKey: "AIzaSyC6zogfxHV3zYs80GgQJ0HpLVxr_m3ArwU", authDomain: "bdsc-nd.firebaseapp.com", databaseURL: "https://bdsc-nd-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "bdsc-nd", appId: "1:58759284467:web:d33a542cee40ee36cf1986" }
+            },
+            {
+                id: 'kd',
+                name: 'TT SSKĐ NAM ĐỊNH',
+                fileName: 'kd.html',
+                config: { apiKey: "AIzaSyDsjrZPhlbK8gpgmQza9sShmiAUptxhQn0", authDomain: "bdsc-kd.firebaseapp.com", databaseURL: "https://bdsc-kd-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "bdsc-kd", appId: "1:167446714761:web:617fe3666d9599cf486958" }
+            },
+            {
+                id: 'xt',
+                name: 'XE TẢI VẬN CHUYỂN CNMB',
+                fileName: 'xt.html', 
+                config: { apiKey: "AIzaSyAAlYHnrM33W0HAQDHtBWTW-s9nB1_Jnvc", authDomain: "bdsc-xt.firebaseapp.com",databaseURL: "https://bdsc-xt-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "bdsc-xt", appId: "1:561700169478:web:39b7d164206a0e69db2087" }
+            }
+            // MUỐN THÊM ĐƠN VỊ MỚI? Copy object trên, dán vào đây là xong!
         ];
 
-        // --- 3. CHART.JS CONFIG ---
+        // Mảng chứa các object unit đã khởi tạo
+        let units = [];
+        window.globalUnitData = {};
+        let activeChartsMap = {};
+
+        // ==============================================================
+        // 2. HÀM TỰ ĐỘNG KHỞI TẠO DOM VÀ FIREBASE APP
+        // ==============================================================
+        function initSystem() {
+            const mainLayout = document.getElementById('mainLayout');
+            mainLayout.innerHTML = '';
+            units = []; // Reset list
+
+            // Logic chia hàng: 2 item đầu tiên vào hàng 1, các item sau vào hàng 3 cột
+            let currentRow = null;
+            
+            listConfigs.forEach((cfg, index) => {
+                // 1. Tạo HTML Row
+                // Nếu là item 0: Tạo hàng 2 cột
+                if (index === 0) {
+                    currentRow = document.createElement('div');
+                    currentRow.className = 'row row-2-cols';
+                    mainLayout.appendChild(currentRow);
+                } 
+                // Nếu là item 2, hoặc các item sau đó chia hết cho 3 (bắt đầu hàng mới): Tạo hàng 3 cột
+                else if (index === 2 || (index > 2 && (index - 2) % 3 === 0)) {
+                    currentRow = document.createElement('div');
+                    currentRow.className = 'row row-3-cols';
+                    mainLayout.appendChild(currentRow);
+                }
+
+                // Tạo cột unit
+                const col = document.createElement('div');
+                col.className = 'unit-column';
+                col.innerHTML = `
+                    <div class="unit-header">
+                        <a href="javascript:void(0)" onclick="openNavigationModal('${cfg.id}', '${cfg.fileName}')" title="Chọn chức năng">
+                            XEM CHI TIẾT CƠ SỞ <span class="link-icon">↗</span>
+                        </a>
+                    </div>
+                    <div id="container-${cfg.id}" class="unit-content">
+                        <div class="status-msg">Đang chờ dữ liệu...</div>
+                    </div>
+                `;
+                currentRow.appendChild(col);
+
+                // 2. Khởi tạo Firebase App
+                const app = initializeApp(cfg.config, `app_${cfg.id}`); // Đặt tên app duy nhất
+                
+				// 2.1 Khởi tạo app check
+				window.appCheck = initializeAppCheck(app, {
+    provider: new ReCaptchaV3Provider('6Ldl4UIsAAAAAJHqtzZeGxXmfNzFNGd5vf-s4QkK'), 
+    isTokenAutoRefreshEnabled: true
+  });
+				
+				
+				const db = getDatabase(app);
+
+                // Push vào mảng quản lý
+                units.push({
+                    id: cfg.id,
+                    db: db,
+                    containerId: `container-${cfg.id}`,
+                    name: cfg.name,
+                    // Dùng để renderSupportList nếu cần dbHN
+                    isDefaultSupport: (cfg.id === 'hn') 
+                });
+            });
+        }
+
+        // --- 3. CHART.JS CONFIG (Giữ nguyên) ---
         const centerTextPlugin = {
             id: 'centerText',
             afterDraw: function(chart) {
@@ -510,7 +268,6 @@ window.appCheck = initializeAppCheck(appDV, {
                 const data = chart.data.datasets[0].data;
                 const total = (data[0] || 0) + (data[1] || 0);
                 const percentage = total > 0 ? Math.round(((data[0] || 0) / total) * 100) : 0;
-                
                 const ctx = chart.ctx;
                 const {width, height} = chart;
                 ctx.save();
@@ -526,11 +283,6 @@ window.appCheck = initializeAppCheck(appDV, {
 
         const formatNumber = (num) => num?.toLocaleString('vi-VN') || '0';
         function convertTTForDisplay(tt) { return String(tt).replace(/,/g, '.'); }
-
-        let activeChartsMap = {};
-        
-        // ** GLOBAL DATA STORE ** : Lưu trữ dữ liệu tổng hợp của từng đơn vị
-        window.globalUnitData = {}; 
 
         // --- 4. LOGIC XỬ LÝ DỮ LIỆU ---
         const yearSelect = document.getElementById('yearSelect');
@@ -551,36 +303,29 @@ window.appCheck = initializeAppCheck(appDV, {
                 yearSelect.appendChild(option);
             });
             yearSelect.value = currentYearValue;
-
-            yearSelect.onchange = () => {
-                loadAllUnits(yearSelect.value);
-            };
+            yearSelect.onchange = () => { loadAllUnits(yearSelect.value); };
         }
 
         async function renderUnitData(unit, year) {
             const container = document.getElementById(unit.containerId);
-            
-            if (activeChartsMap[unit.id]) {
-                activeChartsMap[unit.id].forEach(c => c.destroy());
-            }
+            if (activeChartsMap[unit.id]) activeChartsMap[unit.id].forEach(c => c.destroy());
             activeChartsMap[unit.id] = [];
             container.innerHTML = '<div class="status-msg">Đang tải...</div>';
 
-            // Reset dữ liệu trong kho global cho đơn vị này
-            window.globalUnitData[unit.id] = {
-                name: unit.name,
-                hasData: false,
-                totalTask: 0, execTask: 0,
-                totalCost: 0, execCost: 0
-            };
+            if (!window.globalUnitData[unit.id]) window.globalUnitData[unit.id] = { name: unit.name };
 
             try {
                 const summaryRef = ref(unit.db, `summary_data/${year}`);
-                const summarySnap = await get(summaryRef);
-                
-                // Nếu không có summary, vẫn có thể thử lấy parent data, nhưng ở đây ta check cả 2
                 const parentQuery = ref(unit.db, `congViecMe${year}`);
-                const parentSnapshot = await get(parentQuery);
+                const nameRef = ref(unit.db, 'settings/tenCoSo');
+
+                const [summarySnap, parentSnapshot, nameSnap] = await Promise.all([
+                    get(summaryRef), get(parentQuery), get(nameRef)
+                ]);
+
+                const dynamicName = nameSnap.exists() ? nameSnap.val() : unit.name;
+                window.globalUnitData[unit.id].name = dynamicName;
+                unit.name = dynamicName;
 
                 if (!summarySnap.exists() || !parentSnapshot.exists()) {
                     container.innerHTML = '<div class="status-msg error">Chưa có dữ liệu.</div>';
@@ -589,40 +334,29 @@ window.appCheck = initializeAppCheck(appDV, {
 
                 const summaryData = summarySnap.val();
                 const parentsData = parentSnapshot.val();
-                
                 const parents = Object.keys(parentsData)
                     .map(id => ({ id, ...parentsData[id] }))
                     .sort((a, b) => a.id.localeCompare(b.id));
 
                 if (parents.length === 0) {
-                     container.innerHTML = '<div class="status-msg">Danh sách rỗng.</div>';
-                     return;
+                    container.innerHTML = '<div class="status-msg">Danh sách rỗng.</div>';
+                    return;
                 }
 
-                // TÍNH TOÁN TỔNG HỢP CHO ĐƠN VỊ
-                let uTotalTask = 0, uExecTask = 0;
-                let uTotalCost = 0, uExecCost = 0;
-
+                let uTotalTask = 0, uExecTask = 0, uTotalCost = 0, uExecCost = 0;
                 let htmlContent = '';
+
                 parents.forEach(parent => {
                     const parentId = parent.id;
                     const parentSummary = summaryData[parentId] || {};
+                    uTotalTask += (parentSummary.totalLeafNodesCap1 || 0);
+                    uExecTask += (parentSummary.totalExecutedLeafNodesCap1 || 0);
+                    uTotalCost += (parent.chiPhi || 0);
+                    uExecCost += (parent.chiPhiThucHien || 0);
 
-                    // Dữ liệu cho biểu đồ và tổng hợp
-                    const pTotalTask = parentSummary.totalLeafNodesCap1 || 0;
-                    const pExecTask = parentSummary.totalExecutedLeafNodesCap1 || 0;
-                    const pTotalCost = parent.chiPhi || 0;
-                    const pExecCost = parent.chiPhiThucHien || 0;
-
-                    // Cộng dồn vào biến tổng hợp của Unit
-                    uTotalTask += pTotalTask;
-                    uExecTask += pExecTask;
-                    uTotalCost += pTotalCost;
-                    uExecCost += pExecCost;
-
-                    const uniquePrefix = `${unit.id}-${parentId}`.replace(/[^a-zA-Z0-9-_]/g, '_'); 
+                    const uniquePrefix = `${unit.id}-${parentId}`.replace(/[^a-zA-Z0-9-_]/g, '_');
                     const name = parent.noiDung || 'Chưa có tên';
-                    
+
                     htmlContent += `
                         <div class="summary-parent-card">
                             <h3>${convertTTForDisplay(parentId)}. ${name}</h3>
@@ -636,32 +370,26 @@ window.appCheck = initializeAppCheck(appDV, {
                                     <p>Giải ngân chi phí</p>
                                 </div>
                             </div>
-                        </div>
-                    `;
+                        </div>`;
                 });
 
-                // Cập nhật lại kho dữ liệu global
                 window.globalUnitData[unit.id] = {
-                    name: unit.name,
-                    hasData: true,
+                    name: dynamicName, hasData: true,
                     totalTask: uTotalTask, execTask: uExecTask,
                     totalCost: uTotalCost, execCost: uExecCost
                 };
-
                 container.innerHTML = htmlContent;
 
-                // Vẽ biểu đồ
                 parents.forEach(parent => {
                     const parentId = parent.id;
                     const uniquePrefix = `${unit.id}-${parentId}`.replace(/[^a-zA-Z0-9-_]/g, '_');
                     const parentSummary = summaryData[parentId] || {};
-
+                    
                     const executedLeafNodesCap1 = parentSummary.totalExecutedLeafNodesCap1 || 0;
                     const totalLeafNodesCap1 = parentSummary.totalLeafNodesCap1 || 0;
                     const executedCost = parent.chiPhiThucHien || 0;
                     const plannedCost = parent.chiPhi || 0;
 
-                    // Chart Tiến độ
                     const ctxCap1 = document.getElementById(`cap1Chart-${uniquePrefix}`).getContext('2d');
                     activeChartsMap[unit.id].push(new Chart(ctxCap1, {
                         type: 'doughnut',
@@ -676,7 +404,6 @@ window.appCheck = initializeAppCheck(appDV, {
                         options: { responsive: true, cutout: '65%', plugins: { legend: { display: false } } }
                     }));
 
-                    // Chart Chi phí
                     const ctxCost = document.getElementById(`costChart-${uniquePrefix}`).getContext('2d');
                     activeChartsMap[unit.id].push(new Chart(ctxCost, {
                         type: 'doughnut',
@@ -688,27 +415,19 @@ window.appCheck = initializeAppCheck(appDV, {
                                 borderWidth: 0
                             }]
                         },
-                        options: { 
-                            responsive: true, cutout: '65%', 
-                            plugins: { 
-                                legend: { display: false },
-                                tooltip: { callbacks: { label: function(c) { return c.parsed?.toLocaleString('vi-VN'); } } }
-                            } 
-                        }
+                        options: { responsive: true, cutout: '65%', plugins: { legend: { display: false } } }
                     }));
                 });
 
             } catch (error) {
-                console.error(`Lỗi tải dữ liệu unit ${unit.id}:`, error);
+                console.error(`Lỗi unit ${unit.id}:`, error);
                 container.innerHTML = `<div class="status-msg error">Lỗi kết nối!</div>`;
             }
         }
 
         function loadAllUnits(year) {
             globalStatus.innerText = `Đang cập nhật dữ liệu năm ${year}...`;
-            // Reset dữ liệu global khi load năm mới
             window.globalUnitData = {};
-            
             const promises = units.map(unit => renderUnitData(unit, year));
             Promise.allSettled(promises).then(() => {
                 globalStatus.innerText = `Dữ liệu năm ${year} đã sẵn sàng.`;
@@ -716,7 +435,7 @@ window.appCheck = initializeAppCheck(appDV, {
             });
         }
 
-        // --- GLOBAL FUNCTIONS FOR MODAL ---
+        // --- GLOBAL FUNCTIONS FOR MODAL (Refactored) ---
         window.openSummaryModal = function() {
             const modal = document.getElementById('summaryModal');
             const tbody = document.getElementById('summaryTableBody');
@@ -727,120 +446,121 @@ window.appCheck = initializeAppCheck(appDV, {
             tbody.innerHTML = '';
             tfoot.innerHTML = '';
 
-            let grandTotalTask = 0, grandExecTask = 0;
-            let grandTotalCost = 0, grandExecCost = 0;
+            let grandTotalTask = 0, grandExecTask = 0, grandTotalCost = 0, grandExecCost = 0;
 
-            // Duyệt qua danh sách units để đảm bảo thứ tự
             units.forEach((unit, index) => {
                 const data = window.globalUnitData[unit.id];
+                const displayName = (data && data.name) ? data.name : unit.name;
+
                 if (!data || !data.hasData) {
-                    // Dòng rỗng nếu không có data
-                    const tr = `<tr>
-                        <td>${index + 1}</td>
-                        <td class="text-left font-bold">${unit.name}</td>
-                        <td colspan="6">Chưa có dữ liệu</td>
-                    </tr>`;
-                    tbody.innerHTML += tr;
+                    tbody.innerHTML += `<tr><td>${index + 1}</td><td class="text-left font-bold">${displayName}</td><td colspan="6">Chưa có dữ liệu</td></tr>`;
                 } else {
                     const pctTask = data.totalTask > 0 ? Math.round((data.execTask / data.totalTask) * 100) : 0;
                     const pctCost = data.totalCost > 0 ? Math.round((data.execCost / data.totalCost) * 100) : 0;
 
-                    grandTotalTask += data.totalTask;
-                    grandExecTask += data.execTask;
-                    grandTotalCost += data.totalCost;
-                    grandExecCost += data.execCost;
+                    grandTotalTask += data.totalTask; grandExecTask += data.execTask;
+                    grandTotalCost += data.totalCost; grandExecCost += data.execCost;
 
-                    const tr = `<tr>
-                        <td>${index + 1}</td>
-                        <td class="text-left font-bold">${data.name}</td>
-                        <td>${formatNumber(data.totalTask)}</td>
-                        <td>${formatNumber(data.execTask)}</td>
-                        <td style="color: ${pctTask === 100 ? 'green' : 'black'}">${pctTask}%</td>
-                        <td>${formatNumber(data.totalCost)}</td>
-                        <td>${formatNumber(data.execCost)}</td>
-                        <td style="color: ${pctCost === 100 ? 'blue' : 'black'}">${pctCost}%</td>
-                    </tr>`;
-                    tbody.innerHTML += tr;
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${index + 1}</td><td class="text-left font-bold">${displayName}</td>
+                            <td>${formatNumber(data.totalTask)}</td><td>${formatNumber(data.execTask)}</td>
+                            <td style="color: ${pctTask === 100 ? 'green' : 'black'}">${pctTask}%</td>
+                            <td>${formatNumber(data.totalCost)}</td><td>${formatNumber(data.execCost)}</td>
+                            <td style="color: ${pctCost === 100 ? 'blue' : 'black'}">${pctCost}%</td>
+                        </tr>`;
                 }
             });
 
-            // Tính tổng cộng toàn mạng lưới
             const grandPctTask = grandTotalTask > 0 ? Math.round((grandExecTask / grandTotalTask) * 100) : 0;
             const grandPctCost = grandTotalCost > 0 ? Math.round((grandExecCost / grandTotalCost) * 100) : 0;
 
             tfoot.innerHTML = `<tr>
                 <td colspan="2">TỔNG CỘNG</td>
-                <td>${formatNumber(grandTotalTask)}</td>
-                <td>${formatNumber(grandExecTask)}</td>
-                <td>${grandPctTask}%</td>
-                <td>${formatNumber(grandTotalCost)}</td>
-                <td>${formatNumber(grandExecCost)}</td>
-                <td>${grandPctCost}%</td>
+                <td>${formatNumber(grandTotalTask)}</td><td>${formatNumber(grandExecTask)}</td><td>${grandPctTask}%</td>
+                <td>${formatNumber(grandTotalCost)}</td><td>${formatNumber(grandExecCost)}</td><td>${grandPctCost}%</td>
             </tr>`;
-
             modal.style.display = 'flex';
         };
 
-        window.closeSummaryModal = function() {
-            document.getElementById('summaryModal').style.display = 'none';
-        };
+        window.closeSummaryModal = function() { document.getElementById('summaryModal').style.display = 'none'; };
 
-        // --- NEW: LOGIC ĐIỀU HƯỚNG MỚI ---
+        // Navigation Logic (Refactored)
         let currentNavUrls = { bdsc: '', tb: '' };
-
-        window.openNavigationModal = function(originalUrl, unitName) {
+        window.openNavigationModal = function(unitId, originalUrl) {
             const modal = document.getElementById('navModal');
-            document.getElementById('navSubtitle').textContent = unitName;
+            const data = window.globalUnitData[unitId];
+            const displayName = (data && data.name) ? data.name : "ĐANG TẢI...";
+            document.getElementById('navSubtitle').textContent = displayName;
 
-            // Logic tạo URL thiết bị: thêm 'tb' vào trước .html
-            // vd: dv.html -> dvtb.html
             const part = originalUrl.split('.');
-            const tbUrl = part[0] + 'tb.' + part[1];
+            // Logic tạo URL: dv.html -> dvtb.html
+            const tbUrl = part[0] + 'tb.' + part[1]; 
 
-            currentNavUrls = {
-                bdsc: originalUrl,
-                tb: tbUrl
-            };
-            
+            currentNavUrls = { bdsc: originalUrl, tb: tbUrl };
             modal.style.display = 'flex';
         }
 
         window.performNavigation = function(type) {
-            if (type === 'bdsc') {
-                window.open(currentNavUrls.bdsc, '_blank');
-            } else if (type === 'tb') {
-                window.open(currentNavUrls.tb, '_blank');
-            }
+            if (type === 'bdsc') window.open(currentNavUrls.bdsc, '_blank');
+            else if (type === 'tb') window.open(currentNavUrls.tb, '_blank');
             window.closeNavModal();
         }
+        window.closeNavModal = function() { document.getElementById('navModal').style.display = 'none'; }
 
-        window.closeNavModal = function() {
-            document.getElementById('navModal').style.display = 'none';
+        // Support Modal Logic
+        let supportDataCache = null;
+        window.openSupportModal = async function() {
+            const modal = document.getElementById('supportModal');
+            const container = document.getElementById('supportContainer');
+            modal.style.display = 'flex';
+            if (supportDataCache) { renderSupportList(supportDataCache); return; }
+            container.innerHTML = '<div class="status-msg">Đang kết nối CSDL...</div>';
+
+            try {
+                // Tự động tìm unit có ID là 'hn' để lấy dữ liệu hỗ trợ
+                const hnUnit = units.find(u => u.isDefaultSupport) || units[0]; 
+                const supportRef = ref(hnUnit.db, 'Congcuhotro');
+                const snapshot = await get(supportRef);
+                if (snapshot.exists()) {
+                    supportDataCache = snapshot.val();
+                    renderSupportList(supportDataCache);
+                } else {
+                    container.innerHTML = '<div class="status-msg error">Không tìm thấy dữ liệu hỗ trợ.</div>';
+                }
+            } catch (error) {
+                container.innerHTML = `<div class="status-msg error">Lỗi tải dữ liệu: ${error.message}</div>`;
+            }
+        };
+
+        function renderSupportList(data) {
+            const container = document.getElementById('supportContainer');
+            const items = Object.values(data).filter(item => item && item.Name && item.Link);
+            if (items.length === 0) { container.innerHTML = '<div class="status-msg">Danh sách trống.</div>'; return; }
+            let html = '<ul class="support-list">';
+            items.forEach(item => { html += `<li><a href="${item.Link}" target="_blank"><span class="support-icon">➤</span> ${item.Name}</a></li>`; });
+            html += '</ul>';
+            container.innerHTML = html;
         }
+        window.closeSupportModal = function() { document.getElementById('supportModal').style.display = 'none'; };
 
-        // Đóng modal khi click ra ngoài
         window.onclick = function(event) {
             const sumModal = document.getElementById('summaryModal');
             const navModal = document.getElementById('navModal');
-            if (event.target == sumModal) {
-                sumModal.style.display = "none";
-            }
-            if (event.target == navModal) {
-                navModal.style.display = "none";
-            }
+            const supModal = document.getElementById('supportModal');
+            if (event.target == sumModal) sumModal.style.display = "none";
+            if (event.target == navModal) navModal.style.display = "none";
+            if (event.target == supModal) supModal.style.display = "none";
         }
 
+        // --- KHỞI CHẠY ---
         try {
-            initializeYearDropdown();
-            loadAllUnits(yearSelect.value);
+            initSystem(); // Bước 1: Tạo DOM và Config
+            initializeYearDropdown(); // Bước 2: Setup dropdown
+            loadAllUnits(yearSelect.value); // Bước 3: Load dữ liệu
         } catch (e) {
             console.error("Lỗi khởi tạo trang:", e);
         }
     </script>
 </body>
-
 </html>
-
-
-
-
