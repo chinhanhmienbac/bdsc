@@ -3351,6 +3351,42 @@ window.openExecutionProfile = async function(timestampKey) {
         }
     };
 
+// --- BẮT ĐẦU: HÀM ĐÓNG MỞ CÂY DỮ LIỆU ---
+window.toggleRowExpand = function(event, path) {
+    event.stopPropagation(); // Ngăn sự kiện lan truyền gây click nhầm
+    const btn = event.target;
+    const isExpanded = btn.textContent === '-';
+    
+    // Đổi trạng thái hiển thị của nút
+    btn.textContent = isExpanded ? '+' : '-';
+    
+    const allRows = document.querySelectorAll('#taskListBody tr');
+    
+    if (isExpanded) {
+        // Đang mở -> Thu lại: Ẩn tất cả các cấp con bên trong
+        allRows.forEach(row => {
+            const rowPath = row.dataset.path;
+            if (rowPath && rowPath.startsWith(path + '/') && rowPath !== path) {
+                row.classList.add('collapsed-hide');
+                // Chuyển tất cả các nút con bên trong về trạng thái '+'
+                const childBtn = row.querySelector('.toggle-btn:not(.placeholder)');
+                if (childBtn) childBtn.textContent = '+';
+            }
+        });
+    } else {
+        // Đang thu -> Mở ra: Mở toàn bộ các cấp con bên trong nhánh này
+        allRows.forEach(row => {
+            const rowPath = row.dataset.path;
+            if (rowPath && rowPath.startsWith(path + '/') && rowPath !== path) {
+                row.classList.remove('collapsed-hide');
+                const childBtn = row.querySelector('.toggle-btn:not(.placeholder)');
+                if (childBtn) childBtn.textContent = '-';
+            }
+        });
+    }
+};
+// --- KẾT THÚC: HÀM ĐÓNG MỞ CÂY DỮ LIỆU ---
+
     /**
      * Hàm đệ quy cập nhật trạng thái visual của các cấp cha (Indeterminate)
      */
@@ -6535,12 +6571,31 @@ const recalculateSingleParentCost = async (parentPath, childrenField = null, fie
             return '';
         };
 
-        const createRowHtml = (itemClass, path, data) => {
+        const createRowHtml = (itemClass, path, data, hasChildrenNode) => {
             const isParentLeaf = itemClass.includes('is-parent-leaf');
             const isCheckbox = !itemClass.includes('task-parent');
             
+            // 1. Phân loại Cấp độ để thiết lập trạng thái đóng/mở mặc định
+            let levelNum = 1;
+            if (itemClass.includes('task-parent')) { levelNum = 0; }
+            else if (itemClass.includes('task-child')) { levelNum = 1; }
+            else if (itemClass.includes('task-grandchild')) { levelNum = 2; }
+            else if (itemClass.includes('task-great-grandchild')) { levelNum = 3; }
+
+            // 2. Tạo nút Đóng/Mở
+            let toggleBtn = '<span class="toggle-btn placeholder"></span>';
+            if (hasChildrenNode) {
+                const isExpanded = levelNum < 1; // Chỉ Cấp 1 (Parent) mới mặc định mở (-)
+                const sign = isExpanded ? '-' : '+';
+                toggleBtn = `<span class="toggle-btn" onclick="toggleRowExpand(event, '${path}')">${sign}</span>`;
+            }
+
+            // 3. Mặc định ẨN (thêm class collapsed-hide) với các dòng từ Cấp 3 trở xuống
+            const hideClass = levelNum <= 1 ? '' : 'collapsed-hide';
+            
             let hoSoBtn = '';
             const links = hoSoLinksMap.get(path);
+
             if (links && links.size > 0) {
                 const linksJson = JSON.stringify(Array.from(links));
                 hoSoBtn = `<button class="btn-info btn-action" data-links='${linksJson}' onclick="showLinks(event)">Có</button>`;
@@ -6570,9 +6625,14 @@ const recalculateSingleParentCost = async (parentPath, childrenField = null, fie
 
             const displayTanSuat = (data.tanSuatTH === 0) ? '-' : (data.tanSuatTH || '');
 
-                        return `<tr class="${itemClass}" data-main-parent="${mainParentId}" data-path="${path}">
-                <td>${isCheckbox ? `<input type="checkbox" class="${isParentLeaf ? 'parent-checkbox' : 'task-checkbox'}" data-path="${path}" onchange="${isParentLeaf ? 'toggleChildrenCheckboxes(this)' : 'toggleSelection(this)'}">` : ''}</td>
+                        return `<tr class="${itemClass}${hideClass}" data-main-parent="${mainParentId}" data-path="${path}">
+                <td>
+                    <div style="display: flex; align-items: center;">
+                        ${toggleBtn}${isCheckbox ? `<input type="checkbox" class="${isParentLeaf ? 'parent-checkbox' : 'task-checkbox'}" data-path="${path}" onchange="${isParentLeaf ? 'toggleChildrenCheckboxes(this)' : 'toggleSelection(this)'}">` : ''}
+                    </div>
+                </td>
                 <td class="col-tt">${convertTTForDisplay(data.tt)}</td>
+
                 <td class="col-noidung" ${noiDungStyle}>${data.noiDung}</td>
                 
                 <td class="col-tagname ${itemClass.includes('task-grandchild') ? 'editable-cell' : ''}" ${itemClass.includes('task-grandchild') ? 'data-field="tagName"' : ''}>
@@ -6618,14 +6678,18 @@ parentData.tgBatDau = parentSummary.totalExecutedLeafNodesCap1 || 0;
             totalExecutedCost += parentData.chiPhiThucHien || 0;
             const parentPath = `${getParentCollectionName()}/${parentData.id}`;
             
-            html += createRowHtml('task-parent', parentPath, parentData);
+            // SỬA DÒNG GỌI HÀM CŨ: html += createRowHtml('task-parent', parentPath, parentData);
+            const hasChildren = parentData.children && Object.keys(parentData.children).length > 0;
+            html += createRowHtml('task-parent', parentPath, parentData, hasChildren);
 
             if (parentData.children) {
                 const children = Object.keys(parentData.children).map(id => ({ id, ...parentData.children[id] })).sort(childSort);
                 for (const childData of children) {
                     const childPath = `${parentPath}/children/${childData.id}`;
                     docDataMap.set(childPath, childData);
-                    if (!childData.isHidden) html += createRowHtml('task-child', childPath, childData);
+                    // SỬA DÒNG GỌI HÀM CŨ: if (!childData.isHidden) html += createRowHtml('task-child', childPath, childData);
+                    const hasGC = childData.grandchildren && Object.keys(childData.grandchildren).length > 0;
+                    if (!childData.isHidden) html += createRowHtml('task-child', childPath, childData, hasGC);
                     
                     if (childData.grandchildren) {
                         const grandchildren = Object.keys(childData.grandchildren).map(id => ({ id, ...childData.grandchildren[id] })).sort((a, b) => parseInt(a.id, 10) - parseInt(b.id, 10));
@@ -6645,7 +6709,10 @@ parentData.tgBatDau = parentSummary.totalExecutedLeafNodesCap1 || 0;
                             // Xác định class hiển thị: Nếu KHÔNG có con cấp 4 -> là parent-leaf (chữ thường)
                             const isGCParent = hasLevel4Children;
                             const gcClass = `task-grandchild ${!isGCParent ? 'is-parent-leaf' : ''}`;
-                            html += createRowHtml(gcClass, grandchildPath, grandchildData);
+                            // SỬA DÒNG GỌI HÀM CŨ: html += createRowHtml(gcClass, grandchildPath, grandchildData);
+                            const hasGGC = grandchildData.greatGrandchildren && Object.keys(grandchildData.greatGrandchildren).length > 0;
+                            const hasJust = grandchildData.justifications && Object.keys(grandchildData.justifications).length > 0;
+                            html += createRowHtml(gcClass, grandchildPath, grandchildData, hasGGC || hasJust);
                             // ===============================================
 
                             if (grandchildData.greatGrandchildren) {
@@ -6654,7 +6721,9 @@ parentData.tgBatDau = parentSummary.totalExecutedLeafNodesCap1 || 0;
                                     const greatGrandchildPath = `${grandchildPath}/greatGrandchildren/${greatGrandchildData.id}`;
                                     docDataMap.set(greatGrandchildPath, greatGrandchildData);
                                     const rowClass = `task-great-grandchild is-parent-leaf`; 
-                                    html += createRowHtml(rowClass, greatGrandchildPath, greatGrandchildData);
+                                    // SỬA DÒNG GỌI HÀM CŨ: html += createRowHtml(rowClass, greatGrandchildPath, greatGrandchildData);
+                                    const hasGGJust = greatGrandchildData.justifications && Object.keys(greatGrandchildData.justifications).length > 0;
+                                    html += createRowHtml(rowClass, greatGrandchildPath, greatGrandchildData, hasGGJust);
 
                                     // Render Giải trình Cấp 4 (GreatGrandchild)
                                     if (greatGrandchildData.justifications) {
@@ -6664,8 +6733,17 @@ parentData.tgBatDau = parentSummary.totalExecutedLeafNodesCap1 || 0;
                                         for (const justData of justifications) {
                                              const displayCost = getDisplayChiPhiForJustification(justData);
                                              const chiPhiStyle = justData.hasSubJustifications ? 'font-weight: bold; font-style: italic;' : '';
-                                             html += `<tr class="task-justification task-justification-parent" data-main-parent="${mainParentId}" data-path="${justData.path}">
-                                                <td><input type="checkbox" class="justification-checkbox ${justData.hasSubJustifications ? 'parent-checkbox' : ''}" data-path="${justData.path}" data-parent-path="${greatGrandchildPath}" onchange="${justData.hasSubJustifications ? 'toggleChildrenCheckboxes(this)' : 'toggleSelection(this)'}"></td>
+                                             // THAY THẾ CHO CẢ 2 CHỖ
+                                             const hasSubJust = justData.hasSubJustifications && justData.subJustifications;
+                                             const toggleBtnJust = hasSubJust ? `<span class="toggle-btn" onclick="toggleRowExpand(event, '${justData.path}')">+</span>` : `<span class="toggle-btn placeholder"></span>`;
+
+                                             html += `<tr class="task-justification task-justification-parent collapsed-hide" data-main-parent="${mainParentId}" data-path="${justData.path}">
+                                                <td>
+                                                    <div style="display: flex; align-items: center;">
+                                                        ${toggleBtnJust}
+                                                        <input type="checkbox" class="justification-checkbox ${justData.hasSubJustifications ? 'parent-checkbox' : ''}" data-path="${justData.path}" data-parent-path="${greatGrandchildPath}" onchange="${justData.hasSubJustifications ? 'toggleChildrenCheckboxes(this)' : 'toggleSelection(this)'}">
+                                                    </div>
+                                                </td>
                                                 <td class="col-tt">${convertTTForDisplay(justData.tt)}</td>
                                                 <td class="col-noidung">${justData.noiDung}</td>
                                                 <td class="col-dv-thuchien"></td><td class="text-right col-kh-nam-truoc"></td><td class="text-right col-th-nam-truoc"></td>
@@ -6687,8 +6765,14 @@ parentData.tgBatDau = parentSummary.totalExecutedLeafNodesCap1 || 0;
                                             if (justData.hasSubJustifications && justData.subJustifications) {
                                                  const subJustifications = Object.keys(justData.subJustifications).map(subId => ({ id: subId, path: `${justData.path}/subJustifications/${subId}`, ...justData.subJustifications[subId] })).sort((a, b) => (a.tt || '').localeCompare((b.tt || ''), 'en', { numeric: true }));
                                                  for (const subJust of subJustifications) {
-                                                     html += `<tr class="task-justification task-justification-child" data-main-parent="${mainParentId}" data-path="${subJust.path}">
-                                                        <td><input type="checkbox" class="justification-checkbox" data-path="${subJust.path}" data-parent-path="${justData.path}" onchange="toggleSelection(this)"></td>
+                                                     // THAY THẾ CHO CẢ 2 CHỖ
+                                                     html += `<tr class="task-justification task-justification-child collapsed-hide" data-main-parent="${mainParentId}" data-path="${subJust.path}">
+                                                        <td>
+                                                            <div style="display: flex; align-items: center;">
+                                                                <span class="toggle-btn placeholder"></span>
+                                                                <input type="checkbox" class="justification-checkbox" data-path="${subJust.path}" data-parent-path="${justData.path}" onchange="toggleSelection(this)">
+                                                            </div>
+                                                        </td>
                                                         <td class="col-tt">${convertTTForDisplay(subJust.tt)}</td>
                                                         <td class="col-noidung" style="padding-left: 40px; font-style: italic;">${subJust.noiDung}</td>
                                                         <td class="col-dv-thuchien"></td><td class="text-right col-kh-nam-truoc"></td><td class="text-right col-th-nam-truoc"></td>
@@ -6721,8 +6805,17 @@ parentData.tgBatDau = parentSummary.totalExecutedLeafNodesCap1 || 0;
                                 for (const justData of justifications) {
                                      const displayCost = getDisplayChiPhiForJustification(justData);
                                      const chiPhiStyle = justData.hasSubJustifications ? 'font-weight: bold; font-style: italic;' : '';
-                                     html += `<tr class="task-justification task-justification-parent" data-main-parent="${mainParentId}" data-path="${justData.path}">
-                                        <td><input type="checkbox" class="justification-checkbox ${justData.hasSubJustifications ? 'parent-checkbox' : ''}" data-path="${justData.path}" data-parent-path="${grandchildPath}" onchange="${justData.hasSubJustifications ? 'toggleChildrenCheckboxes(this)' : 'toggleSelection(this)'}"></td>
+                                     // THAY THẾ CHO CẢ 2 CHỖ
+                                             const hasSubJust = justData.hasSubJustifications && justData.subJustifications;
+                                             const toggleBtnJust = hasSubJust ? `<span class="toggle-btn" onclick="toggleRowExpand(event, '${justData.path}')">+</span>` : `<span class="toggle-btn placeholder"></span>`;
+
+                                             html += `<tr class="task-justification task-justification-parent collapsed-hide" data-main-parent="${mainParentId}" data-path="${justData.path}">
+                                                <td>
+                                                    <div style="display: flex; align-items: center;">
+                                                        ${toggleBtnJust}
+                                                        <input type="checkbox" class="justification-checkbox ${justData.hasSubJustifications ? 'parent-checkbox' : ''}" data-path="${justData.path}" data-parent-path="${greatGrandchildPath}" onchange="${justData.hasSubJustifications ? 'toggleChildrenCheckboxes(this)' : 'toggleSelection(this)'}">
+                                                    </div>
+                                                </td>
                                         <td class="col-tt">${convertTTForDisplay(justData.tt)}</td>
                                         <td class="col-noidung">${justData.noiDung}</td>
                                         <td class="col-dv-thuchien"></td><td class="text-right col-kh-nam-truoc"></td><td class="text-right col-th-nam-truoc"></td>
@@ -6742,8 +6835,14 @@ parentData.tgBatDau = parentSummary.totalExecutedLeafNodesCap1 || 0;
                                     if (justData.hasSubJustifications && justData.subJustifications) {
                                          const subJustifications = Object.keys(justData.subJustifications).map(subId => ({ id: subId, path: `${justData.path}/subJustifications/${subId}`, ...justData.subJustifications[subId] })).sort((a, b) => (a.tt || '').localeCompare((b.tt || ''), 'en', { numeric: true }));
                                          for (const subJust of subJustifications) {
-                                             html += `<tr class="task-justification task-justification-child" data-main-parent="${mainParentId}" data-path="${subJust.path}">
-                                                <td><input type="checkbox" class="justification-checkbox" data-path="${subJust.path}" data-parent-path="${justData.path}" onchange="toggleSelection(this)"></td>
+                                             // THAY THẾ CHO CẢ 2 CHỖ
+                                                     html += `<tr class="task-justification task-justification-child collapsed-hide" data-main-parent="${mainParentId}" data-path="${subJust.path}">
+                                                        <td>
+                                                            <div style="display: flex; align-items: center;">
+                                                                <span class="toggle-btn placeholder"></span>
+                                                                <input type="checkbox" class="justification-checkbox" data-path="${subJust.path}" data-parent-path="${justData.path}" onchange="toggleSelection(this)">
+                                                            </div>
+                                                        </td>
                                                 <td class="col-tt">${convertTTForDisplay(subJust.tt)}</td>
                                                 <td class="col-noidung" style="padding-left: 40px; font-style: italic;">${subJust.noiDung}</td>
                                                 <td class="col-dv-thuchien"></td><td class="text-right col-kh-nam-truoc"></td><td class="text-right col-th-nam-truoc"></td>
