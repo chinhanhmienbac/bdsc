@@ -590,3 +590,32 @@ body.is-moving-mode #taskList tbody tr.moving-source {
 .grecaptcha-badge { 
     visibility: hidden !important; 
 }
+/* --- CSS MỚI: NÚT EXPAND/COLLAPSE CÂY DỮ LIỆU --- */
+.toggle-btn {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    line-height: 12px;
+    text-align: center;
+    border: 1px solid #777;
+    background: #fff;
+    cursor: pointer;
+    font-weight: bold;
+    margin-right: 5px;
+    border-radius: 2px;
+    user-select: none;
+    color: #333;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+.toggle-btn:hover {
+    background: #e9ecef;
+}
+.toggle-btn.placeholder {
+    border: none;
+    background: transparent;
+    cursor: default;
+}
+#taskList tbody tr.collapsed-hide {
+    display: none !important;
+}
