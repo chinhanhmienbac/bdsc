@@ -6618,7 +6618,7 @@ const recalculateSingleParentCost = async (parentPath, childrenField = null, fie
 
             const displayTanSuat = (data.tanSuatTH === 0) ? '-' : (data.tanSuatTH || '');
 
-                        return `<tr class="${itemClass}${hideClass}" data-main-parent="${mainParentId}" data-path="${path}">
+                        return `<tr class="${itemClass} ${hideClass}" data-main-parent="${mainParentId}" data-path="${path}">
                 <td>
                     <div style="display: flex; align-items: center;">
                         ${toggleBtnHtml}${isCheckbox ? `<input type="checkbox" class="${isParentLeaf ? 'parent-checkbox' : 'task-checkbox'}" data-path="${path}" onchange="${isParentLeaf ? 'toggleChildrenCheckboxes(this)' : 'toggleSelection(this)'}">` : ''}
