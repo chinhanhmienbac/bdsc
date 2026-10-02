@@ -1,0 +1,231 @@
+@import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap');
+
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; padding: 20px; }
+        .excel-sheet { background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.1); padding: 20px 30px; min-height: 100vh; position: relative; border-radius: 8px; }
+        
+        /* Logo & Fonts */
+        .site-logo { 
+            position: absolute; top: 15px; left: 15px; width: 8%; z-index: 10; 
+            transform: translate(15%, 10%); 
+        }
+
+        h1.main-title { 
+            text-align: center; font-weight: 700; text-transform: uppercase; 
+            margin-bottom: 5px; font-size: 34px; 
+            color: #217346; font-family: 'Segoe UI', sans-serif; margin-top: 10px; 
+        }
+        h2.sub-title { 
+            text-align: center; font-weight: 600; 
+            font-size: 24px; 
+            margin-bottom: 25px; color: #27ae60; font-family: 'Segoe UI', sans-serif; 
+        }
+        
+        #facilityName { border-bottom: 2px dotted #27ae60; min-width: 150px; display: inline-block; color: #333; }
+
+        /* Action Bar */
+        .action-bar { display: flex; justify-content: flex-end; align-items: center; margin-bottom: 15px; gap: 10px; flex-wrap: wrap; padding-right: 5px; }
+        .form-check-input { cursor: pointer; width: 3em; height: 1.5em; }
+        .edit-mode-label { font-weight: bold; color: #d63384; margin-right: 10px; user-select: none; font-size: 14px; }
+
+        
+       /* --- TABLE CSS CẬP NHẬT (FINAL) --- */
+        .table-container { max-height: 80vh; overflow-y: auto; border: 1px solid #000; }
+        table.excel-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+        
+        /* HEADER: Xanh dương đậm RGB(51,102,204), Chữ trắng */
+        table.excel-table th { 
+            position: sticky; top: 0; z-index: 5;
+            background-color: rgb(51, 102, 204) !important;
+            color: white !important;
+            border: 1px solid #ddd;
+            padding: 8px 4px; font-weight: bold; text-align: center; 
+            vertical-align: middle;
+            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4); 
+        }
+
+        /* DATA CELLS: Mặc định căn giữa (Giao diện Xem) */
+        table.excel-table td { 
+            border: 1px solid #ddd; 
+            padding: 6px 6px; 
+            vertical-align: middle !important; /* Mặc định căn giữa */
+        }
+
+        /* --- XỬ LÝ RIÊNG KHI Ở CHẾ ĐỘ CHỈNH SỬA --- */
+        /* Khi bảng có class 'edit-mode-on', các ô dữ liệu sẽ căn trên */
+        table.excel-table.edit-mode-on td {
+            vertical-align: top !important; 
+        }
+        /* Riêng cột STT (cột đầu tiên) vẫn giữ căn giữa cho đẹp */
+        table.excel-table.edit-mode-on td:first-child,
+        table.excel-table.edit-mode-on td.text-center {
+            vertical-align: middle !important;
+        }
+
+        /* --- MÀU NỀN --- */
+        /* Gradient trắng -> xám cho dòng dữ liệu */
+        table.excel-table tbody tr:not(.category-row) td { 
+            background: linear-gradient(180deg, #ffffff 0%, #ebedef 100%);
+        }
+        /* Hover */
+        table.excel-table tbody tr:not(.category-row):hover td { 
+            background: linear-gradient(180deg, #f8f9fa 0%, #dbe9f6 100%) !important;
+            transition: background 0.15s ease;
+        }
+        /* Dòng phân loại: Xanh lá nhạt */
+        tr.category-row td { 
+            font-weight: 700; 
+            background-color: #d1e7dd !important; 
+            color: #0f5132; 
+            vertical-align: middle; 
+            border-bottom: 1px solid #999; 
+        }
+        /* Columns */
+        .col-stt { width: 50px; text-align: center; font-weight: bold; }
+        .col-name { width: 15%; }
+        .col-data { width: auto; }
+
+        /* Buttons & Inline Edit */
+        .cell-actions { display: flex; gap: 3px; margin-bottom: 6px; justify-content: center; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 4px; opacity: 0.2; transition: opacity 0.3s; }
+        td:hover .cell-actions { opacity: 1; }
+        
+        .btn-mini { border: none; font-size: 10px; padding: 3px 6px; border-radius: 3px; cursor: pointer; color: white; font-weight: bold; transition: 0.2s; }
+        .btn-mini:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .btn-upload { background-color: #f39c12; } .btn-link { background-color: #3498db; }
+        .btn-manage { background-color: #9b59b6; } .btn-collect { background-color: #27ae60; }
+        
+        .inline-edit { width: 100%; border: 1px solid #3498db; padding: 4px; background-color: rgba(255,255,255,0.8); font-weight: 600; font-size: 13px; border-radius: 3px; }
+
+        /* Multi-link Box (Transparent to show gradient) */
+        .multi-link-box { 
+            max-height: 80px; overflow-y: auto; display: block; 
+            background-color: transparent; 
+            border: 1px solid rgba(0,0,0,0.05); 
+            padding: 2px; border-radius: 3px; 
+        }
+        .multi-link-box::-webkit-scrollbar { width: 4px; }
+        .multi-link-box::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
+
+        /* Link Item (Reverted to standard QLTB3 style) */
+        .link-item { 
+            display: block; font-size: 12px; line-height: 1.6; 
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+            border-bottom: 1px dashed rgba(0,0,0,0.1); padding: 1px 0; 
+        }
+        .link-item a { text-decoration: none; color: #0066cc; }
+        .link-item a:hover { color: #d35400; text-decoration: underline; }
+
+        /* Main Buttons */
+        .btn-excel-export { background-color: #1D6F42; color: white; }
+        .btn-excel-import { background-color: #e67e22; color: white; }
+        .btn-batch { background-color: #8e44ad; color: white; }
+        .btn-main { display: flex; align-items: center; gap: 6px; font-weight: 500; font-size: 13px; padding: 6px 12px; }
+
+        /* Modals & Loading */
+        #loadingMsg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; display: none; justify-content: center; align-items: center; flex-direction: column; color: white; }
+        .login-logo { width: 120px; display: block; margin: 0 auto 20px auto; }
+        
+        /* History Modal Table */
+		.history-year-block { 
+    margin-bottom: 20px; 
+    border: 1px solid #e0e0e0; 
+    padding: 15px; 
+    border-radius: 8px; 
+    background: #ffffff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* FIX: Tiêu đề Năm Đậm & Đỏ */
+.history-year-title { 
+    font-weight: 700 !important;  /* Bắt buộc in đậm */
+    color: #dc3545 !important;    /* Màu đỏ đậm */
+    font-size: 14px;
+    text-transform: uppercase;    /* Viết hoa cho nổi bật */
+    border-bottom: 2px solid #dc3545; /* Gạch chân màu đỏ */
+    padding-bottom: 8px; 
+    margin-bottom: 15px; 
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+        /* --- CẬP NHẬT CSS CHO MODAL LỊCH SỬ --- */
+
+/* Màu nền xen kẽ cho các nhóm ngày khác nhau */
+.hist-group-odd td { 
+    background-color: #ffffff !important; /* Màu trắng */
+}
+.hist-group-even td { 
+    background-color: #e8f4f8 !important; /* Màu xanh dương rất nhạt */
+}
+
+/* Cập nhật lại độ rộng các cột để nhường chỗ cho cột Nội dung */
+.col-hist-date { width: 10%; text-align: center; }
+.col-hist-oddo { width: 10%; text-align: center; font-weight: bold; color: #d35400; } /* Cột mới */
+.col-hist-content { width: 33%; text-align: left; } 
+.col-hist-unit { width: 8%; text-align: center; }
+.col-hist-price { width: 13%; text-align: right; }
+.col-hist-total { width: 16%; text-align: right; font-weight: bold; color: #c0392b; }
+.col-hist-link { width: 10%; text-align: center; }
+
+/* Tinh chỉnh lại bảng */
+.history-detail-table { 
+    width: 100%; 
+    font-size: 12px; 
+    border-collapse: collapse; 
+    table-layout: fixed; /* Cố định chiều rộng cột */
+}
+.history-detail-table th {
+    background: #3366cc; /* Màu header xanh đậm cho đẹp */
+    color: white;
+    padding: 8px;
+    border: 1px solid #ddd;
+}
+
+/* CSS MỚI CHO BẢNG LỊCH SỬ PHÂN CẤP */
+.hist-group-row td {
+    background-color: #d1e7dd !important; /* Màu xanh nhạt cho dòng Tổng/Cha */
+    font-weight: bold;
+    color: #0f5132;
+    border-top: 2px solid #fff;
+}
+.hist-child-row td {
+    background-color: #fff !important;
+}
+.hist-child-content {
+    padding-left: 20px !important; /* Thụt đầu dòng cho việc con */
+    font-style: italic;
+    color: #555;
+}
+.hist-child-row:hover td {
+    background-color: #f8f9fa !important;
+}
+        
+        .device-table { width: 100%; font-size: 12px; border-collapse: collapse; background: white; }
+        .device-table th, .device-table td { border: 1px solid #ddd; padding: 4px 8px; }
+        .manage-item-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; border-bottom: 1px solid #f0f0f0; padding-bottom: 8px; }
+        .manage-item-del { color: #e74c3c; cursor: pointer; }
+    
+	/* --- STYLE CHO ICON SÁCH (MỚI) --- */
+        .book-icon {
+            width: 66%;           /* Chiều rộng 2/3 ô */
+            display: block;
+            margin: 0 auto;       /* Căn giữa */
+            cursor: pointer;      /* Con trỏ bàn tay */
+            transition: transform 0.2s;
+            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.3)); /* Đổ bóng nhẹ cho đẹp */
+        }
+        .book-icon:hover {
+            transform: scale(1.1); /* Phóng to nhẹ khi di chuột */
+        }
+        
+        /* Style cho danh sách trong Modal (Read-only) */
+        .read-only-item {
+            padding: 8px 10px;
+            border-bottom: 1px dashed #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+        .read-only-item:last-child { border-bottom: none; }
+        .read-only-item a { text-decoration: none; font-weight: 600; color: #0066cc; }
+        .read-only-item a:hover { text-decoration: underline; color: #d35400; }
