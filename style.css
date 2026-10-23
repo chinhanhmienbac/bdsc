@@ -546,45 +546,38 @@ body.can-quick-insert #taskList.planning-mode .quick-insert-btn {
     100% { opacity: 0.5; }
 }
 
-/* Giao diện Menu lựa chọn đa cấp độ */
+/* Giao diện Menu Đa Cấp khi nhấn vào dấu + ở đáy */
 .quick-insert-menu {
     position: absolute;
-    left: 20px;
-    bottom: -7px;
-    background: white;
+    background-color: #ffffff; /* Nền trắng để không bị chồng chữ */
     border: 1px solid #ccc;
-    border-radius: 4px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    z-index: 1000;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    border-radius: 6px;
+    z-index: 9999; /* Đẩy lên lớp cao nhất */
+    min-width: 320px;
     display: none;
-    min-width: 280px;
-    text-align: left;
-    font-family: Arial, sans-serif;
-    animation: fadeIn 0.2s;
+    padding: 8px 0;
+    font-family: inherit;
 }
-.quick-insert-menu.show {
-    display: block;
-}
-.quick-insert-menu div.menu-item {
-    padding: 10px 12px;
-    font-size: 13px;
-    color: #333;
+.quick-insert-menu-item {
+    padding: 12px 18px;
     cursor: pointer;
-    border-bottom: 1px solid #eee;
+    font-size: 14px;
+    color: #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     transition: background-color 0.2s;
 }
-.quick-insert-menu div.menu-item:hover {
-    background-color: #f0f8ff;
-    color: #0056b3;
+.quick-insert-menu-item:hover {
+    background-color: #f0f8ff; 
+    color: #007bff;
 }
-.quick-insert-menu div.menu-item:last-child {
-    border-bottom: none;
+.quick-insert-menu-tt {
+    font-weight: bold;
+    color: #d63384; 
+    font-size: 13px;
+    background-color: #ffe8f0;
+    padding: 3px 8px;
+    border-radius: 4px;
 }
-.quick-insert-menu span.tt-preview {
-    color: #888;
-    font-style: italic;
-    float: right;
-}
-
-
-
