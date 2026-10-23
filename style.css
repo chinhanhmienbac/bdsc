@@ -213,6 +213,8 @@ input[type=number] { -moz-appearance: textfield; }
 .task-grandchild .col-noidung { font-style: italic !important; }
 .task-grandchild .col-ghichu { font-style: normal !important; font-weight: normal !important; }
 .task-great-grandchild.is-parent-leaf td { background-color: #f8f9fa; }
+/* Màu nền xanh lá nhạt cho toàn bộ các cột của task cấp 5 */
+.task-great-great-grandchild td { background-color: #e8f5e9; }
 .task-great-great-grandchild td:nth-child(3) { font-style: italic; padding-left: 18px !important; }
 
 /* Justification Rows */
