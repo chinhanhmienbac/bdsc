@@ -5240,7 +5240,8 @@ if (childrenField === 'greatGreatGrandchildren') {
                 };
             } 
             else {
-                btn.title = 'Thêm Cấp độ Task...'; // Tooltip mặc định
+                // Sửa lại Tooltip theo đúng yêu cầu
+                btn.title = 'Thêm Kế hoạch / Công việc / Thiết bị';
                 
                 btn.onclick = (e) => {
                     e.stopPropagation();
