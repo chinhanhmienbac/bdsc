@@ -38,6 +38,23 @@ if (!firebaseConfig) {
 const WEB_APP_URL = window.WEB_APP_URL;
 const RECAPTCHA_SITE_KEY = window.RECAPTCHA_SITE_KEY;
 
+// --- HELPER: Lấy Tiêu đề Modal chuẩn theo Cấp độ ---
+    window.getModalTitleByLevel = function(level) {
+        if (level === 'justification') return 'Thêm giải trình';
+        if (level === 'subJustification') return 'Thêm giải trình con';
+        if (level === 'child') return 'THÊM HỆ THỐNG THIẾT BỊ, CÔNG TRÌNH';
+        if (level === 'grandchild') return 'THÊM THIẾT BỊ, HẠNG MỤC';
+        if (level === 'greatGrandchild') return 'THÊM CÔNG VIỆC HOẶC PHỤ TÙNG THAY THẾ';
+        if (level === 'greatGreatGrandchild') return 'THÊM VẬT TƯ/PHỤ TÙNG CHI TIẾT';
+        return `Thêm mục mới`;
+    };
+
+    // --- HELPER: Dự đoán nhanh TT tiếp theo (Dùng cho giao diện) ---
+    window.predictNextTT = function(lastTT, level) {
+        if (!lastTT) return '1';
+        if (level === 'child') return numberToRoman(romanToNumber(lastTT) + 1);
+        return incrementTT(lastTT); // Tận dụng hàm incrementTT hiện có
+    };
 // Hàm hỗ trợ đọc file dưới dạng chuỗi Base64 trả về Promise
 const readFileAsBase64 = (file) => {
     return new Promise((resolve, reject) => {
@@ -3788,6 +3805,10 @@ function processJustificationForExcel(justificationNode, parentTT, level, ctx) {
         if (dateDropdown && !dateDropdown.contains(event.target) && !event.target.classList.contains('date-filter-toggle')) {
             dateDropdown.style.display = 'none';
         }
+		  // [BỔ SUNG MỚI]: Đóng Quick Insert Menu
+        if (!event.target.closest('.quick-insert-btn') && !event.target.closest('.quick-insert-menu')) {
+            document.querySelectorAll('.quick-insert-menu').forEach(m => m.classList.remove('show'));
+        }
     };
 
     // CÁC HÀM HỖ TRỢ KHÔNG CẦN GLOBAL
@@ -4993,10 +5014,12 @@ if (childrenField === 'greatGreatGrandchildren') {
         }
     }
 	// =========================================================================
-    // HÀM QUÉT DOM & VẼ NÚT CHÈN NHANH (+) CHO KHE TRỐNG VÀ CUỐI DANH SÁCH
+    // HÀM QUÉT DOM & VẼ NÚT CHÈN NHANH (+) - ĐÃ NÂNG CẤP ĐA CẤP ĐỘ
     // =========================================================================
     window.renderQuickInsertButtons = function() {
         document.querySelectorAll('.quick-insert-btn').forEach(btn => btn.remove());
+        document.querySelectorAll('.quick-insert-menu').forEach(menu => menu.remove());
+
         const tbody = document.getElementById('taskListBody');
         if (!tbody) return;
 
@@ -5004,6 +5027,7 @@ if (childrenField === 'greatGreatGrandchildren') {
         if (rows.length === 0) return;
 
         const groups = new Map();
+        const insertPoints = new Map(); // Nơi gom các Option chèn theo rowIndex
 
         const parseTTNum = (ttStr, level) => {
             if (!ttStr) return 0;
@@ -5028,23 +5052,23 @@ if (childrenField === 'greatGreatGrandchildren') {
                 case 'grandchild': return 3;
                 case 'greatGrandchild': return 4;
                 case 'greatGreatGrandchild': return 5;
-                default: return 99; // Các row giải trình
+                default: return 99;
             }
         };
 
-        // 1. Phân nhóm các dòng theo cấu trúc Cha logic
+        // 1. Phân nhóm
         rows.forEach((row, index) => {
             const path = row.dataset.path;
             const isJust = row.classList.contains('task-justification') || row.classList.contains('task-justification-parent') || row.classList.contains('task-justification-child');
-            
-            if (!path || isJust) return; // Bỏ qua giải trình
+            if (!path || isJust) return;
 
             const level = getLevelFromRow(row);
-            if (!level) return;
+            // YÊU CẦU 1: Bỏ qua hoàn toàn Level 5 (greatGreatGrandchild)
+            if (!level || level === 'greatGreatGrandchild') return; 
 
             const pathParts = path.split('/');
-            pathParts.pop(); // Bỏ ID
-            if (level !== 'parent') pathParts.pop(); // Bỏ tên collection (children, grandchildren...)
+            pathParts.pop();
+            if (level !== 'parent') pathParts.pop();
             
             const parentPath = pathParts.join('/');
             const ttText = row.querySelector('.col-tt')?.innerText.trim() || '';
@@ -5053,28 +5077,16 @@ if (childrenField === 'greatGreatGrandchildren') {
             if (!groups.has(parentPath)) {
                 groups.set(parentPath, { level: level, items: [], parentPath: parentPath });
             }
-            
             groups.get(parentPath).items.push({ row, rowIndex: index, tt: ttText, num, level });
         });
 
-        // Hàm helper sinh nút + vào vị trí DOM
-        const injectPlusButton = (targetRow, parentPath, apiLevel, startTT, maxRows, tooltip) => {
-            if (!targetRow) return;
-            const tdFirst = targetRow.querySelector('td:first-child');
-            if (!tdFirst) return;
-
-            const btn = document.createElement('div');
-            btn.className = 'quick-insert-btn';
-            btn.innerHTML = '+';
-            btn.title = tooltip;
-            btn.onclick = (e) => {
-                e.stopPropagation();
-                window.openAddModal(parentPath, apiLevel, startTT, maxRows);
-            };
-            tdFirst.appendChild(btn);
+        // Hàm helper gom điểm chèn
+        const addInsertOption = (targetRowIndex, option) => {
+            if (!insertPoints.has(targetRowIndex)) insertPoints.set(targetRowIndex, []);
+            insertPoints.get(targetRowIndex).push(option);
         };
 
-        // 2. Tính toán và chèn nút +
+        // 2. Tính toán vị trí chèn
         groups.forEach((group) => {
             const items = group.items;
             if (items.length === 0) return;
@@ -5082,15 +5094,12 @@ if (childrenField === 'greatGreatGrandchildren') {
             for (let i = 0; i < items.length; i++) {
                 const current = items[i];
                 
-                // Trường hợp A: Có GAP giữa 2 phần tử
+                // Trưởng hợp A: GAP (Khe trống)
                 if (i > 0) {
                     const prev = items[i - 1];
                     const diff = current.num - prev.num;
-                    
                     if (diff > 1) {
-                        const maxRowsAllowed = diff - 1;
                         const startNum = prev.num + 1;
-                        
                         let startTTStr = String(startNum);
                         if (group.level !== 'parent' && group.level !== 'child') {
                             const parts = prev.tt.split(/[.,]/);
@@ -5100,30 +5109,99 @@ if (childrenField === 'greatGreatGrandchildren') {
                             startTTStr = numberToRoman(startNum);
                         }
                         
-                        // Khe hở: Chèn xuống mốc "Đáy" của task phía trên (bao gồm cả giải trình của nó)
-                        // Bằng cách lùi DOM 1 row tính từ task phía dưới
-                        const insertTargetRow = rows[current.rowIndex - 1];
-                        injectPlusButton(insertTargetRow, group.parentPath, group.level, startTTStr, maxRowsAllowed, `Thêm task chèn vào khe trống (Tối đa ${maxRowsAllowed} dòng)`);
+                        const title = window.getModalTitleByLevel(group.level);
+                        addInsertOption(current.rowIndex - 1, {
+                            parentPath: group.parentPath,
+                            level: group.level,
+                            startTT: startTTStr,
+                            maxRows: diff - 1,
+                            title: title,
+                            displayTT: startTTStr
+                        });
                     }
                 }
 
-                // Trường hợp B: Ở Đáy cùng của danh sách group
+                // Trường hợp B: ĐÁY CỦA NHÓM (Có thể trùng nhiều cấp độ)
                 if (i === items.length - 1) {
-                    let lastDescendantRow = current.row;
+                    let lastDescendantIndex = current.rowIndex;
                     const currentLevelWeight = getLevelWeight(group.level);
                     
-                    // Quét xuống dưới để tìm "đáy" (vượt qua tất cả task con và giải trình của nó)
                     for (let j = current.rowIndex + 1; j < rows.length; j++) {
                         const nextRow = rows[j];
                         const nextLevel = getLevelFromRow(nextRow);
                         const nextWeight = nextLevel ? getLevelWeight(nextLevel) : 99; 
-                        
                         if (nextWeight <= currentLevelWeight) break;
-                        lastDescendantRow = nextRow;
+                        lastDescendantIndex = j;
                     }
                     
-                    injectPlusButton(lastDescendantRow, group.parentPath, group.level, null, null, `Thêm task kế tiếp vào cuối nhóm`);
+                    const expectedTT = window.predictNextTT(current.tt, group.level);
+                    const title = window.getModalTitleByLevel(group.level);
+
+                    addInsertOption(lastDescendantIndex, {
+                        parentPath: group.parentPath,
+                        level: group.level,
+                        startTT: null,
+                        maxRows: null,
+                        title: title,
+                        displayTT: expectedTT
+                    });
                 }
+            }
+        });
+
+        // 3. Vẽ UI từ dữ liệu đã gom
+        insertPoints.forEach((options, rowIndex) => {
+            const targetRow = rows[rowIndex];
+            if (!targetRow) return;
+            const tdFirst = targetRow.querySelector('td:first-child');
+            if (!tdFirst) return;
+
+            // Sắp xếp Menu theo thứ tự Cấp cao -> Cấp thấp cho logic (Weight nhỏ -> lớn)
+            options.sort((a, b) => getLevelWeight(a.level) - getLevelWeight(b.level));
+
+            const btn = document.createElement('div');
+            btn.className = 'quick-insert-btn';
+            btn.innerHTML = '+';
+
+            // YÊU CẦU 3 & YÊU CẦU 2: Xử lý hiển thị
+            if (options.length === 1) {
+                const opt = options[0];
+                btn.title = `${opt.title} (TT: ${opt.displayTT})`;
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    window.openAddModal(opt.parentPath, opt.level, opt.startTT, opt.maxRows);
+                };
+                tdFirst.appendChild(btn);
+            } 
+            else {
+                // Menu Đa cấp độ
+                btn.title = `Thêm Hệ thống / Thiết bị / Công việc...`;
+                const menu = document.createElement('div');
+                menu.className = 'quick-insert-menu';
+                
+                options.forEach(opt => {
+                    const item = document.createElement('div');
+                    item.className = 'menu-item';
+                    item.innerHTML = `<strong>${opt.title}</strong> <span class="tt-preview">(TT: ${opt.displayTT})</span>`;
+                    item.onclick = (e) => {
+                        e.stopPropagation();
+                        menu.classList.remove('show');
+                        window.openAddModal(opt.parentPath, opt.level, opt.startTT, opt.maxRows);
+                    };
+                    menu.appendChild(item);
+                });
+
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    // Đóng tất cả menu khác đang mở
+                    document.querySelectorAll('.quick-insert-menu').forEach(m => {
+                        if (m !== menu) m.classList.remove('show');
+                    });
+                    menu.classList.toggle('show');
+                };
+                
+                tdFirst.appendChild(menu);
+                tdFirst.appendChild(btn);
             }
         });
     };
@@ -6575,14 +6653,7 @@ const disableAttr = isYearLocked ? 'disabled style="cursor:not-allowed; opacity:
              datalistHtml = `<datalist id="deviceTagsList">${tagOptions}</datalist>`;
         }
 
-        let title;
-        if (level === 'justification') title = 'Thêm giải trình';
-        else if (level === 'subJustification') title = 'Thêm giải trình con';
-        else if (level === 'child') title = 'THÊM HỆ THỐNG THIẾT BỊ, CÔNG TRÌNH';
-        else if (level === 'grandchild') title = 'THÊM THIẾT BỊ, HẠNG MỤC';
-        else if (level === 'greatGrandchild') title = 'THÊM CÔNG VIỆC HOẶC PHỤ TÙNG THAY THẾ';
-        else if (level === 'greatGreatGrandchild') title = 'THÊM VẬT TƯ/PHỤ TÙNG CHI TIẾT';
-        else title = `Thêm mục mới (Cấp: ${level})`;
+        const title = window.getModalTitleByLevel(level);
         
         document.getElementById('modalTitle').innerHTML = `<h2>${title}</h2>`;
 
