@@ -5014,17 +5014,18 @@ if (childrenField === 'greatGreatGrandchildren') {
         }
     }
 	// =========================================================================
-    // HÀM QUÉT DOM & VẼ NÚT CHÈN NHANH (+) - ĐÃ XỬ LÝ ẨN/HIỆN L5 & THÊM "CON ĐẦU LÒNG"
+    // HÀM QUÉT DOM & VẼ NÚT CHÈN NHANH (+) - FIX ẨN L5 & GIẢI TRÌNH CON, TOOLTIP NATIVE
     // =========================================================================
     window.renderQuickInsertButtons = function() {
         document.querySelectorAll('.quick-insert-btn').forEach(btn => btn.remove());
         const tbody = document.getElementById('taskListBody');
         if (!tbody) return;
 
-        // [VẤN ĐỀ 1]: Lọc các dòng đang hiển thị thực sự. Bỏ qua các dòng bị ẩn (L5 collapsed, Zero plan...)
+        // [SỬA LỖI]: Thêm điều kiện !r.classList.contains('subjust-collapsed')
         const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => {
             return r.style.display !== 'none' && 
                    !r.classList.contains('l5-collapsed') && 
+                   !r.classList.contains('subjust-collapsed') && 
                    !r.classList.contains('zero-plan-hidden-row');
         });
         
@@ -5094,7 +5095,6 @@ if (childrenField === 'greatGreatGrandchildren') {
                 const current = items[i];
                 
                 // A: Có GAP (Khe hở ngang hàng)
-                // [VẤN ĐỀ 3]: Chặn không sinh GAP cho Level 1 (parent)
                 if (i > 0 && group.level !== 'parent') {
                     const prev = items[i - 1];
                     const diff = current.num - prev.num;
@@ -5123,7 +5123,6 @@ if (childrenField === 'greatGreatGrandchildren') {
                 }
 
                 // B: KẾT THÚC DANH SÁCH (Đáy ngang hàng)
-                // [VẤN ĐỀ 3]: Chặn không sinh Đáy cho Level 1 (parent)
                 if (i === items.length - 1 && group.level !== 'parent') {
                     const nextNum = current.num + 1;
                     let nextTTStr = String(nextNum);
@@ -5137,7 +5136,6 @@ if (childrenField === 'greatGreatGrandchildren') {
                     let lastDescendantIdx = current.rowIndex;
                     const currentLevelWeight = getLevelWeight(group.level);
                     
-                    // Tìm dòng DOM cuối cùng thuộc nhóm (đi xuyên qua con cháu)
                     for (let j = current.rowIndex + 1; j < rows.length; j++) {
                         const nextRow = rows[j];
                         const nextLevel = getLevelFromRow(nextRow);
@@ -5156,14 +5154,12 @@ if (childrenField === 'greatGreatGrandchildren') {
                     });
                 }
 
-                // [VẤN ĐỀ 2]: "CON ĐẦU LÒNG" - Check xem nếu task này CHƯA CÓ CON thì add thêm option tạo Con
-                // Bỏ qua L1 (đã loại), bỏ qua L4 (vì con của L4 là L5, mà L5 đã bị loại khỏi chức năng này)
+                // C: "CON ĐẦU LÒNG"
                 if (group.level === 'child' || group.level === 'grandchild') {
                     const currentLevelWeight = getLevelWeight(group.level);
                     const nextRow = rows[current.rowIndex + 1];
                     let hasVisibleChild = false;
 
-                    // Kiểm tra xem dòng ngay sát bên dưới có phải là con trực tiếp không
                     if (nextRow) {
                         const nextLevel = getLevelFromRow(nextRow);
                         const nextWeight = nextLevel ? getLevelWeight(nextLevel) : 99;
@@ -5175,11 +5171,11 @@ if (childrenField === 'greatGreatGrandchildren') {
                     if (!hasVisibleChild) {
                         let childLevel, childPath, firstChildTTStr;
                         
-                        if (group.level === 'child') { // Đang ở L2, con là L3
+                        if (group.level === 'child') {
                             childLevel = 'grandchild';
-                            childPath = current.row.dataset.path; // Đường dẫn của cha
+                            childPath = current.row.dataset.path; 
                             firstChildTTStr = "1";
-                        } else if (group.level === 'grandchild') { // Đang ở L3, con là L4
+                        } else if (group.level === 'grandchild') { 
                             childLevel = 'greatGrandchild';
                             childPath = current.row.dataset.path;
                             firstChildTTStr = current.tt + ".1";
@@ -5222,26 +5218,20 @@ if (childrenField === 'greatGreatGrandchildren') {
             const tdFirst = targetRow.querySelector('td:first-child');
             if (!tdFirst) return;
 
-            // Loại bỏ trùng lặp (trường hợp đáy ngang hàng trùng với "con đầu lòng" của thằng trên)
             const uniqueConfigsMap = new Map();
             configs.forEach(cfg => uniqueConfigsMap.set(cfg.level, cfg));
             const uniqueConfigs = Array.from(uniqueConfigsMap.values());
             
-            // Sắp xếp Menu từ Cấp độ nhỏ nhất (vd L4) trồi lên lớn nhất (vd L2)
             uniqueConfigs.sort((a, b) => getLevelWeight(b.level) - getLevelWeight(a.level));
 
             const btn = document.createElement('div');
             btn.className = 'quick-insert-btn';
             btn.innerHTML = '+';
 
-            // [VẤN ĐỀ 4]: Tạo Tooltip Tùy chỉnh (HTML Tooltip)
-            const customTooltip = document.createElement('div');
-            customTooltip.className = 'quick-insert-tooltip';
-
+            // [SỬA LỖI]: Quay lại Tooltip title mặc định của trình duyệt
             if (uniqueConfigs.length === 1) {
                 const cfg = uniqueConfigs[0];
-                // Chữ thường + Chữ Đậm Màu đỏ cho TT
-                customTooltip.innerHTML = `${cfg.title} <span class="tt-highlight">(TT: ${cfg.startTT})</span>`;
+                btn.title = `${cfg.title} (TT: ${cfg.startTT})`; // Tooltip mặc định
                 
                 btn.onclick = (e) => {
                     e.stopPropagation();
@@ -5250,7 +5240,7 @@ if (childrenField === 'greatGreatGrandchildren') {
                 };
             } 
             else {
-                customTooltip.innerHTML = 'Thêm Cấp độ Task...';
+                btn.title = 'Thêm Cấp độ Task...'; // Tooltip mặc định
                 
                 btn.onclick = (e) => {
                     e.stopPropagation();
@@ -5275,7 +5265,6 @@ if (childrenField === 'greatGreatGrandchildren') {
                 };
             }
 
-            btn.appendChild(customTooltip); // Gắn tooltip vào trong nút
             tdFirst.appendChild(btn);
         });
     };
