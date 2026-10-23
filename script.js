@@ -5014,20 +5014,23 @@ if (childrenField === 'greatGreatGrandchildren') {
         }
     }
 	// =========================================================================
-    // HÀM QUÉT DOM & VẼ NÚT CHÈN NHANH (+) - ĐÃ NÂNG CẤP ĐA CẤP ĐỘ
+    // HÀM QUÉT DOM & VẼ NÚT CHÈN NHANH (+) - ĐÃ XỬ LÝ ẨN/HIỆN L5 & THÊM "CON ĐẦU LÒNG"
     // =========================================================================
     window.renderQuickInsertButtons = function() {
         document.querySelectorAll('.quick-insert-btn').forEach(btn => btn.remove());
-        document.querySelectorAll('.quick-insert-menu').forEach(menu => menu.remove());
-
         const tbody = document.getElementById('taskListBody');
         if (!tbody) return;
 
-        const rows = Array.from(tbody.querySelectorAll('tr'));
+        // [VẤN ĐỀ 1]: Lọc các dòng đang hiển thị thực sự. Bỏ qua các dòng bị ẩn (L5 collapsed, Zero plan...)
+        const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => {
+            return r.style.display !== 'none' && 
+                   !r.classList.contains('l5-collapsed') && 
+                   !r.classList.contains('zero-plan-hidden-row');
+        });
+        
         if (rows.length === 0) return;
 
         const groups = new Map();
-        const insertPoints = new Map(); // Nơi gom các Option chèn theo rowIndex
 
         const parseTTNum = (ttStr, level) => {
             if (!ttStr) return 0;
@@ -5052,7 +5055,7 @@ if (childrenField === 'greatGreatGrandchildren') {
                 case 'grandchild': return 3;
                 case 'greatGrandchild': return 4;
                 case 'greatGreatGrandchild': return 5;
-                default: return 99;
+                default: return 99; 
             }
         };
 
@@ -5060,15 +5063,15 @@ if (childrenField === 'greatGreatGrandchildren') {
         rows.forEach((row, index) => {
             const path = row.dataset.path;
             const isJust = row.classList.contains('task-justification') || row.classList.contains('task-justification-parent') || row.classList.contains('task-justification-child');
-            if (!path || isJust) return;
+            if (!path || isJust) return; 
 
             const level = getLevelFromRow(row);
-            // YÊU CẦU 1: Bỏ qua hoàn toàn Level 5 (greatGreatGrandchild)
-            if (!level || level === 'greatGreatGrandchild') return; 
+            if (!level) return;
+            if (level === 'greatGreatGrandchild') return;
 
             const pathParts = path.split('/');
-            pathParts.pop();
-            if (level !== 'parent') pathParts.pop();
+            pathParts.pop(); 
+            if (level !== 'parent') pathParts.pop(); 
             
             const parentPath = pathParts.join('/');
             const ttText = row.querySelector('.col-tt')?.innerText.trim() || '';
@@ -5080,13 +5083,9 @@ if (childrenField === 'greatGreatGrandchildren') {
             groups.get(parentPath).items.push({ row, rowIndex: index, tt: ttText, num, level });
         });
 
-        // Hàm helper gom điểm chèn
-        const addInsertOption = (targetRowIndex, option) => {
-            if (!insertPoints.has(targetRowIndex)) insertPoints.set(targetRowIndex, []);
-            insertPoints.get(targetRowIndex).push(option);
-        };
+        const insertionsByRow = new Map();
 
-        // 2. Tính toán vị trí chèn
+        // 2. Tính toán điểm chèn
         groups.forEach((group) => {
             const items = group.items;
             if (items.length === 0) return;
@@ -5094,115 +5093,190 @@ if (childrenField === 'greatGreatGrandchildren') {
             for (let i = 0; i < items.length; i++) {
                 const current = items[i];
                 
-                // Trưởng hợp A: GAP (Khe trống)
-                if (i > 0) {
+                // A: Có GAP (Khe hở ngang hàng)
+                // [VẤN ĐỀ 3]: Chặn không sinh GAP cho Level 1 (parent)
+                if (i > 0 && group.level !== 'parent') {
                     const prev = items[i - 1];
                     const diff = current.num - prev.num;
+                    
                     if (diff > 1) {
                         const startNum = prev.num + 1;
                         let startTTStr = String(startNum);
-                        if (group.level !== 'parent' && group.level !== 'child') {
+                        if (group.level === 'child') startTTStr = numberToRoman(startNum);
+                        else if (prev.tt.match(/[.,]/)) {
                             const parts = prev.tt.split(/[.,]/);
                             parts.pop();
                             startTTStr = parts.join('.') + '.' + startNum;
-                        } else if (group.level === 'child') {
-                            startTTStr = numberToRoman(startNum);
                         }
+
+                        const targetRowIdx = current.rowIndex - 1;
+                        if (!insertionsByRow.has(targetRowIdx)) insertionsByRow.set(targetRowIdx, []);
                         
-                        const title = window.getModalTitleByLevel(group.level);
-                        addInsertOption(current.rowIndex - 1, {
+                        insertionsByRow.get(targetRowIdx).push({
                             parentPath: group.parentPath,
                             level: group.level,
                             startTT: startTTStr,
                             maxRows: diff - 1,
-                            title: title,
-                            displayTT: startTTStr
+                            title: window.getModalTitleByLevel(group.level)
                         });
                     }
                 }
 
-                // Trường hợp B: ĐÁY CỦA NHÓM (Có thể trùng nhiều cấp độ)
-                if (i === items.length - 1) {
-                    let lastDescendantIndex = current.rowIndex;
+                // B: KẾT THÚC DANH SÁCH (Đáy ngang hàng)
+                // [VẤN ĐỀ 3]: Chặn không sinh Đáy cho Level 1 (parent)
+                if (i === items.length - 1 && group.level !== 'parent') {
+                    const nextNum = current.num + 1;
+                    let nextTTStr = String(nextNum);
+                    if (group.level === 'child') nextTTStr = numberToRoman(nextNum);
+                    else if (current.tt.match(/[.,]/)) {
+                        const parts = current.tt.split(/[.,]/);
+                        parts.pop();
+                        nextTTStr = parts.join('.') + '.' + nextNum;
+                    }
+
+                    let lastDescendantIdx = current.rowIndex;
                     const currentLevelWeight = getLevelWeight(group.level);
                     
+                    // Tìm dòng DOM cuối cùng thuộc nhóm (đi xuyên qua con cháu)
                     for (let j = current.rowIndex + 1; j < rows.length; j++) {
                         const nextRow = rows[j];
                         const nextLevel = getLevelFromRow(nextRow);
                         const nextWeight = nextLevel ? getLevelWeight(nextLevel) : 99; 
                         if (nextWeight <= currentLevelWeight) break;
-                        lastDescendantIndex = j;
+                        lastDescendantIdx = j;
                     }
-                    
-                    const expectedTT = window.predictNextTT(current.tt, group.level);
-                    const title = window.getModalTitleByLevel(group.level);
 
-                    addInsertOption(lastDescendantIndex, {
+                    if (!insertionsByRow.has(lastDescendantIdx)) insertionsByRow.set(lastDescendantIdx, []);
+                    insertionsByRow.get(lastDescendantIdx).push({
                         parentPath: group.parentPath,
                         level: group.level,
-                        startTT: null,
+                        startTT: nextTTStr,
                         maxRows: null,
-                        title: title,
-                        displayTT: expectedTT
+                        title: window.getModalTitleByLevel(group.level)
                     });
+                }
+
+                // [VẤN ĐỀ 2]: "CON ĐẦU LÒNG" - Check xem nếu task này CHƯA CÓ CON thì add thêm option tạo Con
+                // Bỏ qua L1 (đã loại), bỏ qua L4 (vì con của L4 là L5, mà L5 đã bị loại khỏi chức năng này)
+                if (group.level === 'child' || group.level === 'grandchild') {
+                    const currentLevelWeight = getLevelWeight(group.level);
+                    const nextRow = rows[current.rowIndex + 1];
+                    let hasVisibleChild = false;
+
+                    // Kiểm tra xem dòng ngay sát bên dưới có phải là con trực tiếp không
+                    if (nextRow) {
+                        const nextLevel = getLevelFromRow(nextRow);
+                        const nextWeight = nextLevel ? getLevelWeight(nextLevel) : 99;
+                        if (nextWeight === currentLevelWeight + 1) { 
+                            hasVisibleChild = true;
+                        }
+                    }
+
+                    if (!hasVisibleChild) {
+                        let childLevel, childPath, firstChildTTStr;
+                        
+                        if (group.level === 'child') { // Đang ở L2, con là L3
+                            childLevel = 'grandchild';
+                            childPath = current.row.dataset.path; // Đường dẫn của cha
+                            firstChildTTStr = "1";
+                        } else if (group.level === 'grandchild') { // Đang ở L3, con là L4
+                            childLevel = 'greatGrandchild';
+                            childPath = current.row.dataset.path;
+                            firstChildTTStr = current.tt + ".1";
+                        }
+
+                        if (childLevel && childPath) {
+                            if (!insertionsByRow.has(current.rowIndex)) insertionsByRow.set(current.rowIndex, []);
+                            insertionsByRow.get(current.rowIndex).push({
+                                parentPath: childPath,
+                                level: childLevel,
+                                startTT: firstChildTTStr,
+                                maxRows: null,
+                                title: window.getModalTitleByLevel(childLevel)
+                            });
+                        }
+                    }
                 }
             }
         });
 
-        // 3. Vẽ UI từ dữ liệu đã gom
-        insertPoints.forEach((options, rowIndex) => {
+        // 3. Chuẩn bị Smart Menu 
+        let menuContainer = document.getElementById('quick-insert-context-menu');
+        if (!menuContainer) {
+            menuContainer = document.createElement('div');
+            menuContainer.id = 'quick-insert-context-menu';
+            menuContainer.className = 'quick-insert-menu';
+            document.body.appendChild(menuContainer);
+
+            document.addEventListener('click', (e) => {
+                if (e.target.id !== 'quick-insert-context-menu' && !e.target.closest('.quick-insert-btn')) {
+                    menuContainer.style.display = 'none';
+                }
+            });
+        }
+
+        // 4. Vẽ nút + lên DOM
+        insertionsByRow.forEach((configs, rowIndex) => {
             const targetRow = rows[rowIndex];
             if (!targetRow) return;
             const tdFirst = targetRow.querySelector('td:first-child');
             if (!tdFirst) return;
 
-            // Sắp xếp Menu theo thứ tự Cấp cao -> Cấp thấp cho logic (Weight nhỏ -> lớn)
-            options.sort((a, b) => getLevelWeight(a.level) - getLevelWeight(b.level));
+            // Loại bỏ trùng lặp (trường hợp đáy ngang hàng trùng với "con đầu lòng" của thằng trên)
+            const uniqueConfigsMap = new Map();
+            configs.forEach(cfg => uniqueConfigsMap.set(cfg.level, cfg));
+            const uniqueConfigs = Array.from(uniqueConfigsMap.values());
+            
+            // Sắp xếp Menu từ Cấp độ nhỏ nhất (vd L4) trồi lên lớn nhất (vd L2)
+            uniqueConfigs.sort((a, b) => getLevelWeight(b.level) - getLevelWeight(a.level));
 
             const btn = document.createElement('div');
             btn.className = 'quick-insert-btn';
             btn.innerHTML = '+';
 
-            // YÊU CẦU 3 & YÊU CẦU 2: Xử lý hiển thị
-            if (options.length === 1) {
-                const opt = options[0];
-                btn.title = `${opt.title} (TT: ${opt.displayTT})`;
+            // [VẤN ĐỀ 4]: Tạo Tooltip Tùy chỉnh (HTML Tooltip)
+            const customTooltip = document.createElement('div');
+            customTooltip.className = 'quick-insert-tooltip';
+
+            if (uniqueConfigs.length === 1) {
+                const cfg = uniqueConfigs[0];
+                // Chữ thường + Chữ Đậm Màu đỏ cho TT
+                customTooltip.innerHTML = `${cfg.title} <span class="tt-highlight">(TT: ${cfg.startTT})</span>`;
+                
                 btn.onclick = (e) => {
                     e.stopPropagation();
-                    window.openAddModal(opt.parentPath, opt.level, opt.startTT, opt.maxRows);
+                    menuContainer.style.display = 'none'; 
+                    window.openAddModal(cfg.parentPath, cfg.level, cfg.startTT, cfg.maxRows);
                 };
-                tdFirst.appendChild(btn);
             } 
             else {
-                // Menu Đa cấp độ
-                btn.title = `Thêm Hệ thống / Thiết bị / Công việc...`;
-                const menu = document.createElement('div');
-                menu.className = 'quick-insert-menu';
+                customTooltip.innerHTML = 'Thêm Cấp độ Task...';
                 
-                options.forEach(opt => {
-                    const item = document.createElement('div');
-                    item.className = 'menu-item';
-                    item.innerHTML = `<strong>${opt.title}</strong> <span class="tt-preview">(TT: ${opt.displayTT})</span>`;
-                    item.onclick = (e) => {
-                        e.stopPropagation();
-                        menu.classList.remove('show');
-                        window.openAddModal(opt.parentPath, opt.level, opt.startTT, opt.maxRows);
-                    };
-                    menu.appendChild(item);
-                });
-
                 btn.onclick = (e) => {
                     e.stopPropagation();
-                    // Đóng tất cả menu khác đang mở
-                    document.querySelectorAll('.quick-insert-menu').forEach(m => {
-                        if (m !== menu) m.classList.remove('show');
+                    menuContainer.innerHTML = ''; 
+                    
+                    uniqueConfigs.forEach(cfg => {
+                        const item = document.createElement('div');
+                        item.className = 'quick-insert-menu-item';
+                        item.innerHTML = `<span>${cfg.title}</span> <span class="quick-insert-menu-tt">(TT: ${cfg.startTT})</span>`;
+                        item.onclick = (ev) => {
+                            ev.stopPropagation();
+                            menuContainer.style.display = 'none';
+                            window.openAddModal(cfg.parentPath, cfg.level, cfg.startTT, cfg.maxRows);
+                        };
+                        menuContainer.appendChild(item);
                     });
-                    menu.classList.toggle('show');
+
+                    const rect = btn.getBoundingClientRect();
+                    menuContainer.style.left = `${rect.left + window.scrollX + 25}px`;
+                    menuContainer.style.top = `${rect.top + window.scrollY}px`;
+                    menuContainer.style.display = 'block';
                 };
-                
-                tdFirst.appendChild(menu);
-                tdFirst.appendChild(btn);
             }
+
+            btn.appendChild(customTooltip); // Gắn tooltip vào trong nút
+            tdFirst.appendChild(btn);
         });
     };
 
