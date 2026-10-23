@@ -586,43 +586,4 @@ body.can-quick-insert #taskList.planning-mode .quick-insert-btn {
     50% { opacity: 1; box-shadow: 0 0 5px #28a745; }
     100% { opacity: 0.5; }
 }
-/* Custom Tooltip cho dấu + (Hỗ trợ đổi màu, in đậm) */
-.quick-insert-tooltip {
-    visibility: hidden;
-    background-color: #333;
-    color: #fff;
-    text-align: center;
-    border-radius: 4px;
-    padding: 6px 12px;
-    position: absolute;
-    z-index: 2000;
-    bottom: 160%; /* Nổi lên phía trên dấu + */
-    left: 50%;
-    transform: translateX(-50%);
-    white-space: nowrap;
-    font-size: 13px;
-    font-weight: normal; /* Chữ mặc định không đậm */
-    opacity: 0;
-    transition: opacity 0.2s;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-    pointer-events: none; /* Không cản trở click */
-}
-/* Mũi tên chỉ xuống của tooltip */
-.quick-insert-tooltip::after {
-    content: "";
-    position: absolute;
-    top: 100%; left: 50%;
-    margin-left: -5px;
-    border-width: 5px;
-    border-style: solid;
-    border-color: #333 transparent transparent transparent;
-}
-.quick-insert-btn:hover .quick-insert-tooltip {
-    visibility: visible;
-    opacity: 1;
-}
-/* Class highlight dành riêng cho số TT */
-.tt-highlight {
-    font-weight: bold;
-    color: #ff4d4d; /* Màu đỏ nổi bật */
-}
+
