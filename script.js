@@ -5193,6 +5193,40 @@ if (childrenField === 'greatGreatGrandchildren') {
                         }
                     }
                 }
+				// D: GAP TRÊN CÙNG (Khuyết các task đầu tiên của danh sách)
+                if (i === 0 && group.level !== 'parent') {
+                    const firstNum = current.num;
+                    
+                    // Nếu task đầu tiên có số TT lớn hơn 1 (ví dụ: 2, 3, hoặc 5.2, 5.3)
+                    if (firstNum > 1) {
+                        const startNum = 1;
+                        let startTTStr = String(startNum);
+                        
+                        // Định dạng lại TT bắt đầu cho chuẩn (La Mã hoặc có dấu chấm)
+                        if (group.level === 'child') {
+                            startTTStr = numberToRoman(startNum);
+                        } else if (current.tt.match(/[.,]/)) {
+                            const parts = current.tt.split(/[.,]/);
+                            parts.pop(); // Bỏ phần đuôi hiện tại đi
+                            startTTStr = parts.join('.') + '.' + startNum;
+                        }
+
+                        // Neo dấu + vào cạnh dưới của dòng ngay phía trên task đầu tiên này
+                        const targetRowIdx = current.rowIndex - 1;
+                        
+                        if (targetRowIdx >= 0) {
+                            if (!insertionsByRow.has(targetRowIdx)) insertionsByRow.set(targetRowIdx, []);
+                            
+                            insertionsByRow.get(targetRowIdx).push({
+                                parentPath: group.parentPath,
+                                level: group.level,
+                                startTT: startTTStr,
+                                maxRows: firstNum - 1, // Số dòng tối đa được phép thêm để lấp đầy khoảng trống
+                                title: window.getModalTitleByLevel(group.level)
+                            });
+                        }
+                    }
+                }
             }
         });
 
