@@ -540,6 +540,11 @@ body.is-moving-mode #taskList tbody tr.moving-source {
 body.can-quick-insert #taskList.planning-mode .quick-insert-btn {
     display: block;
 }
+@keyframes pulseQuickInsert {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; box-shadow: 0 0 5px #28a745; }
+    100% { opacity: 0.5; }
+}
 
 /* Giao diện Menu lựa chọn đa cấp độ */
 .quick-insert-menu {
@@ -581,9 +586,5 @@ body.can-quick-insert #taskList.planning-mode .quick-insert-btn {
     float: right;
 }
 
-@keyframes pulseQuickInsert {
-    0% { opacity: 0.5; }
-    50% { opacity: 1; box-shadow: 0 0 5px #28a745; }
-    100% { opacity: 0.5; }
-}
+
 
