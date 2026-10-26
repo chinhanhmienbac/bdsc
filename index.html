@@ -1,13 +1,13 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tổng hợp QL thiết bị và BDSC</title>
     <script src="chart.js"></script>
-	<!--
-	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-	-->
+    <!-- Bổ sung thư viện ExcelJS để đọc/ghi file Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+    
     <style>
         /* --- GIỮ NGUYÊN CSS GỐC CỦA BẠN --- */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; background-color: #f4f4f9; line-height: 1.6; padding: 20px; }
@@ -21,8 +21,8 @@
         /* Layout & Unit Styles */
         .main-layout { display: flex; flex-direction: column; gap: 20px; max-width: 1800px; margin: 0 auto; }
         .row { display: flex; gap: 60px; width: 100%; justify-content: center; }
-        .row-2-cols .unit-column { width: 25%; } /* Giữ kích thước cũ */
-        .row-3-cols .unit-column { width: 25%; } /* Giữ kích thước cũ */
+        .row-2-cols .unit-column { width: 25%; } 
+        .row-3-cols .unit-column { width: 25%; } 
         
         .unit-column { background-color: transparent; display: flex; flex-direction: column; gap: 15px; }
         .unit-header { background-color: #0056b3; color: white; padding: 0; text-align: center; border-radius: 8px; font-weight: bold; text-transform: uppercase; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: background-color 0.3s ease; }
@@ -61,9 +61,14 @@
         .btn-thietbi { background-color: #fd7e14; }
         .btn-thietbi:hover { background-color: #e36d0c; }
         
-        /* Button Support */
+        /* Button Support & Export */
         .btn-support { position: absolute; left: 20px; padding: 10px 20px; background-color: #17a2b8; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: background-color 0.2s; }
         .btn-support:hover { background-color: #138496; }
+        
+        .btn-export { position: absolute; left: 120px; padding: 10px 20px; background-color: #6f42c1; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: background-color 0.2s; }
+        .btn-export:hover { background-color: #59339d; }
+        .btn-export:disabled { background-color: #a08cc4; cursor: not-allowed; }
+
         .support-list { list-style: none; padding: 0; margin: 0; }
         .support-list li { margin-bottom: 10px; border-bottom: 1px solid #eee; }
         .support-list a { display: block; padding: 12px 15px; color: #333; text-decoration: none; font-size: 16px; font-weight: 500; transition: background-color 0.2s, color 0.2s; border-radius: 5px; }
@@ -74,7 +79,7 @@
             .row { flex-wrap: wrap; }
             .row-2-cols .unit-column, .row-3-cols .unit-column { width: 100%; }
             .header-controls { flex-direction: column; gap: 10px; }
-            .btn-summary, .btn-support { position: static; width: 100%; margin-top: 10px; }
+            .btn-summary, .btn-support, .btn-export { position: static; width: 100%; margin-top: 10px; }
         }
     </style>
 </head>
@@ -90,6 +95,9 @@
 
     <div class="header-controls">
         <button class="btn-support" onclick="openSupportModal()">Hỗ trợ</button>
+        <!-- Bổ sung nút Xuất BC -->
+        <button class="btn-export" id="btnExport" onclick="exportDataToSampleExcel()">Xuất BC</button>
+
         <div style="display: flex; align-items: center;">
             <label for="yearSelect">Chọn năm dữ liệu:</label>
             <select id="yearSelect"></select>
@@ -100,6 +108,7 @@
 
     <div class="main-layout" id="mainLayout"></div>
 
+    <!-- Modals giữ nguyên... -->
     <div id="summaryModal" class="modal-overlay">
         <div class="modal-content">
             <span class="modal-close" onclick="closeSummaryModal()">&times;</span>
@@ -146,91 +155,69 @@
     </div>
 
     <script type="module">
-         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 		import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
 
         // ==============================================================
-        // 1. MẢNG CẤU HÌNH TẬP TRUNG (CHỈ CẦN SỬA Ở ĐÂY)
+        // 1. MẢNG CẤU HÌNH TẬP TRUNG (Đã bổ sung thuộc tính sheetName)
         // ==============================================================
         const listConfigs = [
             {
-                id: 'dv',
-                name: 'TỔNG KHO MIỀN BẮC',
-                fileName: 'dv.html', // File gốc để điều hướng
+                id: 'dv', name: 'TỔNG KHO MIỀN BẮC', fileName: 'dv.html', sheetName: 'KMB',
                 config: { apiKey: "AIzaSyDv2uEv6L_0G4g_V8VxNJDMu3_AhvhqjBE", authDomain: "bdsc-dv.firebaseapp.com", databaseURL: "https://bdsc-dv-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "bdsc-dv", appId: "1:194375535653:web:fac116dcbb01d4a09883cc" }
             },
             {
-                id: 'hp',
-                name: 'TỔNG KHO HẢI PHÒNG',
-                fileName: 'hp.html',
+                id: 'hp', name: 'TỔNG KHO HẢI PHÒNG', fileName: 'hp.html', sheetName: 'KHP',
                 config: { apiKey: "AIzaSyDl1ns6-XBsTI1MEteS3AjeTYZ3rbL_yRc", authDomain: "bdsc-hp.firebaseapp.com", databaseURL: "https://bdsc-hp-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "bdsc-hp", appId: "1:602300297635:web:1991f9caff76cf7744ea16" }
             },
             {
-                id: 'hn',
-                name: 'TRẠM NẠP HÀ NỘI',
-                fileName: 'hn.html',
+                id: 'hn', name: 'TRẠM NẠP HÀ NỘI', fileName: 'hn.html', sheetName: 'HN',
                 config: { apiKey: "AIzaSyCwPifGgnorA6rXYE_gCGViN8jkWazkW-I", authDomain: "bdsc-hn.firebaseapp.com", databaseURL: "https://bdsc-hn-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "bdsc-hn", appId: "1:1064432135631:web:12927d01e88a11fb57f6ba" }
             },
             {
-                id: 'nd',
-                name: 'TRẠM NẠP NAM ĐỊNH',
-                fileName: 'nd.html',
+                id: 'nd', name: 'TRẠM NẠP NAM ĐỊNH', fileName: 'nd.html', sheetName: 'NĐ',
                 config: { apiKey: "AIzaSyC6zogfxHV3zYs80GgQJ0HpLVxr_m3ArwU", authDomain: "bdsc-nd.firebaseapp.com", databaseURL: "https://bdsc-nd-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "bdsc-nd", appId: "1:58759284467:web:d33a542cee40ee36cf1986" }
             },
             {
-                id: 'kd',
-                name: 'TT SSKĐ NAM ĐỊNH',
-                fileName: 'kd.html',
+                id: 'kd', name: 'TT SSKĐ NAM ĐỊNH', fileName: 'kd.html', sheetName: 'TTSSKĐ',
                 config: { apiKey: "AIzaSyDsjrZPhlbK8gpgmQza9sShmiAUptxhQn0", authDomain: "bdsc-kd.firebaseapp.com", databaseURL: "https://bdsc-kd-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "bdsc-kd", appId: "1:167446714761:web:617fe3666d9599cf486958" }
             },
             {
-                id: 'xt',
-                name: 'XE TẢI VẬN CHUYỂN CNMB',
-                fileName: 'xt.html', 
+                id: 'xt', name: 'XE TẢI VẬN CHUYỂN CNMB', fileName: 'xt.html', sheetName: 'XT',
                 config: { apiKey: "AIzaSyAAlYHnrM33W0HAQDHtBWTW-s9nB1_Jnvc", authDomain: "bdsc-xt.firebaseapp.com",databaseURL: "https://bdsc-xt-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "bdsc-xt", appId: "1:561700169478:web:39b7d164206a0e69db2087" }
             },
-			{
-                id: 'vp',
-                name: 'XE VĂN PHÒNG CNMB',
-                fileName: 'vp.html', 
+            {
+                id: 'vp', name: 'XE VĂN PHÒNG CNMB', fileName: 'vp.html', sheetName: ,
                 config: { apiKey: "AIzaSyAxcasVYdaO2XIl06l2VhYFOB8vRpKoJec", authDomain: "otovanphong.firebaseapp.com",databaseURL: "https://otovanphong-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "otovanphong", appId: "1:467137924247:web:7f1b59ce789358868c2dd2" }
             }
-            // MUỐN THÊM ĐƠN VỊ MỚI? Copy object trên, dán vào đây là xong!
         ];
 
-        // Mảng chứa các object unit đã khởi tạo
         let units = [];
         window.globalUnitData = {};
         let activeChartsMap = {};
 
         // ==============================================================
-        // 2. HÀM TỰ ĐỘNG KHỞI TẠO DOM VÀ FIREBASE APP
+        // 2. KHỞI TẠO DOM VÀ FIREBASE APP (GIỮ NGUYÊN)
         // ==============================================================
         function initSystem() {
             const mainLayout = document.getElementById('mainLayout');
             mainLayout.innerHTML = '';
-            units = []; // Reset list
+            units = [];
 
-            // Logic chia hàng: 2 item đầu tiên vào hàng 1, các item sau vào hàng 3 cột
             let currentRow = null;
-            
             listConfigs.forEach((cfg, index) => {
-                // 1. Tạo HTML Row
-                // Nếu là item 0: Tạo hàng 2 cột
                 if (index === 0) {
                     currentRow = document.createElement('div');
                     currentRow.className = 'row row-2-cols';
                     mainLayout.appendChild(currentRow);
                 } 
-                // Nếu là item 2, hoặc các item sau đó chia hết cho 3 (bắt đầu hàng mới): Tạo hàng 3 cột
                 else if (index === 2 || (index > 2 && (index - 2) % 3 === 0)) {
                     currentRow = document.createElement('div');
                     currentRow.className = 'row row-3-cols';
                     mainLayout.appendChild(currentRow);
                 }
 
-                // Tạo cột unit
                 const col = document.createElement('div');
                 col.className = 'unit-column';
                 col.innerHTML = `
@@ -245,31 +232,27 @@
                 `;
                 currentRow.appendChild(col);
 
-                // 2. Khởi tạo Firebase App
-                const app = initializeApp(cfg.config, `app_${cfg.id}`); // Đặt tên app duy nhất
+                const app = initializeApp(cfg.config, `app_${cfg.id}`);
                 
-				// 2.1 Khởi tạo app check
 				window.appCheck = initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider('6Ldl4UIsAAAAAJHqtzZeGxXmfNzFNGd5vf-s4QkK'), 
-    isTokenAutoRefreshEnabled: true
-  });
-				
+                    provider: new ReCaptchaV3Provider('6Ldl4UIsAAAAAJHqtzZeGxXmfNzFNGd5vf-s4QkK'), 
+                    isTokenAutoRefreshEnabled: true
+                });
 				
 				const db = getDatabase(app);
 
-                // Push vào mảng quản lý
                 units.push({
                     id: cfg.id,
                     db: db,
                     containerId: `container-${cfg.id}`,
                     name: cfg.name,
-                    // Dùng để renderSupportList nếu cần dbHN
-                    isDefaultSupport: (cfg.id === 'hn') 
+                    isDefaultSupport: (cfg.id === 'hn'),
+                    sheetName: cfg.sheetName 
                 });
             });
         }
 
-        // --- 3. CHART.JS CONFIG (Giữ nguyên) ---
+        // --- CHART.JS CONFIG VÀ LOGIC XỬ LÝ DỮ LIỆU ĐỂ RENDER WEB (GIỮ NGUYÊN) ---
         const centerTextPlugin = {
             id: 'centerText',
             afterDraw: function(chart) {
@@ -291,9 +274,8 @@
         Chart.register(centerTextPlugin);
 
         const formatNumber = (num) => num?.toLocaleString('vi-VN') || '0';
-        function convertTTForDisplay(tt) { return String(tt).replace(/,/g, '.'); }
+        function convertTTForDisplay(tt) { return String(tt || '').replace(/,/g, '.'); }
 
-        // --- 4. LOGIC XỬ LÝ DỮ LIỆU ---
         const yearSelect = document.getElementById('yearSelect');
         const globalStatus = document.getElementById('global-status');
 
@@ -444,7 +426,261 @@
             });
         }
 
-        // --- GLOBAL FUNCTIONS FOR MODAL (Refactored) ---
+
+        // ==============================================================
+        // 3. LOGIC LÕI LẤY DỮ LIỆU ĐỂ XUẤT EXCEL (TÁCH BIỆT HOÀN TOÀN)
+        // ==============================================================
+        
+        /**
+         * Hàm hỗ trợ sắp xếp các mục công việc để khi xuất Excel có thứ tự chuẩn xác.
+         */
+        const sortingHelpers = {
+            romanToInt: (s) => {
+                if (!s) return 0;
+                const map = {I:1, V:5, X:10, L:50, C:100, D:500, M:1000};
+                let res = 0; s = s.toUpperCase();
+                for (let i = 0; i < s.length; i++) {
+                    let v1 = map[s[i]] || 0; let v2 = map[s[i+1]] || 0;
+                    if (v2 > v1) res -= v1; else res += v1;
+                }
+                return res;
+            },
+            compareRoman: (a, b) => sortingHelpers.romanToInt(a.id) - sortingHelpers.romanToInt(b.id),
+            compareChapters: (a, b) => {
+                const partsA = String(a.id || '').replace(/,/g, '.').split('.'); 
+                const partsB = String(b.id || '').replace(/,/g, '.').split('.');
+                const len = Math.max(partsA.length, partsB.length);
+                for (let i = 0; i < len; i++) {
+                    if (partsA[i] === undefined) return -1; 
+                    if (partsB[i] === undefined) return 1;
+                    const strA = partsA[i].replace('*', '');
+                    const strB = partsB[i].replace('*', '');
+                    const numA = parseInt(strA, 10); 
+                    const numB = parseInt(strB, 10);
+                    if (!isNaN(numA) && !isNaN(numB)) { 
+                        if (numA !== numB) return numA - numB; 
+                    } else { 
+                        if (partsA[i] !== partsB[i]) return partsA[i].localeCompare(partsB[i], undefined, {numeric: true}); 
+                    }
+                }
+                return 0;
+            }
+        };
+
+        /**
+         * HÀM LÕI (CORE): Trích xuất và duỗi phẳng dữ liệu của 1 Unit thành 1 mảng 2 chiều 
+         * tương ứng với định dạng HeadersSimplified. Dễ dàng tùy chỉnh, tái sử dụng.
+         * 
+         * @param {Object} db - Firebase database instance
+         * @param {String} year - Năm cần lấy dữ liệu
+         * @returns {Promise<Array<Array<any>>>} Mảng 2 chiều (Dòng 1 là Header, các dòng sau là dữ liệu)
+         */
+        async function extractDataForSimplifiedReport(db, year) {
+            const rootPath = `congViecMe${year}`;
+            
+            // Lấy dữ liệu công việc và tổng hợp song song
+            const [parentSnap, summarySnap] = await Promise.all([
+                get(ref(db, rootPath)),
+                get(ref(db, `summary_data/${year}`))
+            ]);
+
+            if (!parentSnap.exists()) return [];
+
+            const parentsData = parentSnap.val();
+            const summaryData = summarySnap.exists() ? summarySnap.val() : {};
+            const rowsData = [];
+
+            // Thiết lập hàng Header (Bỏ cột 'TG hoàn thành' theo đúng cấu trúc HeadersSimplified)
+            const headers = [
+                'TT', 'Nội dung', 'Tag Name', 'ĐV th.hiện', 'KH năm trước', 'Thực hiện năm trước', 
+                'Tần suất TH', 'Đ.vị tính', 'Số lượng', 'Đơn giá (GT)', 'Chi phí KH', 
+                'Chi phí thực hiện', 'Kế hoạch còn lại', 'Năm phân bổ', 'CP phân bổ', 
+                'Cấp độ', 'CP CĐ1', 'Thời điểm TH', 'Ghi chú'
+            ];
+            rowsData.push(headers);
+
+            const safeNum = (val) => {
+                if (typeof val === 'number') return val;
+                if (!val) return 0;
+                if (typeof val === 'string') return parseFloat(val.replace(/\./g, '').replace(/,/g, '.')) || 0;
+                return 0;
+            };
+
+            // Hàm đệ quy duyệt cây dữ liệu
+            const flattenNode = (node, level) => {
+                // 1. Logic chuẩn bị các giá trị đặc biệt
+                let slValue = safeNum(node.soLuong);
+                let tgBatDauValue = node.tgBatDau || '';
+                
+                // Ở level 0 (Gốc), Số lượng và TG Bắt đầu được gán theo số lượng Parent
+                if (level === 0 && summaryData[node.id]) {
+                    slValue = summaryData[node.id].totalLeafNodesCap1 || 0;
+                    tgBatDauValue = summaryData[node.id].totalExecutedLeafNodesCap1 || 0;
+                }
+
+                const capDo = node.capDo || '';
+                const chiPhi = safeNum(node.chiPhi);
+                const chiPhiThucHien = safeNum(node.chiPhiThucHien);
+                let keHoachConLai = 0;
+                
+                // Logic tính kế hoạch còn lại (Nếu không phải Phát Sinh "PS")
+                if (String(capDo).trim().toLowerCase() !== 'ps') {
+                    keHoachConLai = chiPhi - chiPhiThucHien;
+                }
+
+                // 2. Map dữ liệu vào từng mảng (tương ứng từng cột Header)
+                const rowArray = [
+                    convertTTForDisplay(node.tt),                // TT
+                    node.noiDung || '',                          // Nội dung
+                    level === 2 ? (node.tagName || '') : '',     // Tag Name (Chỉ lấy ở Level Grandchild)
+                    node.dvThucHien || '',                       // ĐV th.hiện
+                    safeNum(node.khNamTruoc),                    // KH năm trước
+                    safeNum(node.thucHienNamTruoc),              // Thực hiện năm trước
+                    node.tanSuatTH === 0 ? '-' : (node.tanSuatTH || ''), // Tần suất TH
+                    node.donVi || '',                            // Đ.vị tính
+                    slValue,                                     // Số lượng
+                    safeNum(node.donGia),                        // Đơn giá (GT)
+                    chiPhi,                                      // Chi phí KH
+                    chiPhiThucHien,                              // Chi phí thực hiện
+                    keHoachConLai,                               // Kế hoạch còn lại
+                    node.namPhanBo || '',                        // Năm phân bổ
+                    safeNum(node.chiPhiPhanBo),                  // CP phân bổ
+                    capDo,                                       // Cấp độ
+                    safeNum(node.cpCap1),                        // CP CĐ1
+                    tgBatDauValue,                               // Thời điểm TH
+                    node.ghiChu || ''                            // Ghi chú
+                ];
+                
+                rowsData.push(rowArray);
+
+                // 3. Đệ quy xuống các cấp độ nhỏ hơn theo thứ tự sắp xếp chuẩn
+                if (node.children) {
+                    Object.keys(node.children)
+                        .map(id => ({ id, ...node.children[id] }))
+                        .sort(sortingHelpers.compareRoman)
+                        .forEach(c => flattenNode(c, level + 1));
+                }
+                if (node.grandchildren) {
+                    Object.keys(node.grandchildren)
+                        .map(id => ({ id, ...node.grandchildren[id] }))
+                        .sort(sortingHelpers.compareChapters)
+                        .forEach(c => flattenNode(c, level + 2));
+                }
+                if (node.greatGrandchildren) {
+                    Object.keys(node.greatGrandchildren)
+                        .map(id => ({ id, ...node.greatGrandchildren[id] }))
+                        .sort(sortingHelpers.compareChapters)
+                        .forEach(c => flattenNode(c, level + 3));
+                }
+                if (node.greatGreatGrandchildren) {
+                    Object.keys(node.greatGreatGrandchildren)
+                        .map(id => ({ id, ...node.greatGreatGrandchildren[id] }))
+                        .sort(sortingHelpers.compareChapters)
+                        .forEach(c => flattenNode(c, level + 4));
+                }
+            };
+
+            // Bắt đầu duyệt từ mảng cha (Root Level)
+            const parents = Object.keys(parentsData)
+                .map(id => ({ id, ...parentsData[id] }))
+                .sort((a,b) => a.id.localeCompare(b.id));
+
+            parents.forEach(p => flattenNode(p, 0));
+
+            return rowsData;
+        }
+
+        // ==============================================================
+        // 4. LOGIC XUẤT FILE TỔNG HỢP VÀO TEMPLATE CÓ SẴN
+        // ==============================================================
+        window.exportDataToSampleExcel = async function() {
+            const btn = document.getElementById('btnExport');
+            const year = document.getElementById('yearSelect').value;
+            
+            try {
+                // Khóa nút và báo trạng thái Loading
+                btn.disabled = true;
+                btn.innerText = 'Đang trích xuất...';
+                globalStatus.innerText = 'Đang tải file mẫu và gom dữ liệu...';
+                
+                // 1. Tải file Sample.xlsx từ server (yêu cầu file này phải nằm cùng thư mục khi deploy)
+                const response = await fetch('Sample.xlsx');
+                if (!response.ok) {
+                    throw new Error("Không tìm thấy file mẫu 'Sample.xlsx' trên hệ thống.");
+                }
+                const arrayBuffer = await response.arrayBuffer();
+                
+                // 2. Tạo đối tượng ExcelJS Workbook và nạp file mẫu vào
+                const workbook = new ExcelJS.Workbook();
+                await workbook.xlsx.load(arrayBuffer);
+                
+                // 3. Duyệt qua từng cấu hình DB trong listConfigs
+                for (const cfg of listConfigs) {
+                    // Bỏ qua nếu đơn vị không được set sheetName hợp lệ
+                    if (!cfg.sheetName || cfg.sheetName.trim() === '') {
+                        console.log(`Bỏ qua DB: ${cfg.name} do không có sheetName.`);
+                        continue;
+                    }
+                    
+                    const unit = units.find(u => u.id === cfg.id);
+                    if (!unit) continue;
+                    
+                    // Tìm sheet tương ứng trong file mẫu
+                    const sheet = workbook.getWorksheet(cfg.sheetName);
+                    if (!sheet) {
+                        console.warn(`Sheet "${cfg.sheetName}" không tồn tại trong file Sample.xlsx. Đã bỏ qua.`);
+                        continue;
+                    }
+                    
+                    // 4. Kích hoạt Hàm Lõi để kéo dữ liệu từ CSDL
+                    const dataRows = await extractDataForSimplifiedReport(unit.db, year);
+                    
+                    if (dataRows.length > 0) {
+                        // Xóa sạch dữ liệu cũ trong Sheet (nếu có) và Dán vào từ dòng 1
+                        sheet.spliceRows(1, sheet.rowCount);
+                        sheet.addRows(dataRows);
+                        
+                        // Định dạng In đậm cho dòng Tiêu đề (Row 1)
+                        const headerRow = sheet.getRow(1);
+                        headerRow.font = { bold: true };
+                        // Căn chỉnh tự động wrap text (tuỳ chọn thêm)
+                        headerRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                    }
+                }
+                
+                // 5. Đóng gói Workbook lại thành định dạng xlsx và kích hoạt tải về
+                globalStatus.innerText = 'Đang tạo file tải xuống...';
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                const url = window.URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `BaoCaoTongHop_BDSC_${year}.xlsx`; // Đổi tên mặc định tải về ở đây
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                globalStatus.innerText = 'Xuất báo cáo thành công!';
+                
+            } catch (error) {
+                console.error("Lỗi quá trình xuất Excel:", error);
+                alert("Đã có lỗi xảy ra khi xuất báo cáo: " + error.message);
+                globalStatus.innerText = 'Lỗi xuất báo cáo.';
+            } finally {
+                // Khôi phục nút bấm sau khi hoàn tất hoặc bị lỗi
+                btn.disabled = false;
+                btn.innerText = 'Xuất BC';
+                setTimeout(() => { 
+                    if(globalStatus.innerText.includes('thành công') || globalStatus.innerText.includes('Lỗi')) {
+                        globalStatus.innerText = ''; 
+                    }
+                }, 4000);
+            }
+        };
+
+        // --- CÁC HÀM MODAL HỖ TRỢ & ĐIỀU HƯỚNG CŨ GIỮ NGUYÊN ---
         window.openSummaryModal = function() {
             const modal = document.getElementById('summaryModal');
             const tbody = document.getElementById('summaryTableBody');
@@ -494,7 +730,6 @@
 
         window.closeSummaryModal = function() { document.getElementById('summaryModal').style.display = 'none'; };
 
-        // Navigation Logic (Refactored)
         let currentNavUrls = { bdsc: '', tb: '' };
         window.openNavigationModal = function(unitId, originalUrl) {
             const modal = document.getElementById('navModal');
@@ -503,7 +738,6 @@
             document.getElementById('navSubtitle').textContent = displayName;
 
             const part = originalUrl.split('.');
-            // Logic tạo URL: dv.html -> dvtb.html
             const tbUrl = part[0] + 'tb.' + part[1]; 
 
             currentNavUrls = { bdsc: originalUrl, tb: tbUrl };
@@ -517,7 +751,6 @@
         }
         window.closeNavModal = function() { document.getElementById('navModal').style.display = 'none'; }
 
-        // Support Modal Logic
         let supportDataCache = null;
         window.openSupportModal = async function() {
             const modal = document.getElementById('supportModal');
@@ -527,7 +760,6 @@
             container.innerHTML = '<div class="status-msg">Đang kết nối CSDL...</div>';
 
             try {
-                // Tự động tìm unit có ID là 'hn' để lấy dữ liệu hỗ trợ
                 const hnUnit = units.find(u => u.isDefaultSupport) || units[0]; 
                 const supportRef = ref(hnUnit.db, 'Congcuhotro');
                 const snapshot = await get(supportRef);
@@ -564,9 +796,9 @@
 
         // --- KHỞI CHẠY ---
         try {
-            initSystem(); // Bước 1: Tạo DOM và Config
-            initializeYearDropdown(); // Bước 2: Setup dropdown
-            loadAllUnits(yearSelect.value); // Bước 3: Load dữ liệu
+            initSystem(); 
+            initializeYearDropdown(); 
+            loadAllUnits(yearSelect.value); 
         } catch (e) {
             console.error("Lỗi khởi tạo trang:", e);
         }
