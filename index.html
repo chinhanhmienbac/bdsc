@@ -630,10 +630,8 @@
                     const dataRows = await extractDataForSimplifiedReport(unit.db, year);
                     
                     if (dataRows.length > 0) {
-                        const headers = dataRows[0]; // Lưu lại dòng Header để nhận diện cột
+                        const headers = dataRows[0]; 
                         
-                        // Phương pháp an toàn nhất: Gán giá trị vào TỪNG Ô (Cell-by-cell)
-                        // Tránh ghi đè cấu trúc Dòng (Row) gây lỗi Repair của Excel
                         dataRows.forEach((rowArray, rowIndex) => {
                             const excelRow = sheet.getRow(rowIndex + 1);
                             
@@ -641,19 +639,30 @@
                                 const cell = excelRow.getCell(colIndex + 1);
                                 const headerName = headers[colIndex] ? String(headers[colIndex]) : '';
 
-                                // Xử lý đặc biệt: Biến chuỗi thành đối tượng Date cho các cột "Ngày TH"
-                                if (rowIndex > 0 && val && headerName.startsWith('Ngày TH')) {
-                                    // Dữ liệu từ input type="date" thường có dạng YYYY-MM-DD
+                                // 1. FIX CÔNG THỨC: Chuyển chuỗi rỗng thành null để Excel hiểu là ô trống (Blank)
+                                // Điều này cực kỳ quan trọng để ngăn lỗi #VALUE! khi hàm MONTH() hoặc SUMPRODUCT tương tác.
+                                if (val === '') {
+                                    cell.value = null;
+                                    return;
+                                }
+
+                                // 2. FIX NGÀY THÁNG: Ép thành ngày thuần, triệt tiêu Timezone
+                                if (rowIndex > 0 && headerName.startsWith('Ngày TH')) {
                                     const dateParts = String(val).split('-');
                                     if (dateParts.length === 3) {
-                                        // Dùng new Date(year, monthIndex, day) để tránh bị lùi ngày do timezone
-                                        cell.value = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
-                                        cell.numFmt = 'dd/mm/yyyy'; // Định dạng hiển thị ngày cho Excel
-                                        return; // Bỏ qua lệnh gán mặc định bên dưới
+                                        // Sử dụng Date.UTC để tạo mốc thời gian tĩnh ở chính xác 00:00:00
+                                        // Giúp ExcelJS không bị lệch giờ do múi giờ (GMT+7) của trình duyệt
+                                        cell.value = new Date(Date.UTC(
+                                            parseInt(dateParts[0], 10), 
+                                            parseInt(dateParts[1], 10) - 1, 
+                                            parseInt(dateParts[2], 10)
+                                        ));
+                                        cell.numFmt = 'dd/mm/yyyy'; 
+                                        return; 
                                     }
                                 }
                                 
-                                // Các ô bình thường
+                                // Các ô bình thường (Số, Text)
                                 cell.value = val;
                             });
                         });
@@ -663,7 +672,7 @@
                         headerRow.font = { bold: true };
                         headerRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
                         
-                        // [TÙY CHỌN BỔ SUNG] Dọn dẹp Name rác trong Workbook để chặn đứng lỗi Repair
+                        // Dọn dẹp Name rác trong Workbook để chặn đứng lỗi Repair
                         if (workbook.definedNames) {
                             workbook.definedNames.model = []; 
                         }
