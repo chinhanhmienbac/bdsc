@@ -428,12 +428,9 @@
 
 
         // ==============================================================
-        // 3. LOGIC LÕI LẤY DỮ LIỆU ĐỂ XUẤT EXCEL (TÁCH BIỆT HOÀN TOÀN)
+        // 3. LOGIC LÕI LẤY DỮ LIỆU ĐỂ XUẤT EXCEL 
         // ==============================================================
         
-        /**
-         * Hàm hỗ trợ sắp xếp các mục công việc để khi xuất Excel có thứ tự chuẩn xác.
-         */
         const sortingHelpers = {
             romanToInt: (s) => {
                 if (!s) return 0;
@@ -467,18 +464,31 @@
             }
         };
 
-        /**
-         * HÀM LÕI (CORE): Trích xuất và duỗi phẳng dữ liệu của 1 Unit thành 1 mảng 2 chiều 
-         * tương ứng với định dạng HeadersSimplified. Dễ dàng tùy chỉnh, tái sử dụng.
-         * 
-         * @param {Object} db - Firebase database instance
-         * @param {String} year - Năm cần lấy dữ liệu
-         * @returns {Promise<Array<Array<any>>>} Mảng 2 chiều (Dòng 1 là Header, các dòng sau là dữ liệu)
-         */
+        // Hàm phụ trợ tìm số lần thực hiện lớn nhất trong cây
+        function findMaxExecutions(nodes) {
+            let maxExec = 0;
+            if (!nodes) return 0;
+            const nodesArray = Array.isArray(nodes) ? nodes : Object.values(nodes);
+            for (const node of nodesArray) {
+                if (node) { 
+                    if (node.executions) {
+                        const execCount = Object.keys(node.executions).length;
+                        if (execCount > maxExec) maxExec = execCount;
+                    }
+                    let childMax = 0;
+                    if (node.children) childMax = Math.max(childMax, findMaxExecutions(node.children));
+                    if (node.grandchildren) childMax = Math.max(childMax, findMaxExecutions(node.grandchildren));
+                    if (node.greatGrandchildren) childMax = Math.max(childMax, findMaxExecutions(node.greatGrandchildren));
+                    if (node.greatGreatGrandchildren) childMax = Math.max(childMax, findMaxExecutions(node.greatGreatGrandchildren));
+                    if (childMax > maxExec) maxExec = childMax;
+                }
+            }
+            return maxExec;
+        }
+
         async function extractDataForSimplifiedReport(db, year) {
             const rootPath = `congViecMe${year}`;
             
-            // Lấy dữ liệu công việc và tổng hợp song song
             const [parentSnap, summarySnap] = await Promise.all([
                 get(ref(db, rootPath)),
                 get(ref(db, `summary_data/${year}`))
@@ -490,13 +500,21 @@
             const summaryData = summarySnap.exists() ? summarySnap.val() : {};
             const rowsData = [];
 
-            // Thiết lập hàng Header (Bỏ cột 'TG hoàn thành' theo đúng cấu trúc HeadersSimplified)
+            // 1. Quét tìm số lần thực hiện lớn nhất
+            const maxLanThucHien = findMaxExecutions(parentsData);
+
+            // 2. Thiết lập hàng Header cố định
             const headers = [
                 'TT', 'Nội dung', 'Tag Name', 'ĐV th.hiện', 'KH năm trước', 'Thực hiện năm trước', 
                 'Tần suất TH', 'Đ.vị tính', 'Số lượng', 'Đơn giá (GT)', 'Chi phí KH', 
                 'Chi phí thực hiện', 'Kế hoạch còn lại', 'Năm phân bổ', 'CP phân bổ', 
                 'Cấp độ', 'CP CĐ1', 'Thời điểm TH', 'Ghi chú'
             ];
+
+            // 3. Nối thêm Header cho các lần thực hiện (Simplified mode: không có Timestamp và Link)
+            for (let i = 1; i <= maxLanThucHien; i++) {
+                headers.push(`Ngày TH (${i})`, `Số lượng (${i})`, `Đơn giá (${i})`, `Thành tiền (${i})`);
+            }
             rowsData.push(headers);
 
             const safeNum = (val) => {
@@ -506,13 +524,10 @@
                 return 0;
             };
 
-            // Hàm đệ quy duyệt cây dữ liệu
             const flattenNode = (node, level) => {
-                // 1. Logic chuẩn bị các giá trị đặc biệt
                 let slValue = safeNum(node.soLuong);
                 let tgBatDauValue = node.tgBatDau || '';
                 
-                // Ở level 0 (Gốc), Số lượng và TG Bắt đầu được gán theo số lượng Parent
                 if (level === 0 && summaryData[node.id]) {
                     slValue = summaryData[node.id].totalLeafNodesCap1 || 0;
                     tgBatDauValue = summaryData[node.id].totalExecutedLeafNodesCap1 || 0;
@@ -523,68 +538,47 @@
                 const chiPhiThucHien = safeNum(node.chiPhiThucHien);
                 let keHoachConLai = 0;
                 
-                // Logic tính kế hoạch còn lại (Nếu không phải Phát Sinh "PS")
                 if (String(capDo).trim().toLowerCase() !== 'ps') {
                     keHoachConLai = chiPhi - chiPhiThucHien;
                 }
 
-                // 2. Map dữ liệu vào từng mảng (tương ứng từng cột Header)
                 const rowArray = [
-                    convertTTForDisplay(node.tt),                // TT
-                    node.noiDung || '',                          // Nội dung
-                    level === 2 ? (node.tagName || '') : '',     // Tag Name (Chỉ lấy ở Level Grandchild)
-                    node.dvThucHien || '',                       // ĐV th.hiện
-                    safeNum(node.khNamTruoc),                    // KH năm trước
-                    safeNum(node.thucHienNamTruoc),              // Thực hiện năm trước
-                    node.tanSuatTH === 0 ? '-' : (node.tanSuatTH || ''), // Tần suất TH
-                    node.donVi || '',                            // Đ.vị tính
-                    slValue,                                     // Số lượng
-                    safeNum(node.donGia),                        // Đơn giá (GT)
-                    chiPhi,                                      // Chi phí KH
-                    chiPhiThucHien,                              // Chi phí thực hiện
-                    keHoachConLai,                               // Kế hoạch còn lại
-                    node.namPhanBo || '',                        // Năm phân bổ
-                    safeNum(node.chiPhiPhanBo),                  // CP phân bổ
-                    capDo,                                       // Cấp độ
-                    safeNum(node.cpCap1),                        // CP CĐ1
-                    tgBatDauValue,                               // Thời điểm TH
-                    node.ghiChu || ''                            // Ghi chú
+                    convertTTForDisplay(node.tt), node.noiDung || '', level === 2 ? (node.tagName || '') : '', 
+                    node.dvThucHien || '', safeNum(node.khNamTruoc), safeNum(node.thucHienNamTruoc), 
+                    node.tanSuatTH === 0 ? '-' : (node.tanSuatTH || ''), node.donVi || '', slValue, 
+                    safeNum(node.donGia), chiPhi, chiPhiThucHien, keHoachConLai, node.namPhanBo || '', 
+                    safeNum(node.chiPhiPhanBo), capDo, safeNum(node.cpCap1), tgBatDauValue, node.ghiChu || ''
                 ];
+
+                // 4. Bổ sung Dữ liệu Thực hiện (Executions)
+                const nodeExecutions = [];
+                if (node.executions) {
+                    const sortedExecs = Object.values(node.executions).sort((a, b) => {
+                        const timeA = a.timestamp || new Date(a.ngayThucHien).getTime() || 0;
+                        const timeB = b.timestamp || new Date(b.ngayThucHien).getTime() || 0;
+                        return timeA - timeB;
+                    });
+                    nodeExecutions.push(...sortedExecs);
+                }
+                
+                for (let i = 0; i < maxLanThucHien; i++) {
+                    if (i < nodeExecutions.length) {
+                        const exec = nodeExecutions[i];
+                        rowArray.push(exec.ngayThucHien || '', safeNum(exec.dvt), safeNum(exec.donGia), safeNum(exec.thanhTien));
+                    } else {
+                        rowArray.push('', '', '', ''); // Ô trống nếu không có
+                    }
+                }
                 
                 rowsData.push(rowArray);
 
-                // 3. Đệ quy xuống các cấp độ nhỏ hơn theo thứ tự sắp xếp chuẩn
-                if (node.children) {
-                    Object.keys(node.children)
-                        .map(id => ({ id, ...node.children[id] }))
-                        .sort(sortingHelpers.compareRoman)
-                        .forEach(c => flattenNode(c, level + 1));
-                }
-                if (node.grandchildren) {
-                    Object.keys(node.grandchildren)
-                        .map(id => ({ id, ...node.grandchildren[id] }))
-                        .sort(sortingHelpers.compareChapters)
-                        .forEach(c => flattenNode(c, level + 2));
-                }
-                if (node.greatGrandchildren) {
-                    Object.keys(node.greatGrandchildren)
-                        .map(id => ({ id, ...node.greatGrandchildren[id] }))
-                        .sort(sortingHelpers.compareChapters)
-                        .forEach(c => flattenNode(c, level + 3));
-                }
-                if (node.greatGreatGrandchildren) {
-                    Object.keys(node.greatGreatGrandchildren)
-                        .map(id => ({ id, ...node.greatGreatGrandchildren[id] }))
-                        .sort(sortingHelpers.compareChapters)
-                        .forEach(c => flattenNode(c, level + 4));
-                }
+                if (node.children) Object.keys(node.children).map(id => ({ id, ...node.children[id] })).sort(sortingHelpers.compareRoman).forEach(c => flattenNode(c, level + 1));
+                if (node.grandchildren) Object.keys(node.grandchildren).map(id => ({ id, ...node.grandchildren[id] })).sort(sortingHelpers.compareChapters).forEach(c => flattenNode(c, level + 2));
+                if (node.greatGrandchildren) Object.keys(node.greatGrandchildren).map(id => ({ id, ...node.greatGrandchildren[id] })).sort(sortingHelpers.compareChapters).forEach(c => flattenNode(c, level + 3));
+                if (node.greatGreatGrandchildren) Object.keys(node.greatGreatGrandchildren).map(id => ({ id, ...node.greatGreatGrandchildren[id] })).sort(sortingHelpers.compareChapters).forEach(c => flattenNode(c, level + 4));
             };
 
-            // Bắt đầu duyệt từ mảng cha (Root Level)
-            const parents = Object.keys(parentsData)
-                .map(id => ({ id, ...parentsData[id] }))
-                .sort((a,b) => a.id.localeCompare(b.id));
-
+            const parents = Object.keys(parentsData).map(id => ({ id, ...parentsData[id] })).sort((a,b) => a.id.localeCompare(b.id));
             parents.forEach(p => flattenNode(p, 0));
 
             return rowsData;
@@ -636,14 +630,17 @@
                     const dataRows = await extractDataForSimplifiedReport(unit.db, year);
                     
                     if (dataRows.length > 0) {
-                        // Xóa sạch dữ liệu cũ trong Sheet (nếu có) và Dán vào từ dòng 1
-                        sheet.spliceRows(1, sheet.rowCount);
-                        sheet.addRows(dataRows);
+                        // VÌ SHEET ĐÃ ĐƯỢC LÀM SẠCH, ta điền an toàn tuyệt đối từ A1 (Row 1)
+                        // Gán trực tiếp từng dòng mảng vào values của Row tương ứng
+                        dataRows.forEach((rowArray, index) => {
+                            const rowNumber = index + 1; // ExcelJS bắt đầu dòng từ 1
+                            const excelRow = sheet.getRow(rowNumber);
+                            excelRow.values = rowArray; 
+                        });
                         
                         // Định dạng In đậm cho dòng Tiêu đề (Row 1)
                         const headerRow = sheet.getRow(1);
                         headerRow.font = { bold: true };
-                        // Căn chỉnh tự động wrap text (tuỳ chọn thêm)
                         headerRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
                     }
                 }
