@@ -692,7 +692,33 @@
                         }
                     }
                 }
-                
+				// 4.5. Cập nhật năm xuất báo cáo trên sheet "TỔNG HỢP"
+                const summarySheet = workbook.getWorksheet('TỔNG HỢP');
+                if (summarySheet) {
+                    summarySheet.eachRow((row) => {
+                        row.eachCell((cell) => {
+                            // Trường hợp 1: Ô chứa chuỗi ký tự bình thường
+                            if (typeof cell.value === 'string' && cell.value.includes('20xy')) {
+                                cell.value = cell.value.replace(/20xy/g, year);
+                            } 
+                            // Trường hợp 2: Ô chứa chuỗi có định dạng (RichText - ví dụ chữ vừa thường vừa in đậm)
+                            else if (cell.value && cell.value.richText) {
+                                let hasChanged = false;
+                                cell.value.richText.forEach(rt => {
+                                    if (rt.text && rt.text.includes('20xy')) {
+                                        rt.text = rt.text.replace(/20xy/g, year);
+                                        hasChanged = true;
+                                    }
+                                });
+                                // Phải gán lại object để exceljs lưu lại thay đổi
+                                if (hasChanged) {
+                                    cell.value = { richText: cell.value.richText };
+                                }
+                            }
+                        });
+                    });
+                }
+				
                 // 5. Đóng gói Workbook lại thành định dạng xlsx và kích hoạt tải về
                 globalStatus.innerText = 'Đang tạo file tải xuống...';
                 
