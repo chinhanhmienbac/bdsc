@@ -630,18 +630,43 @@
                     const dataRows = await extractDataForSimplifiedReport(unit.db, year);
                     
                     if (dataRows.length > 0) {
-                        // VÌ SHEET ĐÃ ĐƯỢC LÀM SẠCH, ta điền an toàn tuyệt đối từ A1 (Row 1)
-                        // Gán trực tiếp từng dòng mảng vào values của Row tương ứng
-                        dataRows.forEach((rowArray, index) => {
-                            const rowNumber = index + 1; // ExcelJS bắt đầu dòng từ 1
-                            const excelRow = sheet.getRow(rowNumber);
-                            excelRow.values = rowArray; 
+                        const headers = dataRows[0]; // Lưu lại dòng Header để nhận diện cột
+                        
+                        // Phương pháp an toàn nhất: Gán giá trị vào TỪNG Ô (Cell-by-cell)
+                        // Tránh ghi đè cấu trúc Dòng (Row) gây lỗi Repair của Excel
+                        dataRows.forEach((rowArray, rowIndex) => {
+                            const excelRow = sheet.getRow(rowIndex + 1);
+                            
+                            rowArray.forEach((val, colIndex) => {
+                                const cell = excelRow.getCell(colIndex + 1);
+                                const headerName = headers[colIndex] ? String(headers[colIndex]) : '';
+
+                                // Xử lý đặc biệt: Biến chuỗi thành đối tượng Date cho các cột "Ngày TH"
+                                if (rowIndex > 0 && val && headerName.startsWith('Ngày TH')) {
+                                    // Dữ liệu từ input type="date" thường có dạng YYYY-MM-DD
+                                    const dateParts = String(val).split('-');
+                                    if (dateParts.length === 3) {
+                                        // Dùng new Date(year, monthIndex, day) để tránh bị lùi ngày do timezone
+                                        cell.value = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+                                        cell.numFmt = 'dd/mm/yyyy'; // Định dạng hiển thị ngày cho Excel
+                                        return; // Bỏ qua lệnh gán mặc định bên dưới
+                                    }
+                                }
+                                
+                                // Các ô bình thường
+                                cell.value = val;
+                            });
                         });
                         
-                        // Định dạng In đậm cho dòng Tiêu đề (Row 1)
+                        // Định dạng In đậm và căn chỉnh cho dòng Tiêu đề (Row 1)
                         const headerRow = sheet.getRow(1);
                         headerRow.font = { bold: true };
                         headerRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                        
+                        // [TÙY CHỌN BỔ SUNG] Dọn dẹp Name rác trong Workbook để chặn đứng lỗi Repair
+                        if (workbook.definedNames) {
+                            workbook.definedNames.model = []; 
+                        }
                     }
                 }
                 
