@@ -681,6 +681,13 @@
                 
                 // 5. Đóng gói Workbook lại thành định dạng xlsx và kích hoạt tải về
                 globalStatus.innerText = 'Đang tạo file tải xuống...';
+                
+                // Kích hoạt cờ ép tính toán lại toàn bộ công thức khi mở file (dành cho Excel 2016)
+                if (!workbook.calcProperties) {
+                    workbook.calcProperties = {};
+                }
+                workbook.calcProperties.fullCalcOnLoad = true;
+
                 const buffer = await workbook.xlsx.writeBuffer();
                 const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                 const url = window.URL.createObjectURL(blob);
