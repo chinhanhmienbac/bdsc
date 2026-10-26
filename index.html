@@ -160,35 +160,35 @@
 		import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
 
         // ==============================================================
-        // 1. MẢNG CẤU HÌNH TẬP TRUNG (Đã bổ sung thuộc tính sheetName)
+        // 1. MẢNG CẤU HÌNH TẬP TRUNG (Bổ sung thuộc tính type: 1 hoặc 2)
         // ==============================================================
         const listConfigs = [
             {
-                id: 'dv', name: 'TỔNG KHO MIỀN BẮC', fileName: 'dv.html', sheetName: 'KMB',
+                id: 'dv', name: 'TỔNG KHO MIỀN BẮC', fileName: 'dv.html', sheetName: 'KMB', type: 1,
                 config: { apiKey: "AIzaSyDv2uEv6L_0G4g_V8VxNJDMu3_AhvhqjBE", authDomain: "bdsc-dv.firebaseapp.com", databaseURL: "https://bdsc-dv-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "bdsc-dv", appId: "1:194375535653:web:fac116dcbb01d4a09883cc" }
             },
             {
-                id: 'hp', name: 'TỔNG KHO HẢI PHÒNG', fileName: 'hp.html', sheetName: 'KHP',
+                id: 'hp', name: 'TỔNG KHO HẢI PHÒNG', fileName: 'hp.html', sheetName: 'KHP', type: 1,
                 config: { apiKey: "AIzaSyDl1ns6-XBsTI1MEteS3AjeTYZ3rbL_yRc", authDomain: "bdsc-hp.firebaseapp.com", databaseURL: "https://bdsc-hp-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "bdsc-hp", appId: "1:602300297635:web:1991f9caff76cf7744ea16" }
             },
             {
-                id: 'hn', name: 'TRẠM NẠP HÀ NỘI', fileName: 'hn.html', sheetName: 'HN',
+                id: 'hn', name: 'TRẠM NẠP HÀ NỘI', fileName: 'hn.html', sheetName: 'HN', type: 1,
                 config: { apiKey: "AIzaSyCwPifGgnorA6rXYE_gCGViN8jkWazkW-I", authDomain: "bdsc-hn.firebaseapp.com", databaseURL: "https://bdsc-hn-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "bdsc-hn", appId: "1:1064432135631:web:12927d01e88a11fb57f6ba" }
             },
             {
-                id: 'nd', name: 'TRẠM NẠP NAM ĐỊNH', fileName: 'nd.html', sheetName: 'NĐ',
+                id: 'nd', name: 'TRẠM NẠP NAM ĐỊNH', fileName: 'nd.html', sheetName: 'NĐ', type: 1,
                 config: { apiKey: "AIzaSyC6zogfxHV3zYs80GgQJ0HpLVxr_m3ArwU", authDomain: "bdsc-nd.firebaseapp.com", databaseURL: "https://bdsc-nd-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "bdsc-nd", appId: "1:58759284467:web:d33a542cee40ee36cf1986" }
             },
             {
-                id: 'kd', name: 'TT SSKĐ NAM ĐỊNH', fileName: 'kd.html', sheetName: 'TTSSKĐ',
+                id: 'kd', name: 'TT SSKĐ NAM ĐỊNH', fileName: 'kd.html', sheetName: 'TTSSKĐ', type: 1,
                 config: { apiKey: "AIzaSyDsjrZPhlbK8gpgmQza9sShmiAUptxhQn0", authDomain: "bdsc-kd.firebaseapp.com", databaseURL: "https://bdsc-kd-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "bdsc-kd", appId: "1:167446714761:web:617fe3666d9599cf486958" }
             },
             {
-                id: 'xt', name: 'XE TẢI VẬN CHUYỂN CNMB', fileName: 'xt.html', sheetName: 'XT',
+                id: 'xt', name: 'XE TẢI VẬN CHUYỂN CNMB', fileName: 'xt.html', sheetName: 'XT', type: 2,
                 config: { apiKey: "AIzaSyAAlYHnrM33W0HAQDHtBWTW-s9nB1_Jnvc", authDomain: "bdsc-xt.firebaseapp.com",databaseURL: "https://bdsc-xt-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "bdsc-xt", appId: "1:561700169478:web:39b7d164206a0e69db2087" }
             },
             {
-                id: 'vp', name: 'XE VĂN PHÒNG CNMB', fileName: 'vp.html', sheetName: 'VP',
+                id: 'vp', name: 'XE VĂN PHÒNG CNMB', fileName: 'vp.html', sheetName: 'VP', type: 2,
                 config: { apiKey: "AIzaSyAxcasVYdaO2XIl06l2VhYFOB8vRpKoJec", authDomain: "otovanphong.firebaseapp.com",databaseURL: "https://otovanphong-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "otovanphong", appId: "1:467137924247:web:7f1b59ce789358868c2dd2" }
             }
         ];
@@ -198,7 +198,7 @@
         let activeChartsMap = {};
 
         // ==============================================================
-        // 2. KHỞI TẠO DOM VÀ FIREBASE APP (GIỮ NGUYÊN)
+        // 2. KHỞI TẠO DOM VÀ FIREBASE APP
         // ==============================================================
         function initSystem() {
             const mainLayout = document.getElementById('mainLayout');
@@ -247,7 +247,8 @@
                     containerId: `container-${cfg.id}`,
                     name: cfg.name,
                     isDefaultSupport: (cfg.id === 'hn'),
-                    sheetName: cfg.sheetName 
+                    sheetName: cfg.sheetName,
+                    type: cfg.type || 1 // Bổ sung lưu type vào mảng units đang hoạt động
                 });
             });
         }
@@ -486,7 +487,8 @@
             return maxExec;
         }
 
-        async function extractDataForSimplifiedReport(db, year) {
+        // Hàm đã được cập nhật thêm tham số unitType
+        async function extractDataForSimplifiedReport(db, year, unitType) {
             const rootPath = `congViecMe${year}`;
             
             const [parentSnap, summarySnap] = await Promise.all([
@@ -500,18 +502,24 @@
             const summaryData = summarySnap.exists() ? summarySnap.val() : {};
             const rowsData = [];
 
-            // 1. Quét tìm số lần thực hiện lớn nhất
             const maxLanThucHien = findMaxExecutions(parentsData);
 
-            // 2. Thiết lập hàng Header cố định
-            const headers = [
+            // 2. Thiết lập Header động dựa trên unitType
+            const baseHeaders = [
                 'TT', 'Nội dung', 'Tag Name', 'ĐV th.hiện', 'KH năm trước', 'Thực hiện năm trước', 
                 'Tần suất TH', 'Đ.vị tính', 'Số lượng', 'Đơn giá (GT)', 'Chi phí KH', 
                 'Chi phí thực hiện', 'Kế hoạch còn lại', 'Năm phân bổ', 'CP phân bổ', 
-                'Cấp độ', 'CP CĐ1', 'Thời điểm TH', 'Ghi chú'
+                'Cấp độ', 'CP CĐ1', 'Thời điểm TH'
             ];
 
-            // 3. Nối thêm Header cho các lần thực hiện (Simplified mode: không có Timestamp và Link)
+            // Nếu là Loại 2, chèn ODDO ngay sau Thời điểm TH
+            if (unitType === 2) {
+                baseHeaders.push('ODDO');
+            }
+            baseHeaders.push('Ghi chú');
+
+            const headers = [...baseHeaders];
+
             for (let i = 1; i <= maxLanThucHien; i++) {
                 headers.push(`Ngày TH (${i})`, `Số lượng (${i})`, `Đơn giá (${i})`, `Thành tiền (${i})`);
             }
@@ -542,15 +550,21 @@
                     keHoachConLai = chiPhi - chiPhiThucHien;
                 }
 
+                // 3. Thiết lập Data Row động dựa trên unitType
                 const rowArray = [
                     convertTTForDisplay(node.tt), node.noiDung || '', level === 2 ? (node.tagName || '') : '', 
                     node.dvThucHien || '', safeNum(node.khNamTruoc), safeNum(node.thucHienNamTruoc), 
                     node.tanSuatTH === 0 ? '-' : (node.tanSuatTH || ''), node.donVi || '', slValue, 
                     safeNum(node.donGia), chiPhi, chiPhiThucHien, keHoachConLai, node.namPhanBo || '', 
-                    safeNum(node.chiPhiPhanBo), capDo, safeNum(node.cpCap1), tgBatDauValue, node.ghiChu || ''
+                    safeNum(node.chiPhiPhanBo), capDo, safeNum(node.cpCap1), tgBatDauValue
                 ];
 
-                // 4. Bổ sung Dữ liệu Thực hiện (Executions)
+                // Nếu là Loại 2, chèn dữ liệu tgHoanThanh vào
+                if (unitType === 2) {
+                    rowArray.push(node.tgHoanThanh || '');
+                }
+                rowArray.push(node.ghiChu || '');
+
                 const nodeExecutions = [];
                 if (node.executions) {
                     const sortedExecs = Object.values(node.executions).sort((a, b) => {
@@ -566,7 +580,7 @@
                         const exec = nodeExecutions[i];
                         rowArray.push(exec.ngayThucHien || '', safeNum(exec.dvt), safeNum(exec.donGia), safeNum(exec.thanhTien));
                     } else {
-                        rowArray.push('', '', '', ''); // Ô trống nếu không có
+                        rowArray.push('', '', '', ''); 
                     }
                 }
                 
@@ -627,7 +641,7 @@
                     }
                     
                     // 4. Kích hoạt Hàm Lõi để kéo dữ liệu từ CSDL
-                    const dataRows = await extractDataForSimplifiedReport(unit.db, year);
+                    const dataRows = await extractDataForSimplifiedReport(unit.db, year, unit.type);
                     
                     if (dataRows.length > 0) {
                         const headers = dataRows[0]; 
