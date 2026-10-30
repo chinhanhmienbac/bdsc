@@ -953,17 +953,15 @@
                     sheet.eachRow((row) => { row.eachCell((cell) => { cell.value = null; cell.style = {}; }); });
 
                     // =========================================================================
-                    // [MỚI] 5. Copy 7 dòng tiêu đề từ sheet 'mau1' sang các sheet nhận dữ liệu
+                    // 5. Copy 6 dòng tiêu đề từ sheet 'mau1' sang các sheet nhận dữ liệu
                     // =========================================================================
                     if (mau1Sheet) {
-                        for (let r = 1; r <= 7; r++) {
+                        for (let r = 1; r <= 6; r++) { // Sửa r <= 6
                             const sourceRow = mau1Sheet.getRow(r);
                             const targetRow = sheet.getRow(r);
                             
-                            // Copy chiều cao dòng
                             targetRow.height = sourceRow.height;
                             
-                            // Copy từng ô (cả giá trị và định dạng: font, màu sắc, viền, căn lề...)
                             sourceRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
                                 const targetCell = targetRow.getCell(colNumber);
                                 targetCell.value = cell.value;
@@ -971,15 +969,12 @@
                             });
                         }
                         
-                        // Copy các ô được merge (gộp) trong 7 dòng đầu tiên
                         if (mau1Sheet.model && mau1Sheet.model.merges) {
                             mau1Sheet.model.merges.forEach(mergeRange => {
-                                // Trích xuất dòng bắt đầu của vùng merge (ví dụ "A1:B2" -> startRow = 1)
                                 const match = mergeRange.match(/[a-zA-Z]+(\d+):[a-zA-Z]+(\d+)/);
                                 if (match) {
                                     const startRow = parseInt(match[1]);
-                                    // Chỉ áp dụng merge nếu nó nằm trong phạm vi 7 dòng header
-                                    if (startRow <= 7) {
+                                    if (startRow <= 6) { // Sửa startRow <= 6
                                         try { sheet.mergeCells(mergeRange); } catch(e) { console.warn('Lỗi merge ô:', e); }
                                     }
                                 }
@@ -990,8 +985,8 @@
                     // 6. Xây dựng cây dữ liệu & Ghi vào sheet
                     const parents = Object.keys(parentsData).map(id => ({ id, ...parentsData[id] })).sort((a,b) => a.id.localeCompare(b.id));
                     
-                    // [MỚI] Di chuyển dữ liệu bắt đầu từ dòng 8 (vì 7 dòng đầu đã dành cho header copy từ mau1)
-                    let currentRowIdx = 8;
+                    // Bắt đầu rải dữ liệu từ dòng 7
+                    let currentRowIdx = 7; // Sửa thành 7
 
                     const ctx = { sheet, colMap, summaryData, unitType: unit.type, moneyFmt: '#,##0;-#,##0;"-"' };
 
