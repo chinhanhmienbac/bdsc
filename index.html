@@ -104,6 +104,7 @@
             <div id="global-status" style="margin-left: 20px; font-weight: bold; color: #007bff;"></div>
         </div>
         <button class="btn-summary" onclick="openSummaryModal()">Xem tổng hợp năm</button>
+		<button onclick="exportPlanDataToSampleExcel()" style="position: absolute; right: 220px; padding: 10px 20px; background-color: #fd7e14; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">Xuất KH</button>
     </div>
 
     <div class="main-layout" id="mainLayout"></div>
@@ -872,7 +873,281 @@
             if (event.target == supModal) supModal.style.display = "none";
         }
 
-        // --- KHỞI CHẠY ---
+        // =========================================================================================
+        // TÍNH NĂNG ĐỘC LẬP: XUẤT KẾ HOẠCH (CÓ ĐỊNH DẠNG & CÔNG THỨC - KẾ THỪA TỪ exportFFExcel)
+        // =========================================================================================
+        
+        // Helper chuyển đổi số thứ tự cột (1, 2, 3...) thành chữ cái Excel (A, B, C...)
+        const getColLetter = (colIndex) => {
+            let temp, letter = '';
+            while (colIndex > 0) {
+                temp = (colIndex - 1) % 26;
+                letter = String.fromCharCode(temp + 65) + letter;
+                colIndex = (colIndex - temp - 1) / 26;
+            }
+            return letter;
+        };
+
+        window.exportPlanDataToSampleExcel = async function() {
+            const btn = document.querySelector('button[onclick="exportPlanDataToSampleExcel()"]');
+            const year = document.getElementById('yearSelect').value;
+            
+            try {
+                btn.disabled = true; btn.innerText = 'Đang tạo KH...';
+                globalStatus.innerText = 'Đang tải file mẫu và xây dựng công thức...';
+                
+                // 1. Tải file template
+                const response = await fetch('Sample.xlsx');
+                if (!response.ok) throw new Error("Không tìm thấy file 'Sample.xlsx'");
+                const arrayBuffer = await response.arrayBuffer();
+                
+                const workbook = new ExcelJS.Workbook();
+                await workbook.xlsx.load(arrayBuffer);
+                
+                // 2. Duyệt qua các đơn vị
+                for (const cfg of listConfigs) {
+                    if (!cfg.sheetName || cfg.sheetName.trim() === '') continue;
+                    
+                    const unit = units.find(u => u.id === cfg.id);
+                    if (!unit) continue;
+                    
+                    const sheet = workbook.getWorksheet(cfg.sheetName);
+                    if (!sheet) {
+                        console.warn(`Sheet "${cfg.sheetName}" không tồn tại. Bỏ qua.`);
+                        continue;
+                    }
+                    
+                    // 3. Kéo dữ liệu
+                    const [parentSnap, summarySnap] = await Promise.all([
+                        get(ref(unit.db, `congViecMe${year}`)),
+                        get(ref(unit.db, `summary_data/${year}`))
+                    ]);
+
+                    if (!parentSnap.exists()) continue;
+                    const parentsData = parentSnap.val();
+                    const summaryData = summarySnap.exists() ? summarySnap.val() : {};
+
+                    // 4. Thiết lập bản đồ cột (Dựa vào type)
+                    const colMap = {
+                        tt: 1, noiDung: 2, tagName: 3, dvThucHien: 4, khNamTruoc: 5, thucHienNamTruoc: 6,
+                        tanSuatTH: 7, donVi: 8, soLuong: 9, donGia: 10, chiPhi: 11, chiPhiThucHien: 12,
+                        keHoachConLai: 13, namPhanBo: 14, chiPhiPhanBo: 15, capDo: 16, cpCap1: 17, tgBatDau: 18
+                    };
+                    
+                    if (unit.type === 2) {
+                        colMap.tgHoanThanh = 19; // ODDO
+                        colMap.ghiChu = 20;
+                    } else {
+                        colMap.ghiChu = 19;
+                    }
+
+                    // Xóa trắng sheet cũ (An toàn: ghi đè null, không xóa dòng)
+                    sheet.eachRow((row) => { row.eachCell((cell) => { cell.value = null; cell.style = {}; }); });
+
+                    // 5. Ghi Header
+                    const headerRow = sheet.getRow(1);
+                    const headerNames = {
+                        tt: 'TT', noiDung: 'Nội dung', tagName: 'Tag Name', dvThucHien: 'ĐV th.hiện', 
+                        khNamTruoc: 'KH năm trước', thucHienNamTruoc: 'Thực hiện năm trước', tanSuatTH: 'Tần suất TH', 
+                        donVi: 'Đ.vị tính', soLuong: 'Số lượng', donGia: 'Đơn giá (GT)', chiPhi: 'Chi phí KH', 
+                        chiPhiThucHien: 'Chi phí thực hiện', keHoachConLai: 'Kế hoạch còn lại', namPhanBo: 'Năm phân bổ', 
+                        chiPhiPhanBo: 'CP phân bổ', capDo: 'Cấp độ', cpCap1: 'CP CĐ1', tgBatDau: 'Thời điểm TH', 
+                        tgHoanThanh: 'ODDO', ghiChu: 'Ghi chú'
+                    };
+                    
+                    for (const key in colMap) {
+                        const cell = headerRow.getCell(colMap[key]);
+                        cell.value = headerNames[key];
+                        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0070C0' } };
+                        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                    }
+
+                    // 6. Xây dựng cây dữ liệu & Ghi vào sheet
+                    const parents = Object.keys(parentsData).map(id => ({ id, ...parentsData[id] })).sort((a,b) => a.id.localeCompare(b.id));
+                    let currentRowIdx = 2;
+
+                    const ctx = { sheet, colMap, summaryData, unitType: unit.type, moneyFmt: '#,##0' };
+
+                    for (const p of parents) {
+                        currentRowIdx = buildPlanWorksheet(p, 0, currentRowIdx, ctx);
+                    }
+                }
+
+                // 7. Chống lỗi Repair & Ép tính toán
+                globalStatus.innerText = 'Đang đóng gói file...';
+                if (workbook.definedNames) workbook.definedNames.model = [];
+                if (!workbook.calcProperties) workbook.calcProperties = {};
+                workbook.calcProperties.fullCalcOnLoad = true; // Ép Excel 2016 chạy lại công thức
+
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                const url = window.URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `KeHoach_BDSC_${year}.xlsx`; 
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                globalStatus.innerText = 'Xuất Kế hoạch thành công!';
+                
+            } catch (error) {
+                console.error("Lỗi xuất KH:", error);
+                alert("Lỗi: " + error.message);
+                globalStatus.innerText = 'Lỗi xuất KH.';
+            } finally {
+                btn.disabled = false; btn.innerText = 'Xuất KH';
+                setTimeout(() => globalStatus.innerText = '', 4000);
+            }
+        };
+
+        // Hàm Đệ quy Ghi dữ liệu & Tạo công thức (Mô phỏng 100% logic của exportFFExcel)
+        function buildPlanWorksheet(node, level, rowIndex, ctx) {
+            const r = rowIndex;
+            let nextRowIdx = rowIndex + 1;
+            const childRowNumbers = [];
+
+            const isContainer = (node.hasChildren === true) || 
+                (node.children && Object.keys(node.children).length > 0) || 
+                (node.grandchildren && Object.keys(node.grandchildren).length > 0) || 
+                (node.greatGrandchildren && Object.keys(node.greatGrandchildren).length > 0) || 
+                (node.greatGreatGrandchildren && Object.keys(node.greatGreatGrandchildren).length > 0);
+
+            // 1. Duyệt sâu (DFS) xuống con cái trước để lấy số dòng của con làm công thức SUM
+            if (node.children) {
+                Object.values(node.children).sort(sortingHelpers.compareRoman).forEach(c => {
+                    childRowNumbers.push(nextRowIdx);
+                    nextRowIdx = buildPlanWorksheet(c, level + 1, nextRowIdx, ctx);
+                });
+            }
+            if (node.grandchildren) {
+                Object.values(node.grandchildren).sort(sortingHelpers.compareChapters).forEach(c => {
+                    childRowNumbers.push(nextRowIdx);
+                    nextRowIdx = buildPlanWorksheet(c, level + 1, nextRowIdx, ctx);
+                });
+            }
+            if (node.greatGrandchildren) {
+                Object.values(node.greatGrandchildren).sort(sortingHelpers.compareChapters).forEach(c => {
+                    childRowNumbers.push(nextRowIdx);
+                    nextRowIdx = buildPlanWorksheet(c, level + 1, nextRowIdx, ctx);
+                });
+            }
+            if (node.greatGreatGrandchildren) {
+                Object.values(node.greatGreatGrandchildren).sort(sortingHelpers.compareChapters).forEach(c => {
+                    childRowNumbers.push(nextRowIdx);
+                    nextRowIdx = buildPlanWorksheet(c, level + 1, nextRowIdx, ctx);
+                });
+            }
+
+            // 2. Chuẩn bị giá trị đặc biệt
+            const safeNum = (val) => (typeof val === 'number') ? val : (parseFloat(String(val).replace(/\./g, '').replace(/,/g, '.')) || 0);
+            
+            let displaySoLuong = safeNum(node.soLuong);
+            let displayTgBatDau = node.tgBatDau || '';
+            if (level === 0 && ctx.summaryData[node.id]) {
+                displaySoLuong = ctx.summaryData[node.id].totalLeafNodesCap1 || 0;
+                displayTgBatDau = ctx.summaryData[node.id].totalExecutedLeafNodesCap1 || 0;
+            }
+
+            const row = ctx.sheet.getRow(r);
+            const { colMap, moneyFmt } = ctx;
+
+            // Hàm ghi cell an toàn
+            const setVal = (key, val, isNum = false) => {
+                if (!colMap[key]) return;
+                const cell = row.getCell(colMap[key]);
+                if (val === '' || val === undefined || val === null) { cell.value = null; return; }
+                cell.value = val;
+                if (isNum) cell.numFmt = moneyFmt;
+            };
+
+            // 3. Ghi giá trị cơ bản
+            setVal('tt', node.tt ? String(node.tt).replace(/,/g, '.') : '');
+            setVal('noiDung', node.noiDung || '');
+            setVal('tagName', level === 2 ? (node.tagName || '') : '');
+            setVal('dvThucHien', node.dvThucHien || '');
+            setVal('tanSuatTH', node.tanSuatTH === 0 ? '-' : (node.tanSuatTH || ''));
+            setVal('donVi', node.donVi || '');
+            setVal('soLuong', (isContainer && level === 0) ? displaySoLuong : displaySoLuong, true);
+            setVal('donGia', node.donGia || 0, true);
+            setVal('namPhanBo', node.namPhanBo || '');
+            setVal('capDo', node.capDo || '');
+            setVal('tgBatDau', displayTgBatDau);
+            setVal('ghiChu', node.ghiChu || '');
+            if (ctx.unitType === 2) setVal('tgHoanThanh', node.tgHoanThanh || '');
+
+            // 4. XỬ LÝ CÔNG THỨC (Dựa theo logic exportFFExcel)
+            const addr = (key) => getColLetter(colMap[key]) + r;
+            const createSum = (key) => childRowNumbers.map(cr => getColLetter(colMap[key]) + cr).join('+');
+
+            const makeSumOrVal = (key, rawVal) => {
+                if (!colMap[key]) return;
+                const cell = row.getCell(colMap[key]);
+                // Cho phép Cấp 3 (level 2) cộng dồn từ con
+                if (isContainer && childRowNumbers.length > 0 && (key !== 'chiPhi' || level <= 2)) {
+                    cell.value = { formula: createSum(key) };
+                } else {
+                    cell.value = safeNum(rawVal);
+                }
+                cell.numFmt = moneyFmt;
+            };
+
+            makeSumOrVal('khNamTruoc', node.khNamTruoc);
+            makeSumOrVal('thucHienNamTruoc', node.thucHienNamTruoc);
+            makeSumOrVal('chiPhi', node.chiPhi);
+            makeSumOrVal('chiPhiThucHien', node.chiPhiThucHien);
+            makeSumOrVal('chiPhiPhanBo', node.chiPhiPhanBo);
+            makeSumOrVal('cpCap1', node.cpCap1);
+
+            // Công thức: Kế hoạch còn lại
+            if (colMap.keHoachConLai) {
+                const isPs = node.capDo && String(node.capDo).trim().toLowerCase() === 'ps';
+                if (level !== 4 && !isPs) { // Khác cấp 5 và khác PS
+                    row.getCell(colMap.keHoachConLai).value = { formula: `${addr('chiPhi')}-${addr('chiPhiThucHien')}` };
+                } else {
+                    row.getCell(colMap.keHoachConLai).value = null;
+                }
+                row.getCell(colMap.keHoachConLai).numFmt = moneyFmt;
+            }
+
+            // Công thức Level 3, 4
+            if (level >= 3) {
+                if (colMap.chiPhiPhanBo) {
+                    row.getCell(colMap.chiPhiPhanBo).value = { formula: `IF(ISNUMBER(${addr('namPhanBo')}), IF(${addr('namPhanBo')}>0, ${addr('chiPhi')}/${addr('namPhanBo')}, 0), 0)` };
+                }
+                if (colMap.cpCap1) {
+                    row.getCell(colMap.cpCap1).value = { formula: `IF(${addr('capDo')}="1", ${addr('chiPhi')}, IF(${addr('capDo')}="6t", ${addr('chiPhi')}*0.5, 0))` };
+                }
+                // (Đã bỏ công thức Thành tiền SL*DG cho Level 5 theo yêu cầu loại bỏ Executions)
+            }
+
+            // 5. ĐỊNH DẠNG MÀU SẮC (STYLING) TƯƠNG ĐƯƠNG TRÊN WEB
+            const applyStyle = (fgColor, bold = false, italic = false) => {
+                row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                    if (colNumber > Object.keys(colMap).length) return; // Chỉ format các cột có data
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fgColor } };
+                    cell.font = { bold: bold, italic: italic };
+                    
+                    // Riêng cột Tag Name màu hồng đậm
+                    if (colNumber === colMap.tagName && level === 2) {
+                        cell.font = { bold: false, color: { argb: 'FFD63384' } };
+                        cell.alignment = { horizontal: 'center' };
+                    }
+                });
+            };
+
+            if (level === 0) applyStyle('FFE2E6EA', true, false);       // Task Parent
+            else if (level === 1) applyStyle('FFE9ECEF', true, false);  // Task Child
+            else if (level === 2) applyStyle('FFF2F4F6', true, false);  // Task Grandchild
+            else if (level === 3 && isContainer) applyStyle('FFF8F9FA', false, false); // Container leaf
+            else if (level === 4) applyStyle('FFE8F5E9', false, true);  // Level 5 (Vật tư)
+
+            return nextRowIdx; // Trả về index dòng tiếp theo cho vòng lặp
+        }
+		// --- KHỞI CHẠY ---
         try {
             initSystem(); 
             initializeYearDropdown(); 
