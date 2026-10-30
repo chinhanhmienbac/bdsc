@@ -927,8 +927,7 @@
                     const parentsData = parentSnap.val();
                     const summaryData = summarySnap.exists() ? summarySnap.val() : {};
 
-                    // 4. Thiết lập bản đồ cột (Lược bỏ Tag Name, Tần suất, Đơn giá, CP Thực hiện, KH còn lại, ODDO)
-                    // Thay đổi vị trí: Đ.vị tính (3), Thời điểm TH (7), ĐV th.hiện (8), Chi phí KH (9)
+                    // 4. Thiết lập bản đồ cột (Bổ sung cpCap2 vào vị trí 14)
                     const colMap = {
                         tt: 1, 
                         noiDung: 2, 
@@ -943,10 +942,11 @@
                         chiPhiPhanBo: 11, 
                         capDo: 12, 
                         cpCap1: 13, 
-                        ghiChu: 14
+                        cpCap2: 14,
+                        ghiChu: 15
                     };
 
-                    // Xóa trắng sheet cũ (An toàn: ghi đè null, không xóa dòng)
+                    // Xóa trắng sheet cũ
                     sheet.eachRow((row) => { row.eachCell((cell) => { cell.value = null; cell.style = {}; }); });
 
                     // 5. Ghi Header
@@ -956,7 +956,7 @@
                         khNamTruoc: 'KH năm trước', thucHienNamTruoc: 'Thực hiện năm trước', 
                         soLuong: 'Số lượng', tgBatDau: 'Thời điểm TH', dvThucHien: 'ĐV th.hiện', 
                         chiPhi: 'Chi phí KH', namPhanBo: 'Năm phân bổ', chiPhiPhanBo: 'CP phân bổ', 
-                        capDo: 'Cấp độ', cpCap1: 'CP CĐ1', ghiChu: 'Ghi chú'
+                        capDo: 'Cấp độ', cpCap1: 'CP CĐ1', cpCap2: 'CP CĐ2', ghiChu: 'Ghi chú'
                     };
                     
                     for (const key in colMap) {
@@ -971,12 +971,12 @@
                     const parents = Object.keys(parentsData).map(id => ({ id, ...parentsData[id] })).sort((a,b) => a.id.localeCompare(b.id));
                     let currentRowIdx = 2;
 
-                    const ctx = { sheet, colMap, summaryData, unitType: unit.type, moneyFmt: '#,##0' };
+                    // Thay đổi định dạng moneyFmt để hiển thị giá trị 0 thành dấu gạch ngang "-"
+                    const ctx = { sheet, colMap, summaryData, unitType: unit.type, moneyFmt: '#,##0;-#,##0;"-"' };
 
                     for (const p of parents) {
                         currentRowIdx = buildPlanWorksheet(p, 0, currentRowIdx, ctx);
                     }
-                }
 
                 // 7. Chống lỗi Repair & Ép tính toán
                 globalStatus.innerText = 'Đang đóng gói file...';
@@ -1096,7 +1096,6 @@
             makeSumOrVal('cpCap1', node.cpCap1);
 
             // Gán công thức Excel (IF) cho các Node Lá cuối cùng được xuất ra
-            // Lá cuối cùng ở Nhóm 1 là Cấp 4 (level 3), ở Nhóm 2 là Cấp 3 (level 2)
             const isRenderedLeaf = (childRowNumbers.length === 0);
             if (isRenderedLeaf && level >= 2) {
                 if (colMap.chiPhiPhanBo) {
@@ -1107,7 +1106,13 @@
                 }
             }
 
-            // 5. ĐỊNH DẠNG MÀU SẮC (STYLING)
+            // Gán công thức tính CP CĐ2 = Chi phí KH - CP CĐ1 (Áp dụng cho mọi dòng)
+            if (colMap.cpCap2) {
+                row.getCell(colMap.cpCap2).value = { formula: `${addr('chiPhi')}-${addr('cpCap1')}` };
+                row.getCell(colMap.cpCap2).numFmt = moneyFmt;
+            }
+
+            // 5. ĐỊNH DẠNG MÀU SẮC (STYLING) VÀ KIỂU CHỮ
             const applyStyle = (fgColor, bold = false) => {
                 row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
                     if (colNumber > Object.keys(colMap).length) return; 
@@ -1116,10 +1121,14 @@
                 });
             };
 
-            if (level === 0) applyStyle('FFE2E6EA', true);       // Task Parent
-            else if (level === 1) applyStyle('FFE9ECEF', true);  // Task Child
-            else if (level === 2) applyStyle('FFF2F4F6', true);  // Task Grandchild
-            else if (level === 3) applyStyle('FFF8F9FA', false); // Task GreatGrandchild (Chỉ có ở Nhóm 1)
+            if (level === 0) applyStyle('FFE2E6EA', true);       // Task Parent (Cấp 1)
+            else if (level === 1) applyStyle('FFE9ECEF', true);  // Task Child (Cấp 2)
+            else if (level === 2) {
+                // Task Grandchild (Cấp 3): Bỏ in đậm nếu CSDL là loại 2
+                const isBold = (ctx.unitType !== 2);
+                applyStyle('FFF2F4F6', isBold);
+            }
+            else if (level === 3) applyStyle('FFF8F9FA', false); // Task GreatGrandchild (Cấp 4)
 
             return nextRowIdx; 
         }
