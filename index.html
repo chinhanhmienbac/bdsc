@@ -874,7 +874,7 @@
         }
 
         // =========================================================================================
-        // TÍNH NĂNG ĐỘC LẬP: XUẤT KẾ HOẠCH (CÓ ĐỊNH DẠNG & CÔNG THỨC - KẾ THỪA TỪ exportFFExcel)
+        // TÍNH NĂNG ĐỘC LẬP: XUẤT KẾ HOẠCH (CÓ ĐỊNH DẠNG & CÔNG THỨC) - BẢN RÚT GỌN CỘT VÀ CẤP ĐỘ
         // =========================================================================================
         
         // Helper chuyển đổi số thứ tự cột (1, 2, 3...) thành chữ cái Excel (A, B, C...)
@@ -927,19 +927,24 @@
                     const parentsData = parentSnap.val();
                     const summaryData = summarySnap.exists() ? summarySnap.val() : {};
 
-                    // 4. Thiết lập bản đồ cột (Dựa vào type)
+                    // 4. Thiết lập bản đồ cột (Lược bỏ Tag Name, Tần suất, Đơn giá, CP Thực hiện, KH còn lại, ODDO)
+                    // Thay đổi vị trí: Đ.vị tính (3), Thời điểm TH (7), ĐV th.hiện (8), Chi phí KH (9)
                     const colMap = {
-                        tt: 1, noiDung: 2, tagName: 3, dvThucHien: 4, khNamTruoc: 5, thucHienNamTruoc: 6,
-                        tanSuatTH: 7, donVi: 8, soLuong: 9, donGia: 10, chiPhi: 11, chiPhiThucHien: 12,
-                        keHoachConLai: 13, namPhanBo: 14, chiPhiPhanBo: 15, capDo: 16, cpCap1: 17, tgBatDau: 18
+                        tt: 1, 
+                        noiDung: 2, 
+                        donVi: 3, 
+                        khNamTruoc: 4, 
+                        thucHienNamTruoc: 5,
+                        soLuong: 6, 
+                        tgBatDau: 7, 
+                        dvThucHien: 8, 
+                        chiPhi: 9, 
+                        namPhanBo: 10, 
+                        chiPhiPhanBo: 11, 
+                        capDo: 12, 
+                        cpCap1: 13, 
+                        ghiChu: 14
                     };
-                    
-                    if (unit.type === 2) {
-                        colMap.tgHoanThanh = 19; // ODDO
-                        colMap.ghiChu = 20;
-                    } else {
-                        colMap.ghiChu = 19;
-                    }
 
                     // Xóa trắng sheet cũ (An toàn: ghi đè null, không xóa dòng)
                     sheet.eachRow((row) => { row.eachCell((cell) => { cell.value = null; cell.style = {}; }); });
@@ -947,12 +952,11 @@
                     // 5. Ghi Header
                     const headerRow = sheet.getRow(1);
                     const headerNames = {
-                        tt: 'TT', noiDung: 'Nội dung', tagName: 'Tag Name', dvThucHien: 'ĐV th.hiện', 
-                        khNamTruoc: 'KH năm trước', thucHienNamTruoc: 'Thực hiện năm trước', tanSuatTH: 'Tần suất TH', 
-                        donVi: 'Đ.vị tính', soLuong: 'Số lượng', donGia: 'Đơn giá (GT)', chiPhi: 'Chi phí KH', 
-                        chiPhiThucHien: 'Chi phí thực hiện', keHoachConLai: 'Kế hoạch còn lại', namPhanBo: 'Năm phân bổ', 
-                        chiPhiPhanBo: 'CP phân bổ', capDo: 'Cấp độ', cpCap1: 'CP CĐ1', tgBatDau: 'Thời điểm TH', 
-                        tgHoanThanh: 'ODDO', ghiChu: 'Ghi chú'
+                        tt: 'TT', noiDung: 'Nội dung', donVi: 'Đ.vị tính', 
+                        khNamTruoc: 'KH năm trước', thucHienNamTruoc: 'Thực hiện năm trước', 
+                        soLuong: 'Số lượng', tgBatDau: 'Thời điểm TH', dvThucHien: 'ĐV th.hiện', 
+                        chiPhi: 'Chi phí KH', namPhanBo: 'Năm phân bổ', chiPhiPhanBo: 'CP phân bổ', 
+                        capDo: 'Cấp độ', cpCap1: 'CP CĐ1', ghiChu: 'Ghi chú'
                     };
                     
                     for (const key in colMap) {
@@ -978,7 +982,7 @@
                 globalStatus.innerText = 'Đang đóng gói file...';
                 if (workbook.definedNames) workbook.definedNames.model = [];
                 if (!workbook.calcProperties) workbook.calcProperties = {};
-                workbook.calcProperties.fullCalcOnLoad = true; // Ép Excel 2016 chạy lại công thức
+                workbook.calcProperties.fullCalcOnLoad = true; 
 
                 const buffer = await workbook.xlsx.writeBuffer();
                 const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -1004,43 +1008,39 @@
             }
         };
 
-        // Hàm Đệ quy Ghi dữ liệu & Tạo công thức (Mô phỏng 100% logic của exportFFExcel)
+        // Hàm Đệ quy Ghi dữ liệu & Tạo công thức (Đã chặn Cấp 5, và chặn Cấp 4 cho Nhóm 2)
         function buildPlanWorksheet(node, level, rowIndex, ctx) {
             const r = rowIndex;
             let nextRowIdx = rowIndex + 1;
             const childRowNumbers = [];
 
-            const isContainer = (node.hasChildren === true) || 
-                (node.children && Object.keys(node.children).length > 0) || 
-                (node.grandchildren && Object.keys(node.grandchildren).length > 0) || 
-                (node.greatGrandchildren && Object.keys(node.greatGrandchildren).length > 0) || 
-                (node.greatGreatGrandchildren && Object.keys(node.greatGreatGrandchildren).length > 0);
+            // Xác định xem Node hiện tại có chứa con (theo cấp độ được phép render) hay không
+            let hasRenderedChildren = false;
 
-            // 1. Duyệt sâu (DFS) xuống con cái trước để lấy số dòng của con làm công thức SUM
+            // 1. Duyệt sâu (DFS) xuống con cái trước
             if (node.children) {
                 Object.values(node.children).sort(sortingHelpers.compareRoman).forEach(c => {
                     childRowNumbers.push(nextRowIdx);
                     nextRowIdx = buildPlanWorksheet(c, level + 1, nextRowIdx, ctx);
+                    hasRenderedChildren = true;
                 });
             }
             if (node.grandchildren) {
                 Object.values(node.grandchildren).sort(sortingHelpers.compareChapters).forEach(c => {
                     childRowNumbers.push(nextRowIdx);
                     nextRowIdx = buildPlanWorksheet(c, level + 1, nextRowIdx, ctx);
+                    hasRenderedChildren = true;
                 });
             }
-            if (node.greatGrandchildren) {
+            // Chỉ duyệt tiếp xuống Cấp 4 nếu là CSDL Loại 1
+            if (ctx.unitType !== 2 && node.greatGrandchildren) {
                 Object.values(node.greatGrandchildren).sort(sortingHelpers.compareChapters).forEach(c => {
                     childRowNumbers.push(nextRowIdx);
                     nextRowIdx = buildPlanWorksheet(c, level + 1, nextRowIdx, ctx);
+                    hasRenderedChildren = true;
                 });
             }
-            if (node.greatGreatGrandchildren) {
-                Object.values(node.greatGreatGrandchildren).sort(sortingHelpers.compareChapters).forEach(c => {
-                    childRowNumbers.push(nextRowIdx);
-                    nextRowIdx = buildPlanWorksheet(c, level + 1, nextRowIdx, ctx);
-                });
-            }
+            // TOÀN BỘ BỎ QUA CẤP 5 (greatGreatGrandchildren)
 
             // 2. Chuẩn bị giá trị đặc biệt
             const safeNum = (val) => (typeof val === 'number') ? val : (parseFloat(String(val).replace(/\./g, '').replace(/,/g, '.')) || 0);
@@ -1055,7 +1055,6 @@
             const row = ctx.sheet.getRow(r);
             const { colMap, moneyFmt } = ctx;
 
-            // Hàm ghi cell an toàn
             const setVal = (key, val, isNum = false) => {
                 if (!colMap[key]) return;
                 const cell = row.getCell(colMap[key]);
@@ -1064,30 +1063,25 @@
                 if (isNum) cell.numFmt = moneyFmt;
             };
 
-            // 3. Ghi giá trị cơ bản
+            // 3. Ghi giá trị cơ bản (Đã bỏ tagName, donGia, tanSuatTH)
             setVal('tt', node.tt ? String(node.tt).replace(/,/g, '.') : '');
             setVal('noiDung', node.noiDung || '');
-            setVal('tagName', level === 2 ? (node.tagName || '') : '');
-            setVal('dvThucHien', node.dvThucHien || '');
-            setVal('tanSuatTH', node.tanSuatTH === 0 ? '-' : (node.tanSuatTH || ''));
             setVal('donVi', node.donVi || '');
-            setVal('soLuong', (isContainer && level === 0) ? displaySoLuong : displaySoLuong, true);
-            setVal('donGia', node.donGia || 0, true);
+            setVal('soLuong', (hasRenderedChildren && level === 0) ? displaySoLuong : displaySoLuong, true);
+            setVal('tgBatDau', displayTgBatDau);
+            setVal('dvThucHien', node.dvThucHien || '');
             setVal('namPhanBo', node.namPhanBo || '');
             setVal('capDo', node.capDo || '');
-            setVal('tgBatDau', displayTgBatDau);
             setVal('ghiChu', node.ghiChu || '');
-            if (ctx.unitType === 2) setVal('tgHoanThanh', node.tgHoanThanh || '');
 
-            // 4. XỬ LÝ CÔNG THỨC (Dựa theo logic exportFFExcel)
+            // 4. XỬ LÝ CÔNG THỨC (Cộng dồn tự động)
             const addr = (key) => getColLetter(colMap[key]) + r;
             const createSum = (key) => childRowNumbers.map(cr => getColLetter(colMap[key]) + cr).join('+');
 
             const makeSumOrVal = (key, rawVal) => {
                 if (!colMap[key]) return;
                 const cell = row.getCell(colMap[key]);
-                // Cho phép Cấp 3 (level 2) cộng dồn từ con
-                if (isContainer && childRowNumbers.length > 0 && (key !== 'chiPhi' || level <= 2)) {
+                if (hasRenderedChildren && childRowNumbers.length > 0 && (key !== 'chiPhi' || level <= 2)) {
                     cell.value = { formula: createSum(key) };
                 } else {
                     cell.value = safeNum(rawVal);
@@ -1098,54 +1092,36 @@
             makeSumOrVal('khNamTruoc', node.khNamTruoc);
             makeSumOrVal('thucHienNamTruoc', node.thucHienNamTruoc);
             makeSumOrVal('chiPhi', node.chiPhi);
-            makeSumOrVal('chiPhiThucHien', node.chiPhiThucHien);
             makeSumOrVal('chiPhiPhanBo', node.chiPhiPhanBo);
             makeSumOrVal('cpCap1', node.cpCap1);
 
-            // Công thức: Kế hoạch còn lại
-            if (colMap.keHoachConLai) {
-                const isPs = node.capDo && String(node.capDo).trim().toLowerCase() === 'ps';
-                if (level !== 4 && !isPs) { // Khác cấp 5 và khác PS
-                    row.getCell(colMap.keHoachConLai).value = { formula: `${addr('chiPhi')}-${addr('chiPhiThucHien')}` };
-                } else {
-                    row.getCell(colMap.keHoachConLai).value = null;
-                }
-                row.getCell(colMap.keHoachConLai).numFmt = moneyFmt;
-            }
-
-            // Công thức Level 3, 4
-            if (level >= 3) {
+            // Gán công thức Excel (IF) cho các Node Lá cuối cùng được xuất ra
+            // Lá cuối cùng ở Nhóm 1 là Cấp 4 (level 3), ở Nhóm 2 là Cấp 3 (level 2)
+            const isRenderedLeaf = (childRowNumbers.length === 0);
+            if (isRenderedLeaf && level >= 2) {
                 if (colMap.chiPhiPhanBo) {
                     row.getCell(colMap.chiPhiPhanBo).value = { formula: `IF(ISNUMBER(${addr('namPhanBo')}), IF(${addr('namPhanBo')}>0, ${addr('chiPhi')}/${addr('namPhanBo')}, 0), 0)` };
                 }
                 if (colMap.cpCap1) {
                     row.getCell(colMap.cpCap1).value = { formula: `IF(${addr('capDo')}="1", ${addr('chiPhi')}, IF(${addr('capDo')}="6t", ${addr('chiPhi')}*0.5, 0))` };
                 }
-                // (Đã bỏ công thức Thành tiền SL*DG cho Level 5 theo yêu cầu loại bỏ Executions)
             }
 
-            // 5. ĐỊNH DẠNG MÀU SẮC (STYLING) TƯƠNG ĐƯƠNG TRÊN WEB
-            const applyStyle = (fgColor, bold = false, italic = false) => {
+            // 5. ĐỊNH DẠNG MÀU SẮC (STYLING)
+            const applyStyle = (fgColor, bold = false) => {
                 row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-                    if (colNumber > Object.keys(colMap).length) return; // Chỉ format các cột có data
+                    if (colNumber > Object.keys(colMap).length) return; 
                     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fgColor } };
-                    cell.font = { bold: bold, italic: italic };
-                    
-                    // Riêng cột Tag Name màu hồng đậm
-                    if (colNumber === colMap.tagName && level === 2) {
-                        cell.font = { bold: false, color: { argb: 'FFD63384' } };
-                        cell.alignment = { horizontal: 'center' };
-                    }
+                    cell.font = { bold: bold };
                 });
             };
 
-            if (level === 0) applyStyle('FFE2E6EA', true, false);       // Task Parent
-            else if (level === 1) applyStyle('FFE9ECEF', true, false);  // Task Child
-            else if (level === 2) applyStyle('FFF2F4F6', true, false);  // Task Grandchild
-            else if (level === 3 && isContainer) applyStyle('FFF8F9FA', false, false); // Container leaf
-            else if (level === 4) applyStyle('FFE8F5E9', false, true);  // Level 5 (Vật tư)
+            if (level === 0) applyStyle('FFE2E6EA', true);       // Task Parent
+            else if (level === 1) applyStyle('FFE9ECEF', true);  // Task Child
+            else if (level === 2) applyStyle('FFF2F4F6', true);  // Task Grandchild
+            else if (level === 3) applyStyle('FFF8F9FA', false); // Task GreatGrandchild (Chỉ có ở Nhóm 1)
 
-            return nextRowIdx; // Trả về index dòng tiếp theo cho vòng lặp
+            return nextRowIdx; 
         }
 		// --- KHỞI CHẠY ---
         try {
