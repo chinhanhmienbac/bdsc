@@ -904,6 +904,9 @@
                 const workbook = new ExcelJS.Workbook();
                 await workbook.xlsx.load(arrayBuffer);
                 
+                // [MỚI] Tìm và nạp sheet "mau1" để làm mẫu copy header
+                const mau1Sheet = workbook.getWorksheet('mau1');
+                
                 // 2. Duyệt qua các đơn vị
                 for (const cfg of listConfigs) {
                     if (!cfg.sheetName || cfg.sheetName.trim() === '') continue;
@@ -949,35 +952,53 @@
                     // Xóa trắng sheet cũ
                     sheet.eachRow((row) => { row.eachCell((cell) => { cell.value = null; cell.style = {}; }); });
 
-                    // 5. Ghi Header
-                    const headerRow = sheet.getRow(1);
-                    const headerNames = {
-                        tt: 'TT', noiDung: 'Nội dung', donVi: 'Đ.vị tính', 
-                        khNamTruoc: 'KH năm trước', thucHienNamTruoc: 'Thực hiện năm trước', 
-                        soLuong: 'Số lượng', tgBatDau: 'Thời điểm TH', dvThucHien: 'ĐV th.hiện', 
-                        chiPhi: 'Chi phí KH', namPhanBo: 'Năm phân bổ', chiPhiPhanBo: 'CP phân bổ', 
-                        capDo: 'Cấp độ', cpCap1: 'CP CĐ1', cpCap2: 'CP CĐ2', ghiChu: 'Ghi chú'
-                    };
-                    
-                    for (const key in colMap) {
-                        const cell = headerRow.getCell(colMap[key]);
-                        cell.value = headerNames[key];
-                        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0070C0' } };
-                        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                    // =========================================================================
+                    // [MỚI] 5. Copy 7 dòng tiêu đề từ sheet 'mau1' sang các sheet nhận dữ liệu
+                    // =========================================================================
+                    if (mau1Sheet) {
+                        for (let r = 1; r <= 7; r++) {
+                            const sourceRow = mau1Sheet.getRow(r);
+                            const targetRow = sheet.getRow(r);
+                            
+                            // Copy chiều cao dòng
+                            targetRow.height = sourceRow.height;
+                            
+                            // Copy từng ô (cả giá trị và định dạng: font, màu sắc, viền, căn lề...)
+                            sourceRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                                const targetCell = targetRow.getCell(colNumber);
+                                targetCell.value = cell.value;
+                                targetCell.style = cell.style; 
+                            });
+                        }
+                        
+                        // Copy các ô được merge (gộp) trong 7 dòng đầu tiên
+                        if (mau1Sheet.model && mau1Sheet.model.merges) {
+                            mau1Sheet.model.merges.forEach(mergeRange => {
+                                // Trích xuất dòng bắt đầu của vùng merge (ví dụ "A1:B2" -> startRow = 1)
+                                const match = mergeRange.match(/[a-zA-Z]+(\d+):[a-zA-Z]+(\d+)/);
+                                if (match) {
+                                    const startRow = parseInt(match[1]);
+                                    // Chỉ áp dụng merge nếu nó nằm trong phạm vi 7 dòng header
+                                    if (startRow <= 7) {
+                                        try { sheet.mergeCells(mergeRange); } catch(e) { console.warn('Lỗi merge ô:', e); }
+                                    }
+                                }
+                            });
+                        }
                     }
 
                     // 6. Xây dựng cây dữ liệu & Ghi vào sheet
                     const parents = Object.keys(parentsData).map(id => ({ id, ...parentsData[id] })).sort((a,b) => a.id.localeCompare(b.id));
-                    let currentRowIdx = 2;
+                    
+                    // [MỚI] Di chuyển dữ liệu bắt đầu từ dòng 8 (vì 7 dòng đầu đã dành cho header copy từ mau1)
+                    let currentRowIdx = 8;
 
-                    // Định dạng moneyFmt để hiển thị giá trị 0 thành dấu "-"
                     const ctx = { sheet, colMap, summaryData, unitType: unit.type, moneyFmt: '#,##0;-#,##0;"-"' };
 
                     for (const p of parents) {
                         currentRowIdx = buildPlanWorksheet(p, 0, currentRowIdx, ctx);
                     }
-                } // <--- ĐÂY LÀ DẤU NGOẶC ĐÓNG CỦA VÒNG LẶP FOR (Bị mất ở lỗi của bạn)
+                }
 
                 // 7. Chống lỗi Repair & Ép tính toán
                 globalStatus.innerText = 'Đang đóng gói file...';
