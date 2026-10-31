@@ -975,6 +975,15 @@
                     // Đặt Wrap Text mặc định cho cột Nội dung. 
                     // (Lát nữa 6 dòng Header copy đè xuống sẽ giữ nguyên định dạng của sheet mẫu)
                     sheet.getColumn(colMap.noiDung).alignment = { wrapText: true, vertical: 'middle' };
+					// =========================================================================
+                    // [MỚI] THIẾT LẬP TRANG IN (GIẤY NGANG & FIT TẤT CẢ CỘT VÀO 1 TRANG)
+                    // =========================================================================
+                    sheet.pageSetup = {
+                        orientation: 'landscape', // Giấy ngang
+                        fitToPage: true,          // Kích hoạt tính năng Scale fit
+                        fitToWidth: 1,            // Ép tất cả các cột vừa đúng 1 trang
+                        fitToHeight: 0            // 0 = Không giới hạn số trang dọc (tự động kéo dài)
+                    };
                     // =========================================================================
                     // 5. Copy 6 dòng tiêu đề từ sheet mẫu tương ứng ('mau1' hoặc 'mau2')
                     // =========================================================================
@@ -1175,12 +1184,21 @@
                 row.getCell(colMap.cpCap2).numFmt = moneyFmt;
             }
 
-            // 5. ĐỊNH DẠNG MÀU SẮC (STYLING) VÀ KIỂU CHỮ
+            // 5. ĐỊNH DẠNG MÀU SẮC (STYLING), KIỂU CHỮ VÀ KẺ KHUNG (BORDER)
             const applyStyle = (fgColor, bold = false) => {
+                // Khởi tạo nét kẻ khung mỏng, màu đen
+                const borderStyle = { style: 'thin', color: { argb: 'FF000000' } };
+                
                 row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
                     if (colNumber > Object.keys(colMap).length) return; 
                     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fgColor } };
                     cell.font = { bold: bold };
+                    
+                    // Áp dụng kẻ khung cho từng ô dữ liệu được rải
+                    cell.border = {
+                        top: borderStyle, left: borderStyle,
+                        bottom: borderStyle, right: borderStyle
+                    };
                 });
             };
 
