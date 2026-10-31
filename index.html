@@ -104,7 +104,8 @@
             <div id="global-status" style="margin-left: 20px; font-weight: bold; color: #007bff;"></div>
         </div>
         <button class="btn-summary" onclick="openSummaryModal()">Xem tổng hợp năm</button>
-		<button onclick="exportPlanDataToSampleExcel()" style="position: absolute; right: 220px; padding: 10px 20px; background-color: #fd7e14; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">Xuất KH</button>
+		<!-- Tìm dòng này và sửa onclick thành openExportPlanModal() -->
+        <button class="btn-export-kh" id="btnExportKH" onclick="openExportPlanModal()">Xuất KH</button>
     </div>
 
     <div class="main-layout" id="mainLayout"></div>
@@ -154,7 +155,17 @@
             </div>
         </div>
     </div>
-
+	<!-- MODAL MỚI: LỰA CHỌN XUẤT KẾ HOẠCH -->
+    <div id="exportPlanModal" class="modal-overlay">
+        <div class="modal-content modal-nav-content">
+            <span class="modal-close" onclick="document.getElementById('exportPlanModal').style.display='none'">&times;</span>
+            <h2 style="color: #0056b3; margin-top: 0;">Lựa chọn chế độ xuất</h2>
+            <div class="nav-options">
+                <button class="nav-btn btn-bdsc" onclick="handleExportPlanSelection(1)">1. Xuất bản KH duyệt đầu năm</button>
+                <button class="nav-btn btn-thietbi" onclick="handleExportPlanSelection(2)">2. Xuất bản KH điều chỉnh</button>
+            </div>
+        </div>
+    </div>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
@@ -1223,6 +1234,234 @@
 
             return nextRowIdx; 
         }
+
+		// =========================================================================================
+        // [MỚI] LOGIC ĐIỀU HƯỚNG MODAL LỰA CHỌN XUẤT KẾ HOẠCH
+        // =========================================================================================
+        window.openExportPlanModal = function() {
+            document.getElementById('exportPlanModal').style.display = 'flex';
+        };
+
+        window.handleExportPlanSelection = function(type) {
+            document.getElementById('exportPlanModal').style.display = 'none';
+            if (type === 1) {
+                // Chạy hàm xuất KH gốc
+                exportPlanDataToSampleExcel();
+            } else if (type === 2) {
+                // Chạy Option 2: Hỏi năm bằng Prompt mặc định của trình duyệt
+                const currentRealYear = new Date().getFullYear();
+                const userInput = prompt("Có phải bạn đang muốn xuất Kế hoạch điều chỉnh của năm dưới đây không?", currentRealYear);
+                
+                if (userInput !== null && userInput.trim() !== '') {
+                    const inputYear = parseInt(userInput.trim(), 10);
+                    if (!isNaN(inputYear)) {
+                        exportAdjustedPlanToSampleExcel(inputYear); // Gọi hàm xuất chuyên biệt
+                    } else {
+                        alert("Vui lòng nhập một số năm hợp lệ.");
+                    }
+                }
+            }
+        };
+
+        // =========================================================================================
+        // [MỚI] TÍNH NĂNG ĐỘC LẬP: XUẤT KẾ HOẠCH ĐIỀU CHỈNH (OPTION 2)
+        // =========================================================================================
+        window.exportAdjustedPlanToSampleExcel = async function(inputYear) {
+            const btn = document.getElementById('btnExportKH');
+            const dbYear = document.getElementById('yearSelect').value; // Vẫn lấy data theo năm trên Select
+            
+            try {
+                btn.disabled = true; btn.innerText = 'Đang tạo KH...';
+                globalStatus.innerText = 'Đang tải file mẫu điều chỉnh...';
+                
+                const response = await fetch('Sample.xlsx');
+                if (!response.ok) throw new Error("Không tìm thấy file 'Sample.xlsx'");
+                const arrayBuffer = await response.arrayBuffer();
+                
+                const workbook = new ExcelJS.Workbook();
+                await workbook.xlsx.load(arrayBuffer);
+                
+                // Mọi CSDL đều chung 1 mẫu là mau3
+                const mau3Sheet = workbook.getWorksheet('mau3');
+                const keepSheets = new Set(['TỔNG HỢP', 'TONGHOP']); 
+                
+                for (const cfg of listConfigs) {
+                    if (!cfg.sheetName || cfg.sheetName.trim() === '') continue;
+                    
+                    const unit = units.find(u => u.id === cfg.id);
+                    if (!unit) continue;
+                    
+                    const sheet = workbook.getWorksheet(cfg.sheetName);
+                    if (!sheet) continue;
+                    
+                    const [parentSnap, summarySnap] = await Promise.all([
+                        get(ref(unit.db, `congViecMe${dbYear}`)),
+                        get(ref(unit.db, `summary_data/${dbYear}`))
+                    ]);
+
+                    if (!parentSnap.exists()) continue;
+                    keepSheets.add(cfg.sheetName);
+
+                    const parentsData = parentSnap.val();
+                    const summaryData = summarySnap.exists() ? summarySnap.val() : {};
+
+                    // BẢN ĐỒ CỘT MỚI: Bỏ KH & TH Năm trước. Đưa Chi phí thực hiện lên số 4
+                    const colMap = {
+                        tt: 1, 
+                        noiDung: 2, 
+                        donVi: 3, 
+                        chiPhiThucHien: 4, 
+                        soLuong: 5, 
+                        tgBatDau: 6, 
+                        dvThucHien: 7, 
+                        chiPhi: 8, 
+                        namPhanBo: 9, 
+                        chiPhiPhanBo: 10, 
+                        capDo: 11, 
+                        cpCap1: 12, 
+                        cpCap2: 13, 
+                        ghiChu: 14
+                    };
+
+                    sheet.eachRow((row) => { row.eachCell((cell) => { cell.value = null; cell.style = {}; }); });
+
+                    // CẤU HÌNH ĐỘ RỘNG & ALIGNMENT MỚI
+                    sheet.getColumn(colMap.tt).width = 6;
+                    sheet.getColumn(colMap.noiDung).width = 45;
+                    sheet.getColumn(colMap.donVi).width = 10;
+                    sheet.getColumn(colMap.chiPhiThucHien).width = 16;
+                    sheet.getColumn(colMap.soLuong).width = 10;
+                    sheet.getColumn(colMap.tgBatDau).width = 13;
+                    sheet.getColumn(colMap.dvThucHien).width = 12;
+                    sheet.getColumn(colMap.chiPhi).width = 16;
+                    sheet.getColumn(colMap.namPhanBo).width = 11;
+                    sheet.getColumn(colMap.chiPhiPhanBo).width = 15;
+                    sheet.getColumn(colMap.capDo).width = 9;
+                    sheet.getColumn(colMap.cpCap1).width = 15;
+                    sheet.getColumn(colMap.cpCap2).width = 15;
+                    sheet.getColumn(colMap.ghiChu).width = 25;
+
+                    sheet.getColumn(colMap.noiDung).alignment = { wrapText: true, vertical: 'middle' };
+
+                    const centerCols = ['donVi', 'tgBatDau', 'dvThucHien', 'namPhanBo', 'capDo'];
+                    centerCols.forEach(colKey => {
+                        if (colMap[colKey]) {
+                            sheet.getColumn(colMap[colKey]).alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                        }
+                    });
+
+                    // Thiết lập Page Setup A4 Ngang
+                    const marginInches = 0.3937;
+                    sheet.pageSetup = {
+                        paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0,
+                        margins: { left: marginInches, right: marginInches, top: marginInches, bottom: marginInches, header: 0.3, footer: 0.3 }
+                    };
+
+                    // COPY 6 DÒNG HEADER TỪ mau3
+                    if (mau3Sheet) {
+                        for (let r = 1; r <= 6; r++) { 
+                            const sourceRow = mau3Sheet.getRow(r);
+                            const targetRow = sheet.getRow(r);
+                            targetRow.height = sourceRow.height;
+                            sourceRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                                const targetCell = targetRow.getCell(colNumber);
+                                targetCell.value = cell.value;
+                                targetCell.style = cell.style; 
+                            });
+                        }
+                        
+                        if (mau3Sheet.model && mau3Sheet.model.merges) {
+                            mau3Sheet.model.merges.forEach(mergeRange => {
+                                const match = mergeRange.match(/[a-zA-Z]+(\d+):[a-zA-Z]+(\d+)/);
+                                if (match) {
+                                    const startRow = parseInt(match[1]);
+                                    if (startRow <= 6) { 
+                                        try { sheet.mergeCells(mergeRange); } catch(e) { }
+                                    }
+                                }
+                            });
+                        }
+                    }
+
+                    // ĐỔ DỮ LIỆU
+                    const parents = Object.keys(parentsData).map(id => ({ id, ...parentsData[id] })).sort((a,b) => a.id.localeCompare(b.id));
+                    let currentRowIdx = 7; 
+                    const ctx = { sheet, colMap, summaryData, unitType: unit.type, moneyFmt: '#,##0;-#,##0;"-"' };
+                    
+                    // TÁI SỬ DỤNG HOÀN TOÀN HÀM buildPlanWorksheet
+                    for (const p of parents) {
+                        currentRowIdx = buildPlanWorksheet(p, 0, currentRowIdx, ctx);
+                    }
+                }
+
+                // DỌN DẸP SHEET
+                const sheetIdsToRemove = [];
+                workbook.eachSheet((sheet) => {
+                    if (keepSheets.has(sheet.name)) {
+                        sheet.state = 'visible'; 
+                    } else {
+                        sheetIdsToRemove.push(sheet.id); 
+                    }
+                });
+                sheetIdsToRemove.forEach(id => workbook.removeWorksheet(id));
+
+                // THAY THẾ CHUỖI BẰNG inputYear
+                const inputYearStr = String(inputYear);
+                const prevInputYearStr = String(inputYear - 1);
+
+                workbook.eachSheet((worksheet) => {
+                    worksheet.eachRow((row) => {
+                        row.eachCell((cell) => {
+                            if (typeof cell.value === 'string') {
+                                let text = cell.value;
+                                if (text.includes('20xy') || text.includes('20za')) {
+                                    cell.value = text.replace(/20xy/g, inputYearStr).replace(/20za/g, prevInputYearStr);
+                                }
+                            } else if (cell.value && cell.value.richText) {
+                                let hasChanged = false;
+                                cell.value.richText.forEach(rt => {
+                                    if (rt.text && (rt.text.includes('20xy') || rt.text.includes('20za'))) {
+                                        rt.text = rt.text.replace(/20xy/g, inputYearStr).replace(/20za/g, prevInputYearStr);
+                                        hasChanged = true;
+                                    }
+                                });
+                                if (hasChanged) {
+                                    cell.value = { richText: cell.value.richText };
+                                }
+                            }
+                        });
+                    });
+                });
+
+                // XUẤT FILE
+                globalStatus.innerText = 'Đang đóng gói file...';
+                if (workbook.definedNames) workbook.definedNames.model = [];
+                if (!workbook.calcProperties) workbook.calcProperties = {};
+                workbook.calcProperties.fullCalcOnLoad = true; 
+
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                const url = window.URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `KHdieuchinh${inputYear}.xlsx`; // Tên file theo yêu cầu
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                globalStatus.innerText = 'Xuất KH Điều chỉnh thành công!';
+                
+            } catch (error) {
+                console.error("Lỗi xuất KH Điều chỉnh:", error);
+                alert("Lỗi: " + error.message);
+                globalStatus.innerText = 'Lỗi xuất KH Điều chỉnh.';
+            } finally {
+                btn.disabled = false; btn.innerText = 'Xuất KH';
+                setTimeout(() => globalStatus.innerText = '', 4000);
+            }
+        };
 		// --- KHỞI CHẠY ---
         try {
             initSystem(); 
