@@ -105,7 +105,8 @@
         </div>
         <button class="btn-summary" onclick="openSummaryModal()">Xem tổng hợp năm</button>
 		<!-- Tìm dòng này và sửa onclick thành openExportPlanModal() -->
-        <button class="btn-export-kh" id="btnExportKH" onclick="openExportPlanModal()">Xuất KH</button>
+       <button id="btnExportKH" onclick="openExportPlanModal()" style="position: absolute; right: 220px; padding: 10px 20px; background-color: #fd7e14; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">Xuất KH</button>
+
     </div>
 
     <div class="main-layout" id="mainLayout"></div>
@@ -1108,10 +1109,8 @@
             const r = rowIndex;
             let nextRowIdx = rowIndex + 1;
             const childRowNumbers = [];
-
             let hasRenderedChildren = false;
 
-            // 1. Duyệt sâu (DFS) xuống con cái trước
             if (node.children) {
                 Object.values(node.children).sort(sortingHelpers.compareRoman).forEach(c => {
                     childRowNumbers.push(nextRowIdx);
@@ -1126,7 +1125,6 @@
                     hasRenderedChildren = true;
                 });
             }
-            // Cấp 4 (Nhóm 1 mới được render)
             if (ctx.unitType !== 2 && node.greatGrandchildren) {
                 Object.values(node.greatGrandchildren).sort(sortingHelpers.compareChapters).forEach(c => {
                     childRowNumbers.push(nextRowIdx);
@@ -1135,7 +1133,6 @@
                 });
             }
 
-            // 2. Chuẩn bị giá trị đặc biệt
             const safeNum = (val) => (typeof val === 'number') ? val : (parseFloat(String(val).replace(/\./g, '').replace(/,/g, '.')) || 0);
             
             let displaySoLuong = safeNum(node.soLuong);
@@ -1156,7 +1153,6 @@
                 if (isNum) cell.numFmt = moneyFmt;
             };
 
-            // 3. Ghi giá trị cơ bản
             setVal('tt', node.tt ? String(node.tt).replace(/,/g, '.') : '');
             setVal('noiDung', node.noiDung || '');
             setVal('donVi', node.donVi || '');
@@ -1167,7 +1163,6 @@
             setVal('capDo', node.capDo || '');
             setVal('ghiChu', node.ghiChu || '');
 
-            // 4. XỬ LÝ CÔNG THỨC (Cộng dồn tự động)
             const addr = (key) => getColLetter(colMap[key]) + r;
             const createSum = (key) => childRowNumbers.map(cr => getColLetter(colMap[key]) + cr).join('+');
 
@@ -1187,8 +1182,11 @@
             makeSumOrVal('chiPhi', node.chiPhi);
             makeSumOrVal('chiPhiPhanBo', node.chiPhiPhanBo);
             makeSumOrVal('cpCap1', node.cpCap1);
+            
+            // [SỬA LỖI 1]: PHỤC HỒI CHI PHÍ THỰC HIỆN VÀO HÀM ĐỆ QUY
+            // Lệnh này sẽ tự động chạy ở Option 2, tự động tàng hình ở Option 1
+            makeSumOrVal('chiPhiThucHien', node.chiPhiThucHien);
 
-            // Gán công thức Excel (IF) cho các Node Lá
             const isRenderedLeaf = (childRowNumbers.length === 0);
             if (isRenderedLeaf && level >= 2) {
                 if (colMap.chiPhiPhanBo) {
@@ -1199,38 +1197,26 @@
                 }
             }
 
-            // Gán công thức tính CP CĐ2 (Mọi cấp)
             if (colMap.cpCap2) {
                 row.getCell(colMap.cpCap2).value = { formula: `${addr('chiPhi')}-${addr('cpCap1')}` };
                 row.getCell(colMap.cpCap2).numFmt = moneyFmt;
             }
 
-            // 5. ĐỊNH DẠNG MÀU SẮC (STYLING), KIỂU CHỮ VÀ KẺ KHUNG (BORDER)
             const applyStyle = (fgColor, bold = false) => {
-                // Khởi tạo nét kẻ khung mỏng, màu đen
-                const borderStyle = { style: 'thin', color: { argb: 'FF000000' } };
-                
                 row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
                     if (colNumber > Object.keys(colMap).length) return; 
                     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fgColor } };
                     cell.font = { bold: bold };
-                    
-                    // Áp dụng kẻ khung cho từng ô dữ liệu được rải
-                    cell.border = {
-                        top: borderStyle, left: borderStyle,
-                        bottom: borderStyle, right: borderStyle
-                    };
                 });
             };
 
-            if (level === 0) applyStyle('FFE2E6EA', true);       // Cấp 1
-            else if (level === 1) applyStyle('FFE9ECEF', true);  // Cấp 2
+            if (level === 0) applyStyle('FFE2E6EA', true);       
+            else if (level === 1) applyStyle('FFE9ECEF', true);  
             else if (level === 2) {
-                // Cấp 3: In thường nếu là Nhóm 2, in đậm nếu Nhóm 1
                 const isBold = (ctx.unitType !== 2);
                 applyStyle('FFF2F4F6', isBold);
             }
-            else if (level === 3) applyStyle('FFF8F9FA', false); // Cấp 4
+            else if (level === 3) applyStyle('FFF8F9FA', false); 
 
             return nextRowIdx; 
         }
@@ -1268,7 +1254,7 @@
         // =========================================================================================
         window.exportAdjustedPlanToSampleExcel = async function(inputYear) {
             const btn = document.getElementById('btnExportKH');
-            const dbYear = document.getElementById('yearSelect').value; // Vẫn lấy data theo năm trên Select
+            const dbYear = document.getElementById('yearSelect').value; 
             
             try {
                 btn.disabled = true; btn.innerText = 'Đang tạo KH...';
@@ -1281,9 +1267,10 @@
                 const workbook = new ExcelJS.Workbook();
                 await workbook.xlsx.load(arrayBuffer);
                 
-                // Mọi CSDL đều chung 1 mẫu là mau3
                 const mau3Sheet = workbook.getWorksheet('mau3');
-                const keepSheets = new Set(['TỔNG HỢP', 'TONGHOP']); 
+                
+                // [SỬA LỖI 2] Đổi sheet giữ lại thành ĐIỀU CHỈNH
+                const keepSheets = new Set(['ĐIỀU CHỈNH', 'DIEUCHINH']); 
                 
                 for (const cfg of listConfigs) {
                     if (!cfg.sheetName || cfg.sheetName.trim() === '') continue;
@@ -1305,7 +1292,7 @@
                     const parentsData = parentSnap.val();
                     const summaryData = summarySnap.exists() ? summarySnap.val() : {};
 
-                    // BẢN ĐỒ CỘT MỚI: Bỏ KH & TH Năm trước. Đưa Chi phí thực hiện lên số 4
+                    // BẢN ĐỒ CỘT MỚI (Option 2): Có chiPhiThucHien ở vị trí 4
                     const colMap = {
                         tt: 1, 
                         noiDung: 2, 
@@ -1388,7 +1375,6 @@
                     let currentRowIdx = 7; 
                     const ctx = { sheet, colMap, summaryData, unitType: unit.type, moneyFmt: '#,##0;-#,##0;"-"' };
                     
-                    // TÁI SỬ DỤNG HOÀN TOÀN HÀM buildPlanWorksheet
                     for (const p of parents) {
                         currentRowIdx = buildPlanWorksheet(p, 0, currentRowIdx, ctx);
                     }
@@ -1445,7 +1431,7 @@
                 
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `KHdieuchinh${inputYear}.xlsx`; // Tên file theo yêu cầu
+                a.download = `KHdieuchinh${inputYear}.xlsx`; 
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
