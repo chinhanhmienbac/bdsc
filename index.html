@@ -896,7 +896,6 @@
                 btn.disabled = true; btn.innerText = 'Đang tạo KH...';
                 globalStatus.innerText = 'Đang tải file mẫu và xây dựng công thức...';
                 
-                // 1. Tải file template
                 const response = await fetch('Sample.xlsx');
                 if (!response.ok) throw new Error("Không tìm thấy file 'Sample.xlsx'");
                 const arrayBuffer = await response.arrayBuffer();
@@ -904,11 +903,11 @@
                 const workbook = new ExcelJS.Workbook();
                 await workbook.xlsx.load(arrayBuffer);
                 
-                // [MỚI] Tìm và nạp sheet "mau1" và "mau2" để làm mẫu copy header
                 const mau1Sheet = workbook.getWorksheet('mau1');
                 const mau2Sheet = workbook.getWorksheet('mau2');
-                const keepSheets = new Set(['TONGHOP']);
-                // 2. Duyệt qua các đơn vị
+                
+                const keepSheets = new Set(['TỔNG HỢP', 'TONGHOP']); 
+                
                 for (const cfg of listConfigs) {
                     if (!cfg.sheetName || cfg.sheetName.trim() === '') continue;
                     
@@ -916,47 +915,31 @@
                     if (!unit) continue;
                     
                     const sheet = workbook.getWorksheet(cfg.sheetName);
-                    if (!sheet) {
-                        console.warn(`Sheet "${cfg.sheetName}" không tồn tại. Bỏ qua.`);
-                        continue;
-                    }
+                    if (!sheet) continue;
                     
-                    // 3. Kéo dữ liệu
                     const [parentSnap, summarySnap] = await Promise.all([
                         get(ref(unit.db, `congViecMe${year}`)),
                         get(ref(unit.db, `summary_data/${year}`))
                     ]);
 
                     if (!parentSnap.exists()) continue;
-					// ==========================================================
-                    // [MỚI 2] Đánh dấu sheet này có dữ liệu để giữ lại
-                    // ==========================================================
                     keepSheets.add(cfg.sheetName);
+
                     const parentsData = parentSnap.val();
                     const summaryData = summarySnap.exists() ? summarySnap.val() : {};
 
-                    // 4. Thiết lập bản đồ cột
                     const colMap = {
-                        tt: 1, 
-                        noiDung: 2, 
-                        donVi: 3, 
-                        khNamTruoc: 4, 
-                        thucHienNamTruoc: 5,
-                        soLuong: 6, 
-                        tgBatDau: 7, 
-                        dvThucHien: 8, 
-                        chiPhi: 9, 
-                        namPhanBo: 10, 
-                        chiPhiPhanBo: 11, 
-                        capDo: 12, 
-                        cpCap1: 13, 
-                        cpCap2: 14,
-                        ghiChu: 15
+                        tt: 1, noiDung: 2, donVi: 3, khNamTruoc: 4, thucHienNamTruoc: 5,
+                        soLuong: 6, tgBatDau: 7, dvThucHien: 8, chiPhi: 9, namPhanBo: 10, 
+                        chiPhiPhanBo: 11, capDo: 12, cpCap1: 13, cpCap2: 14, ghiChu: 15
                     };
 
-                    // Xóa trắng sheet cũ
                     sheet.eachRow((row) => { row.eachCell((cell) => { cell.value = null; cell.style = {}; }); });
-					sheet.getColumn(colMap.tt).width = 6;
+
+                    // =========================================================================
+                    // CẤU HÌNH ĐỘ RỘNG, WRAP TEXT, ALIGNMENT VÀ PAGE SETUP (GIẤY A4, LỀ 1 CM)
+                    // =========================================================================
+                    sheet.getColumn(colMap.tt).width = 6;
                     sheet.getColumn(colMap.noiDung).width = 45;
                     sheet.getColumn(colMap.donVi).width = 10;
                     sheet.getColumn(colMap.khNamTruoc).width = 15;
@@ -972,28 +955,37 @@
                     sheet.getColumn(colMap.cpCap2).width = 15;
                     sheet.getColumn(colMap.ghiChu).width = 25;
 
-                    // Đặt Wrap Text mặc định cho cột Nội dung. 
-                    // (Lát nữa 6 dòng Header copy đè xuống sẽ giữ nguyên định dạng của sheet mẫu)
+                    // Nội dung: Wrap text, căn lề trái mặc định
                     sheet.getColumn(colMap.noiDung).alignment = { wrapText: true, vertical: 'middle' };
-					// =========================================================================
-                    // [MỚI] THIẾT LẬP TRANG IN (GIẤY NGANG & FIT TẤT CẢ CỘT VÀO 1 TRANG)
-                    // =========================================================================
+
+                    // [MỚI] Căn giữa (Center) cho các cột yêu cầu
+                    const centerCols = ['donVi', 'tgBatDau', 'dvThucHien', 'namPhanBo', 'capDo'];
+                    centerCols.forEach(colKey => {
+                        if (colMap[colKey]) {
+                            sheet.getColumn(colMap[colKey]).alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                        }
+                    });
+
+                    // [MỚI] Thiết lập giấy A4 (paperSize: 9), Landscape, Fit To Width, Margin 1 cm (0.3937 inch)
+                    const marginInches = 0.3937;
                     sheet.pageSetup = {
-                        orientation: 'landscape', // Giấy ngang
-                        fitToPage: true,          // Kích hoạt tính năng Scale fit
-                        fitToWidth: 1,            // Ép tất cả các cột vừa đúng 1 trang
-                        fitToHeight: 0            // 0 = Không giới hạn số trang dọc (tự động kéo dài)
+                        paperSize: 9, 
+                        orientation: 'landscape',
+                        fitToPage: true,
+                        fitToWidth: 1,
+                        fitToHeight: 0, // Không giới hạn số lượng trang theo chiều dọc
+                        margins: {
+                            left: marginInches, right: marginInches,
+                            top: marginInches, bottom: marginInches,
+                            header: 0.3, footer: 0.3
+                        }
                     };
+
                     // =========================================================================
-                    // 5. Copy 6 dòng tiêu đề từ sheet mẫu tương ứng ('mau1' hoặc 'mau2')
+                    // Copy 6 dòng tiêu đề từ sheet mẫu (mau1 hoặc mau2)
                     // =========================================================================
-                    // Mặc định dùng mau1 (áp dụng cho '1a', 2, hoặc các loại khác)
                     let templateSheet = mau1Sheet; 
-                    
-                    // Nếu đơn vị được cấu hình là loại '1b', chuyển sang dùng mau2
-                    if (unit.type === '1b') {
-                        templateSheet = mau2Sheet;
-                    }
+                    if (unit.type === '1b') templateSheet = mau2Sheet;
 
                     if (templateSheet) {
                         for (let r = 1; r <= 6; r++) { 
@@ -1001,7 +993,6 @@
                             const targetRow = sheet.getRow(r);
                             
                             targetRow.height = sourceRow.height;
-                            
                             sourceRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
                                 const targetCell = targetRow.getCell(colNumber);
                                 targetCell.value = cell.value;
@@ -1015,44 +1006,63 @@
                                 if (match) {
                                     const startRow = parseInt(match[1]);
                                     if (startRow <= 6) { 
-                                        try { sheet.mergeCells(mergeRange); } catch(e) { console.warn('Lỗi merge ô:', e); }
+                                        try { sheet.mergeCells(mergeRange); } catch(e) { }
                                     }
                                 }
                             });
                         }
                     }
 
-                    // 6. Xây dựng cây dữ liệu & Ghi vào sheet
                     const parents = Object.keys(parentsData).map(id => ({ id, ...parentsData[id] })).sort((a,b) => a.id.localeCompare(b.id));
-                    
-                    // Bắt đầu rải dữ liệu từ dòng 7
                     let currentRowIdx = 7; 
 
                     const ctx = { sheet, colMap, summaryData, unitType: unit.type, moneyFmt: '#,##0;-#,##0;"-"' };
-
                     for (const p of parents) {
                         currentRowIdx = buildPlanWorksheet(p, 0, currentRowIdx, ctx);
                     }
-					
                 }
-				// =========================================================================
-                // [MỚI 3] Dọn dẹp: Xóa các sheet thừa (mau1, mau2...) và Unhide sheet giữ lại
-                // =========================================================================
+
+                // Dọn dẹp sheet
                 const sheetIdsToRemove = [];
                 workbook.eachSheet((sheet) => {
-                    // Kiểm tra xem tên sheet có nằm trong danh sách trắng không
                     if (keepSheets.has(sheet.name)) {
-                        sheet.state = 'visible'; // Ép unhide (hiển thị)
+                        sheet.state = 'visible'; 
                     } else {
-                        sheetIdsToRemove.push(sheet.id); // Đưa vào danh sách chờ xóa
+                        sheetIdsToRemove.push(sheet.id); 
                     }
                 });
+                sheetIdsToRemove.forEach(id => workbook.removeWorksheet(id));
 
-                // Thực hiện xóa vật lý các sheet thừa khỏi file Excel
-                sheetIdsToRemove.forEach(id => {
-                    workbook.removeWorksheet(id);
+                // =========================================================================
+                // [MỚI] THAY THẾ CHUỖI 20xy (NĂM HIỆN TẠI) VÀ 20za (NĂM TRƯỚC) TRÊN TOÀN BỘ FILE
+                // =========================================================================
+                const currentYearStr = String(year);
+                const prevYearStr = String(parseInt(year) - 1);
+
+                workbook.eachSheet((worksheet) => {
+                    worksheet.eachRow((row) => {
+                        row.eachCell((cell) => {
+                            if (typeof cell.value === 'string') {
+                                let text = cell.value;
+                                if (text.includes('20xy') || text.includes('20za')) {
+                                    cell.value = text.replace(/20xy/g, currentYearStr).replace(/20za/g, prevYearStr);
+                                }
+                            } else if (cell.value && cell.value.richText) {
+                                let hasChanged = false;
+                                cell.value.richText.forEach(rt => {
+                                    if (rt.text && (rt.text.includes('20xy') || rt.text.includes('20za'))) {
+                                        rt.text = rt.text.replace(/20xy/g, currentYearStr).replace(/20za/g, prevYearStr);
+                                        hasChanged = true;
+                                    }
+                                });
+                                if (hasChanged) {
+                                    cell.value = { richText: cell.value.richText };
+                                }
+                            }
+                        });
+                    });
                 });
-                // 7. Chống lỗi Repair & Ép tính toán
+
                 globalStatus.innerText = 'Đang đóng gói file...';
                 if (workbook.definedNames) workbook.definedNames.model = [];
                 if (!workbook.calcProperties) workbook.calcProperties = {};
