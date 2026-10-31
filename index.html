@@ -906,7 +906,7 @@
                 const mau1Sheet = workbook.getWorksheet('mau1');
                 const mau2Sheet = workbook.getWorksheet('mau2');
                 
-                const keepSheets = new Set(['TỔNG HỢP', 'TONGHOP']); 
+                const keepSheets = new Set(['TONGHOP']); 
                 
                 for (const cfg of listConfigs) {
                     if (!cfg.sheetName || cfg.sheetName.trim() === '') continue;
