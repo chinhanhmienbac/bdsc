@@ -907,7 +907,7 @@
                 // [MỚI] Tìm và nạp sheet "mau1" và "mau2" để làm mẫu copy header
                 const mau1Sheet = workbook.getWorksheet('mau1');
                 const mau2Sheet = workbook.getWorksheet('mau2');
-                
+                const keepSheets = new Set(['TONGHOP']);
                 // 2. Duyệt qua các đơn vị
                 for (const cfg of listConfigs) {
                     if (!cfg.sheetName || cfg.sheetName.trim() === '') continue;
@@ -928,6 +928,10 @@
                     ]);
 
                     if (!parentSnap.exists()) continue;
+					// ==========================================================
+                    // [MỚI 2] Đánh dấu sheet này có dữ liệu để giữ lại
+                    // ==========================================================
+                    keepSheets.add(cfg.sheetName);
                     const parentsData = parentSnap.val();
                     const summaryData = summarySnap.exists() ? summarySnap.val() : {};
 
@@ -1003,7 +1007,23 @@
                         currentRowIdx = buildPlanWorksheet(p, 0, currentRowIdx, ctx);
                     }
                 }
+				// =========================================================================
+                // [MỚI 3] Dọn dẹp: Xóa các sheet thừa (mau1, mau2...) và Unhide sheet giữ lại
+                // =========================================================================
+                const sheetIdsToRemove = [];
+                workbook.eachSheet((sheet) => {
+                    // Kiểm tra xem tên sheet có nằm trong danh sách trắng không
+                    if (keepSheets.has(sheet.name)) {
+                        sheet.state = 'visible'; // Ép unhide (hiển thị)
+                    } else {
+                        sheetIdsToRemove.push(sheet.id); // Đưa vào danh sách chờ xóa
+                    }
+                });
 
+                // Thực hiện xóa vật lý các sheet thừa khỏi file Excel
+                sheetIdsToRemove.forEach(id => {
+                    workbook.removeWorksheet(id);
+                });
                 // 7. Chống lỗi Repair & Ép tính toán
                 globalStatus.innerText = 'Đang đóng gói file...';
                 if (workbook.definedNames) workbook.definedNames.model = [];
