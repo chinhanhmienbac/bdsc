@@ -1006,6 +1006,29 @@
                     for (const p of parents) {
                         currentRowIdx = buildPlanWorksheet(p, 0, currentRowIdx, ctx);
                     }
+					// =========================================================================
+                    // [MỚI] CẤU HÌNH ĐỘ RỘNG CỘT VÀ WRAP TEXT CHO SHEET HIỆN TẠI
+                    // =========================================================================
+                    
+                    // 1. Quy định độ rộng các cột (Bạn có thể tinh chỉnh các con số này cho vừa mắt)
+                    sheet.getColumn(colMap.tt).width = 6;
+                    sheet.getColumn(colMap.noiDung).width = 45;
+                    sheet.getColumn(colMap.donVi).width = 10;
+                    sheet.getColumn(colMap.khNamTruoc).width = 15;
+                    sheet.getColumn(colMap.thucHienNamTruoc).width = 15;
+                    sheet.getColumn(colMap.soLuong).width = 10;
+                    sheet.getColumn(colMap.tgBatDau).width = 13;
+                    sheet.getColumn(colMap.dvThucHien).width = 12;
+                    sheet.getColumn(colMap.chiPhi).width = 16;
+                    sheet.getColumn(colMap.namPhanBo).width = 11;
+                    sheet.getColumn(colMap.chiPhiPhanBo).width = 15;
+                    sheet.getColumn(colMap.capDo).width = 9;
+                    sheet.getColumn(colMap.cpCap1).width = 15;
+                    sheet.getColumn(colMap.cpCap2).width = 15;
+                    sheet.getColumn(colMap.ghiChu).width = 25;
+
+                    // 2. Ép Wrap Text (xuống dòng tự động) và căn giữa theo chiều dọc cho cột Nội dung
+                    sheet.getColumn(colMap.noiDung).alignment = { wrapText: true, vertical: 'middle' };
                 }
 				// =========================================================================
                 // [MỚI 3] Dọn dẹp: Xóa các sheet thừa (mau1, mau2...) và Unhide sheet giữ lại
