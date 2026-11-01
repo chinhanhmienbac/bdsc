@@ -879,13 +879,13 @@ const deleteBtnHtml = canEdit ?
         const toggleDiv = document.getElementById('editModeToggle');
         const checkbox = document.getElementById('editModeCheckbox');
         
-        // Các element cho khóa năm
+        // Element cho phần khóa năm
         const lockSection = document.getElementById('lockYearSection');
         const lockCheckbox = document.getElementById('lockYearCheckbox');
         const lblLockYear = document.getElementById('lblLockYear');
         if(lblLockYear) lblLockYear.innerText = currentYear;
 
-        // [MỚI] Element cho phần chuyển dữ liệu Test
+        // Element cho phần chuyển dữ liệu TestKH
         const transferSection = document.getElementById('transferTestSection');
         const lblTransferYear = document.getElementById('lblTransferYear');
         const lblTransferYear_inline = document.querySelector('.lblTransferYear_inline');
@@ -900,20 +900,21 @@ const deleteBtnHtml = canEdit ?
         const currentUser = auth.currentUser;
         const isAdmin = currentUser && currentUser.email === adminEmail;
         const isEditEnabled = editModeStatusByYear[currentYear] === true;
-        
         const isYearLocked = lockedYears[currentYear] === true;
 
+        // PHÂN QUYỀN HIỂN THỊ
         if (isAdmin) {
             unlockBtn.style.display = 'none';
             toggleDiv.style.display = 'block';
             
-            // Hiện phần khóa năm và phần TestKH cho Admin
+            // 1. Hiện Khóa sổ cho Admin
             if(lockSection) lockSection.style.display = 'block';
             if(lockCheckbox) lockCheckbox.checked = isYearLocked;
             
-            // Nếu đang đứng ở năm 2000 thì ẩn nút chuyển (vì không thể lấy 2000 chép đè vào 2000)
+            // 2. Hiện nút Chuyển TestKH cho Admin (chỉ ẩn khi đang đứng ở chính năm 2000)
             if(transferSection) {
-                transferSection.style.display = (currentYear === 2000) ? 'none' : 'block';
+                if(currentYear === 2000) transferSection.style.display = 'none';
+                else transferSection.style.display = 'block';
             }
             
             checkbox.checked = isEditEnabled;
@@ -923,8 +924,9 @@ const deleteBtnHtml = canEdit ?
             unlockBtn.style.display = 'block';
             toggleDiv.style.display = 'none';
             
+            // Ẩn các tính năng Admin với User thường
             if(lockSection) lockSection.style.display = 'none'; 
-            if(transferSection) transferSection.style.display = 'none'; // Ẩn với user thường
+            if(transferSection) transferSection.style.display = 'none'; 
             
             checkbox.checked = isEditEnabled;
         }
