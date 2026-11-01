@@ -879,11 +879,18 @@ const deleteBtnHtml = canEdit ?
         const toggleDiv = document.getElementById('editModeToggle');
         const checkbox = document.getElementById('editModeCheckbox');
         
-        // [THÊM] Các element cho khóa năm
+        // Các element cho khóa năm
         const lockSection = document.getElementById('lockYearSection');
         const lockCheckbox = document.getElementById('lockYearCheckbox');
         const lblLockYear = document.getElementById('lblLockYear');
         if(lblLockYear) lblLockYear.innerText = currentYear;
+
+        // [MỚI] Element cho phần chuyển dữ liệu Test
+        const transferSection = document.getElementById('transferTestSection');
+        const lblTransferYear = document.getElementById('lblTransferYear');
+        const lblTransferYear_inline = document.querySelector('.lblTransferYear_inline');
+        if(lblTransferYear) lblTransferYear.innerText = currentYear;
+        if(lblTransferYear_inline) lblTransferYear_inline.innerText = currentYear;
 
         const adminEmail = "admin@pvgaslpg.com.vn";
 
@@ -894,27 +901,90 @@ const deleteBtnHtml = canEdit ?
         const isAdmin = currentUser && currentUser.email === adminEmail;
         const isEditEnabled = editModeStatusByYear[currentYear] === true;
         
-        // [THÊM] Kiểm tra trạng thái khóa hiện tại
         const isYearLocked = lockedYears[currentYear] === true;
 
         if (isAdmin) {
             unlockBtn.style.display = 'none';
             toggleDiv.style.display = 'block';
             
-            // Hiện phần khóa năm cho Admin
+            // Hiện phần khóa năm và phần TestKH cho Admin
             if(lockSection) lockSection.style.display = 'block';
             if(lockCheckbox) lockCheckbox.checked = isYearLocked;
             
-            checkbox.checked = isEditEnabled;
+            // Nếu đang đứng ở năm 2000 thì ẩn nút chuyển (vì không thể lấy 2000 chép đè vào 2000)
+            if(transferSection) {
+                transferSection.style.display = (currentYear === 2000) ? 'none' : 'block';
+            }
             
-            // [QUAN TRỌNG] Nếu đang khóa năm, vô hiệu hóa checkbox sửa đổi
+            checkbox.checked = isEditEnabled;
             checkbox.disabled = isYearLocked;
             
         } else {
             unlockBtn.style.display = 'block';
             toggleDiv.style.display = 'none';
-            if(lockSection) lockSection.style.display = 'none'; // Ẩn với user thường
+            
+            if(lockSection) lockSection.style.display = 'none'; 
+            if(transferSection) transferSection.style.display = 'none'; // Ẩn với user thường
+            
             checkbox.checked = isEditEnabled;
+        }
+    };
+
+	// =========================================================================
+    // HÀM CHUYỂN DỮ LIỆU SANG VÙNG TRUNG GIAN (TEST KH - NĂM 2000)
+    // =========================================================================
+    window.transferDataToTest = async function() {
+        if (!isAuthenticated) return showAuthError();
+
+        // 1. Kiểm tra an toàn
+        if (currentYear === 2000) {
+            alert("Bạn đang ở vùng dữ liệu TestKH (Năm 2000). Không thể tự chuyển dữ liệu cho chính nó.");
+            return;
+        }
+
+        // 2. Hỏi xác nhận theo yêu cầu
+        const confirmMsg = `Bạn có muốn chuyển toàn bộ dữ liệu kế hoạch và thực hiện năm ${currentYear} vào vùng TestKH để xử lý hay không?`;
+        if (!confirm(confirmMsg)) return;
+
+        try {
+            statusDiv.className = 'success';
+            statusDiv.innerText = `Đang tải dữ liệu năm ${currentYear}...`;
+
+            // 3. Lấy toàn bộ dữ liệu của năm hiện tại
+            const sourceRef = ref(db, `congViecMe${currentYear}`);
+            const snapshot = await get(sourceRef);
+
+            if (!snapshot.exists()) {
+                alert(`Năm ${currentYear} hiện chưa có dữ liệu nào để chuyển.`);
+                statusDiv.innerText = '';
+                return;
+            }
+
+            const sourceData = snapshot.val();
+
+            // 4. Ghi đè toàn bộ vào node năm 2000 (Hàm set tự động xóa sạch dữ liệu cũ tại node đích)
+            statusDiv.innerText = `Đang ghi đè dữ liệu vào vùng TestKH (2000)...`;
+            const targetRef = ref(db, 'congViecMe2000');
+            await set(targetRef, sourceData);
+
+            // 5. Cập nhật thành công, đóng modal
+            statusDiv.innerText = `Hoàn tất! Dữ liệu năm ${currentYear} đã được chuyển sang vùng TestKH an toàn.`;
+            closeAllModals();
+
+            // Tùy chọn nâng cao: Tự động chuyển giao diện sang năm 2000 luôn để người dùng thao tác
+            setTimeout(() => {
+                if (confirm(`Chuyển dữ liệu thành công! Bạn có muốn nhảy sang năm 2000 (TestKH) ngay bây giờ không?`)) {
+                    document.getElementById('yearSelect').value = 2000;
+                    changeYear(2000);
+                } else {
+                    statusDiv.innerText = ''; // Xóa dòng thông báo nếu chọn No
+                }
+            }, 500);
+
+        } catch (error) {
+            console.error("Lỗi khi chuyển dữ liệu sang TestKH:", error);
+            statusDiv.className = 'error';
+            statusDiv.innerText = `Đã xảy ra lỗi: ${error.message}`;
         }
     };
 
