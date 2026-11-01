@@ -297,14 +297,28 @@
             const currentYearValue = new Date().getFullYear();
             const nextYear = currentYearValue + 1;
             yearSelect.innerHTML = '';
+            
+            // Khởi tạo mảng với năm hiện tại và năm sau
             const years = [currentYearValue, nextYear];
+            
+            // Dịch ngược về 3 năm trước
             for (let i = currentYearValue - 1; i >= currentYearValue - 3; i--) {
                 years.unshift(i);
             }
+
+            // =========================================================
+            // [MỚI] Chèn năm đặc biệt 2000 lên vị trí đầu tiên của mảng
+            // =========================================================
+            years.unshift(2000);
+
+            // Đổ danh sách vào thẻ Dropdown
             years.forEach(year => {
                 const option = document.createElement('option');
-                option.value = year;
-                option.textContent = year;
+                option.value = year; // Giá trị thực tế ngầm hiểu là số năm
+                
+                // Nếu là 2000 thì hiển thị chữ "KHtest", ngược lại hiển thị số năm bình thường
+                option.textContent = year === 2000 ? "KHtest" : year;
+                
                 yearSelect.appendChild(option);
             });
             yearSelect.value = currentYearValue;
