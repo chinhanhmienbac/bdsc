@@ -2576,70 +2576,84 @@ window.importData = function() {
     };
 
   window.promptForUnlock = async function() {
-    const adminEmail = "admin@pvgaslpg.com.vn";
-    const unlockBtn = document.getElementById('unlockButton');
-    const originalText = "Mở khóa cho phép sửa đổi";
-    const toggleDiv = document.getElementById('editModeToggle');
-    const checkbox = document.getElementById('editModeCheckbox');
-    
-    // [MỚI] Các biến cho phần Khóa năm
-    const lockSection = document.getElementById('lockYearSection');
-    const lockCheckbox = document.getElementById('lockYearCheckbox');
-    const lblLockYear = document.getElementById('lblLockYear');
-    if(lblLockYear) lblLockYear.innerText = currentYear;
-    const isYearLocked = lockedYears[currentYear] === true;
-    const isEditEnabled = editModeStatusByYear[currentYear] === true;
-
-    // 1. KIỂM TRA NẾU ĐÃ LÀ ADMIN
-    const currentUser = auth.currentUser;
-    if (currentUser && currentUser.email === adminEmail) {
-        statusDiv.className = 'success';
-        statusDiv.innerText = "Đã nhận diện Admin.";
-
-        unlockBtn.style.display = 'none';
-        toggleDiv.style.display = 'block';
-        checkbox.checked = isEditEnabled;
+        const adminEmail = "admin@pvgaslpg.com.vn";
+        const unlockBtn = document.getElementById('unlockButton');
+        const originalText = "Khu vực quyền quản trị";
+        const toggleDiv = document.getElementById('editModeToggle');
+        const checkbox = document.getElementById('editModeCheckbox');
         
-        // [MỚI] Hiển thị phần khóa năm ngay lập tức
-        if(lockSection) lockSection.style.display = 'block';
-        if(lockCheckbox) lockCheckbox.checked = isYearLocked;
-        
-        // Nếu đang khóa năm -> Vô hiệu hóa nút sửa đổi
-        checkbox.disabled = isYearLocked;
-        return;
-    }
+        // [CŨ] Các biến cho phần Khóa năm
+        const lockSection = document.getElementById('lockYearSection');
+        const lockCheckbox = document.getElementById('lockYearCheckbox');
+        const lblLockYear = document.getElementById('lblLockYear');
+        if(lblLockYear) lblLockYear.innerText = currentYear;
+        const isYearLocked = lockedYears[currentYear] === true;
+        const isEditEnabled = editModeStatusByYear[currentYear] === true;
 
-    // 2. NẾU CHƯA LÀ ADMIN -> HỎI MẬT KHẨU
-    const password = prompt(`Nhập mật khẩu quản trị (${adminEmail}):`);
-    if (password === null) return;
+        // [MỚI BỔ SUNG] Các biến cho phần Chuyển TestKH
+        const transferSection = document.getElementById('transferTestSection');
+        const lblTransferYear = document.getElementById('lblTransferYear');
+        const lblTransferYear_inline = document.querySelector('.lblTransferYear_inline');
+        if(lblTransferYear) lblTransferYear.innerText = currentYear;
+        if(lblTransferYear_inline) lblTransferYear_inline.innerText = currentYear;
 
-    try {
-        unlockBtn.disabled = true;
-        unlockBtn.textContent = "Đang xác thực...";
+        // 1. KIỂM TRA NẾU ĐÃ LÀ ADMIN (Trường hợp cache session)
+        const currentUser = auth.currentUser;
+        if (currentUser && currentUser.email === adminEmail) {
+            statusDiv.className = 'success';
+            statusDiv.innerText = "Đã nhận diện Admin.";
 
-        await signInWithEmailAndPassword(auth, adminEmail, password);
+            unlockBtn.style.display = 'none';
+            toggleDiv.style.display = 'block';
+            checkbox.checked = isEditEnabled;
+            
+            if(lockSection) lockSection.style.display = 'block';
+            if(lockCheckbox) lockCheckbox.checked = isYearLocked;
+            checkbox.disabled = isYearLocked;
 
-        statusDiv.className = 'success';
-        statusDiv.innerText = "Xác thực thành công.";
-        
-        unlockBtn.style.display = 'none';
-        toggleDiv.style.display = 'block';
-        checkbox.checked = isEditEnabled;
+            // [MỚI BỔ SUNG] Bật hiển thị vùng TestKH
+            if(transferSection) {
+                transferSection.style.display = (currentYear === 2000) ? 'none' : 'block';
+            }
+            return;
+        }
 
-        // [MỚI] Hiển thị phần khóa năm NGAY SAU KHI ĐĂNG NHẬP THÀNH CÔNG
-        if(lockSection) lockSection.style.display = 'block';
-        if(lockCheckbox) lockCheckbox.checked = isYearLocked;
-        checkbox.disabled = isYearLocked;
+        // 2. NẾU CHƯA LÀ ADMIN -> HỎI MẬT KHẨU
+        const password = prompt(`Nhập mật khẩu quản trị (${adminEmail}):`);
+        if (password === null) return;
 
-    } catch (error) {
-        console.error(error);
-        alert("Mật khẩu không chính xác hoặc lỗi kết nối.");
-        statusDiv.className = 'error';
-        statusDiv.innerText = "Lỗi xác thực.";
-        unlockBtn.disabled = false;
-        unlockBtn.textContent = originalText;
-    }
-};
+        try {
+            unlockBtn.disabled = true;
+            unlockBtn.textContent = "Đang xác thực...";
+
+            await signInWithEmailAndPassword(auth, adminEmail, password);
+
+            statusDiv.className = 'success';
+            statusDiv.innerText = "Xác thực thành công.";
+            
+            unlockBtn.style.display = 'none';
+            toggleDiv.style.display = 'block';
+            checkbox.checked = isEditEnabled;
+
+            // Hiển thị phần khóa năm
+            if(lockSection) lockSection.style.display = 'block';
+            if(lockCheckbox) lockCheckbox.checked = isYearLocked;
+            checkbox.disabled = isYearLocked;
+
+            // [MỚI BỔ SUNG] Bật hiển thị vùng TestKH ngay sau khi nhập pass thành công
+            if(transferSection) {
+                transferSection.style.display = (currentYear === 2000) ? 'none' : 'block';
+            }
+
+        } catch (error) {
+            console.error(error);
+            alert("Mật khẩu không chính xác hoặc lỗi kết nối.");
+            statusDiv.className = 'error';
+            statusDiv.innerText = "Lỗi xác thực.";
+            unlockBtn.disabled = false;
+            unlockBtn.textContent = originalText;
+        }
+    };
 
     window.toggleEditMode = async function(isChecked) {
         if (!isAuthenticated) {
