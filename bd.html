@@ -159,11 +159,11 @@
                 <button class="btn-danger" onclick="openDeleteAllDataModal()">Xoá tất cả</button>
             </div>
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ccc;">
-                <h3>Mở khóa sửa đổi</h3>
-                <button id="unlockButton" class="btn-warning" onclick="promptForUnlock()">Khu vực quyền quản trị</button>
+                <h3>Khu vực quản trị (Admin)</h3>
+                <button id="unlockButton" class="btn-warning" onclick="promptForUnlock()">Vào khu vực quyền quản trị</button>
                 <div id="editModeToggle" style="display: none; margin-top: 10px; text-align: left;">
                     <input type="checkbox" id="editModeCheckbox" onchange="toggleEditMode(this.checked)" style="width: auto;">
-                    <label for="editModeCheckbox">Cho phép sửa đổi, thêm, xóa dữ liệu</label>
+                    <label for="editModeCheckbox">Cho phép thành viên sửa đổi, thêm, xóa dữ liệu</label>
                 </div>
 				<div id="lockYearSection" style="display: none; margin-top: 15px; padding-top: 10px; border-top: 1px dashed #ddd;">
                     <h3 style="color: #dc3545; font-size: 16px;">Khu vực Quản trị (Admin) - Khóa sổ</h3>
@@ -179,7 +179,7 @@
                 </div>
 				<!-- BẮT ĐẦU CHÈN THÊM VÙNG TEST KH TẠI ĐÂY -->
                 <div id="transferTestSection" style="display: none; margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ddd;">
-                    <h3 style="color: #0056b3; font-size: 16px;">Chuyển dữ liệu từ năm <span id="lblTransferYear"></span> về trung gian xử lý (TestKH)</h3>
+                    <h3 style="font-weight: bold; color: #0056b3; font-size: 16px;">Chuyển dữ liệu từ năm <span id="lblTransferYear"></span> về trung gian xử lý (TestKH)</h3>
                     <div style="background-color: #e2e6ea; padding: 10px; border-radius: 5px;">
                         <button class="btn-info" onclick="transferDataToTest()">Thực thi chuyển đổi</button>
                         <p style="font-size: 12px; margin: 5px 0 0 0; color: #495057;">
