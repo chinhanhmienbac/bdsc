@@ -856,7 +856,7 @@ const deleteBtnHtml = canEdit ?
             
             // Tùy chỉnh hiển thị: Nếu là 2000 thì hiện thêm chữ "(Sample)" cho dễ hiểu
             if (year === 2000) {
-                option.textContent = "2000 (Test)";
+                option.textContent = "TestKH";
                 option.style.color = "blue"; // Tô màu xanh cho nổi bật (tuỳ chọn)
                 option.style.fontWeight = "bold";
             } else {
