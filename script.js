@@ -895,7 +895,7 @@ const deleteBtnHtml = canEdit ?
         const adminEmail = "admin@pvgaslpg.com.vn";
 
         unlockBtn.disabled = false;
-        unlockBtn.textContent = 'Mở khóa cho phép sửa đổi';
+        unlockBtn.textContent = 'Vào khu vực quyền quản trị';
 
         const currentUser = auth.currentUser;
         const isAdmin = currentUser && currentUser.email === adminEmail;
