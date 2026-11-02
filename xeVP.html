@@ -142,7 +142,7 @@
             <div style="margin-top: 20px;">
                 <h3>Nhập dữ liệu từ file Excel</h3>
                 <input type="file" id="excelFile" accept=".xlsx, .xls">
-                <p><small><i>Chú ý: để chương trình nhận đúng dữ liệu, hãy định dạng các dữ liệu số trong file Excel ở định dạng General.</i></small></p>
+                <p><small><i>Chú ý: để giảm sai sót khi nhập dữ liệu, nội dung tiêu đề của file nhập vào nên giống như file xuất ra.</i></small></p>
                 <button class="btn-primary" onclick="importData()" style="margin-top: 10px;">Nhập dữ liệu</button>
             </div>
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ccc;">
@@ -151,11 +151,11 @@
                 <button class="btn-danger" onclick="openDeleteAllDataModal()">Xoá tất cả</button>
             </div>
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ccc;">
-                <h3>Mở khóa sửa đổi</h3>
-                <button id="unlockButton" class="btn-warning" onclick="promptForUnlock()">Mở khóa cho phép sửa đổi</button>
+                <h3>Khu vực quản trị (Admin)</h3>
+                <button id="unlockButton" class="btn-warning" onclick="promptForUnlock()">Vào khu vực quyền quản trị</button>
                 <div id="editModeToggle" style="display: none; margin-top: 10px; text-align: left;">
                     <input type="checkbox" id="editModeCheckbox" onchange="toggleEditMode(this.checked)" style="width: auto;">
-                    <label for="editModeCheckbox">Cho phép sửa đổi, thêm, xóa dữ liệu</label>
+                    <label for="editModeCheckbox">Cho phép thành viên sửa đổi, thêm, xóa dữ liệu</label>
                 </div>
 				<div id="lockYearSection" style="display: none; margin-top: 15px; padding-top: 10px; border-top: 1px dashed #ddd;">
                     <h3 style="color: #dc3545; font-size: 16px;">Khu vực Quản trị (Admin) - Khóa sổ</h3>
@@ -169,10 +169,21 @@
                         </p>
                     </div>
                 </div>
+				<!-- BẮT ĐẦU CHÈN THÊM VÙNG TEST KH TẠI ĐÂY -->
+                <div id="transferTestSection" style="display: none; margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ddd;">
+                    <h3 style="font-weight: bold; color: #0056b3; font-size: 16px;">Chuyển dữ liệu từ năm <span id="lblTransferYear"></span> về trung gian xử lý (TestKH)</h3>
+                    <div style="background-color: #e2e6ea; padding: 10px; border-radius: 5px;">
+                        <button class="btn-info" onclick="transferDataToTest()">Thực thi chuyển đổi</button>
+                        <p style="font-size: 12px; margin: 5px 0 0 0; color: #495057;">
+                            <i>(Lưu ý: Hành động này sẽ <strong>xóa trắng</strong> dữ liệu cũ tại vùng TestKH (năm 2000) và sao chép toàn bộ dữ liệu kế hoạch, thực hiện của năm <span class="lblTransferYear_inline"></span> sang).</i>
+                        </p>
+                    </div>
+                </div>
+                <!-- KẾT THÚC CHÈN THÊM VÙNG TEST KH -->				
             </div>
+			
         </div>
     </div>
-
     <div id="deleteAllDataModal" class="modal">
         <div class="modal-content delete-confirm-modal">
             <span class="close-button" onclick="closeAllModals()">&times;</span>
