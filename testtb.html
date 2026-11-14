@@ -1,0 +1,304 @@
+
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Bảo dưỡng thiết bị/máy - PVGAS LPG</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+
+    <link rel="stylesheet" href="./tbstyle.css">
+</head>
+<body>
+
+<img src="PVGLPG.gif" alt="Logo" class="site-logo">
+
+<div id="loadingMsg">
+    <div class="spinner-border text-light mb-2" role="status"></div>
+    <div id="loadingText" style="font-size: 18px; font-weight: bold;">Đang xử lý...</div>
+</div>
+
+<div class="container-fluid">
+    <div class="excel-sheet">
+        <h1 class="main-title">QUẢN LÝ BẢO DƯỠNG CÁC THIẾT BỊ</h1>
+        <h2 class="sub-title">+ <span id="facilityName">..........................</span></h2>
+
+     <div class="action-bar" style="justify-content: space-between !important;">
+            
+            <div class="left-actions d-flex gap-2 align-items-center">
+                <button id="btnBackup" class="btn btn-sm btn-outline-dark fw-bold" onclick="backupData()">
+                    <i class="fas fa-download"></i> Backup (JSON)
+                </button>
+                <button id="btnRestore" class="btn btn-sm btn-danger fw-bold" onclick="document.getElementById('jsonInputRestore').click()" style="display: none;">
+                    <i class="fas fa-history"></i> Restore (JSON)
+                </button>
+            </div>
+
+            <div class="right-actions d-flex gap-2 align-items-center justify-content-end">
+                
+                <div id="viewModeBtns" class="d-flex gap-2">
+                    <button class="btn btn-sm btn-main btn-excel-export" onclick="exportMainData()">
+                        <i class="fas fa-file-export"></i> Xuất D.mục ra Excel
+                    </button>
+                </div>
+
+                <div id="editModeBtns" class="d-flex gap-2" style="display: none !important;">
+                    <button class="btn btn-sm btn-main btn-batch" onclick="batchCollectBDSC()">
+                        <i class="fas fa-sync-alt"></i> Cập nhật Lịch sử (All)
+                    </button>
+                    <button id="btnImportExcel" class="btn btn-sm btn-main btn-excel-import" onclick="document.getElementById('fileInputExcel').click()" style="display: none;">
+                        <i class="fas fa-file-import"></i> Nhập D.sách từ Excel
+                    </button>
+                    
+                    <button class="btn btn-sm btn-main btn-primary" onclick="addNewCategory()">
+                        <i class="fas fa-plus"></i> Thêm Phân loại
+                    </button>
+                </div>
+
+                <div class="form-check form-switch d-flex align-items-center gap-2" style="padding-left: 45px; border-left: 1px solid #ccc; margin-left: 5px;">
+                    <input class="form-check-input" type="checkbox" id="editModeToggle">
+                    <label class="form-check-label edit-mode-label" for="editModeToggle">Chỉnh sửa</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="excel-table" id="mainTable">
+                <thead>
+                    <tr>
+                        <th class="col-stt">STT</th>
+                        <th class="col-name">Tên thiết bị / Loại</th>
+                        <th class="col-data">Tagname</th>
+                        <th class="col-data" data-name="Thông số KT">Thông số KT</th>
+                        <th class="col-data" data-name="Catalogue">Catalogue</th>
+                        <th class="col-data" data-name="Kiểm định">Kiểm định</th>
+                        <th class="col-data" data-name="Quy trình VH">Quy trình VH	</th>
+                        <th class="col-data" data-name="Quy trình BD">Quy trình BD</th>
+                        <th class="col-data" data-name="Định mức">Định mức</th>
+                        <th class="col-data" data-name="Đánh giá rủi ro">ĐGRR</th>
+                        <th class="col-data" data-name="Biểu mẫu">Biểu mẫu</th>
+                        <th class="col-data" data-name="Lịch sử BDSC">Lịch sử BDSC</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade modal-login" id="loginModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="width: 350px;">
+        <div class="modal-content">
+            <div class="modal-body">
+                <img src="PVGLPG.gif" alt="Logo" class="login-logo">
+                <h5 class="text-center fw-bold mb-4 text-success">ĐĂNG NHẬP HỆ THỐNG</h5>
+                <form id="loginForm" onsubmit="handleLogin(event)">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tài khoản</label>
+                        <select class="form-select" id="loginEmail">
+                            <option value="bdsc-cnmb@pvgaslpg.com.vn">*****@pvgaslpg.com.vn</option>
+                            <option value="admin@pvgaslpg.com.vn">admin@pvgaslpg.com.vn</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Mật khẩu</label>
+                        <input type="password" class="form-control" id="loginPassword" required>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success">Đăng nhập</button>
+                        <button type="button" class="btn btn-light text-muted" onclick="closeLoginModal()">Hủy bỏ</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="manageModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white py-2">
+                <h5 class="modal-title fs-6 fw-bold">Quản lý Tài liệu</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="manageListContainer"></div>
+            </div>
+            <div class="modal-footer py-1">
+                <button type="button" class="btn btn-primary btn-sm" id="btnSaveManage" onclick="saveManageChanges()">Lưu Thay Đổi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="historyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white py-2 d-flex justify-content-between">
+                <h5 class="modal-title fs-6 fw-bold" id="historyModalTitle">Chi tiết Lịch sử</h5>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-light btn-sm text-success fw-bold" onclick="exportCurrentHistory()">
+                        <i class="fas fa-file-excel"></i> Xuất Excel
+                    </button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+            </div>
+            <div class="modal-body" id="historyModalBody"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Thêm Link / Upload -->
+<div class="modal fade" id="addLinkModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white py-2">
+                <h5 class="modal-title fs-6 fw-bold">Thêm Link / Upload</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <label class="form-label small fw-bold">Tên hiển thị:</label>
+                    <input type="text" id="manualLinkName" class="form-control form-control-sm" placeholder="Nhập tên hiển thị (tùy chọn)...">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Đường link (URL):</label>
+                    <input type="url" id="manualLinkUrl" class="form-control form-control-sm" placeholder="https://...">
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="triggerCombinedUpload()">
+                        <i class="fas fa-file-upload"></i> Chọn file
+                    </button>
+                    <button class="btn btn-primary btn-sm" onclick="saveManualLink()">Lưu Link</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deviceModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning py-2">
+                <h5 class="modal-title fs-6 fw-bold text-dark">Quản lý thiết bị/máy trong Hệ thống/Loại/Nhóm</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="deviceModalContent">
+                    <table class="device-table" id="deviceTableList">
+                        <thead>
+                            <tr>
+                                <th style="width:50px">STT</th>
+                                <th>Tên thiết bị/máy</th>
+                                <th style="width:50px">Xoá</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deviceTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="mt-3">
+                    <label class="form-label fw-bold small">Thêm thiệt bị mới:</label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" id="newDeviceName" class="form-control" placeholder="Nhập tên thiết bị/máy...">
+                        <button class="btn btn-success" onclick="addNewDevice()">
+                            <i class="fas fa-plus"></i> Thêm
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="exportOptionsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white py-2">
+                <h5 class="modal-title fs-6 fw-bold">Tùy chọn xuất báo cáo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="radio" name="exportOption" id="optAll" value="all" checked onchange="toggleYearInput()">
+                    <label class="form-check-label fw-bold" for="optAll">
+                        1. Xuất toàn bộ Lịch sử
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="exportOption" id="optYear" value="year" onchange="toggleYearInput()">
+                    <label class="form-check-label fw-bold" for="optYear">
+                        2. Xuất chi tiết Năm:
+                    </label>
+                </div>
+                
+                <div class="ms-4 mt-1">
+                    <input type="number" id="exportYearInput" class="form-control form-control-sm" disabled>
+                </div>
+            </div>
+            <div class="modal-footer py-1 justify-content-center">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-success btn-sm fw-bold" onclick="confirmExportProcess()">
+                    <i class="fas fa-file-excel"></i> Xuất File
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<input type="file" id="fileInputExcel" accept=".xlsx, .xls" style="display: none;">
+<input type="file" id="driveUploadInput" style="display: none;">
+<input type="file" id="jsonInputRestore" accept=".json" style="display: none;">
+
+<!-- Bỏ các thẻ gọi script cũ đi và dùng khối script động này -->
+<script type="module">
+    try {
+        // 1. Phân tích URL để lấy tên file HTML hiện tại (ví dụ: .../bd.html)
+        const path = window.location.pathname;
+        let pageName = path.split('/').pop(); 
+        
+        // Nếu người dùng truy cập thư mục gốc (VD: localhost:5500/), mặc định gán tên
+        if (!pageName || pageName === '') {
+            pageName = 'index.html';
+        }
+
+        // Cắt đuôi .html để lấy tiền tố (bd.html -> bd)
+        const prefix = pageName.replace('.html', ''); 
+        
+        // Tạo đường dẫn tới file config tương ứng (VD: ./bdconfig.js)
+        const configFileName = `./${prefix}config.js`;
+
+        console.log(`Đang nạp cấu hình từ: ${configFileName}`);
+
+        // 2. Tạm dừng thực thi để nạp file config bằng Dynamic Import
+        // Bước này đảm bảo Firebase và các biến window (window.db, window.auth...) được khởi tạo xong hoàn toàn.
+        await import(configFileName);
+
+        // 3. Sau khi Config đã nạp thành công, mới gọi tbscript.js để đảm bảo không bị lỗi "undefined"
+        const mainScript = document.createElement('script');
+        mainScript.src = './tbscript.js';
+        
+        // [QUAN TRỌNG] Xử lý sự kiện Life-cycle của trình duyệt:
+        // Do nạp động mất 1 khoảng thời gian nhỏ, trình duyệt có thể đã load xong trang.
+        // Điều này làm sự kiện "window.onload" bên trong tbscript.js bị lỡ nhịp và không chạy.
+        // Khối mã dưới đây sẽ kiểm tra và "ép" kích hoạt window.onload nếu trang đã load xong.
+        mainScript.onload = () => {
+            if (document.readyState === 'complete' && typeof window.onload === 'function') {
+                window.onload();
+            }
+        };
+        
+        document.body.appendChild(mainScript);
+
+    } catch (error) {
+        console.error("Lỗi nạp cấu hình động:", error);
+        alert("Lỗi hệ thống: Không thể khởi tạo cấu hình cho trang này. Vui lòng kiểm tra lại file config.");
+    }
+</script>
+</body>
+</html>
