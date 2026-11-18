@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Quản Lý Tài Liệu</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check-compat.js"></script>
+
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .loader { border-top-color: #3498db; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .tooltip-container:hover .tooltip-text { visibility: visible; opacity: 1; }
+        .modal { transition: opacity 0.25s ease; }
+        body.modal-active { overflow-x: hidden; overflow-y: hidden !important; }
+        .modal-table-header { font-size: 0.65rem; } 
+        .input-mini { font-size: 0.75rem; padding: 2px 4px; height: 24px; line-height: 1; }
+        input::-webkit-calendar-picker-indicator { opacity: 0.8; transform: scale(0.9); cursor: pointer; }
+
+        .editable-cell { cursor: text; padding: 4px; border-radius: 4px; border: 1px solid transparent; transition: all 0.2s; min-height: 24px; display: flex; align-items: center; }
+        .editing-mode .editable-cell:hover { background-color: #f0f9ff; border-color: #bae6fd; cursor: pointer; }
+        .inline-input-active { width: 100%; font-size: 0.75rem; padding: 2px; border: 1px solid #3b82f6; border-radius: 2px; outline: none; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+        .sortable-header { cursor: pointer; user-select: none; transition: background-color 0.2s; }
+        .sortable-header:hover { background-color: #e5e7eb; }
+        .btn-upload:active { transform: scale(0.95); }
+		
+		.scrollbar-hide::-webkit-scrollbar { display: none; }
+		.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans h-screen flex flex-col overflow-hidden">
+    <!-- Nội dung HTML DOM giữ nguyên hoàn toàn như ban đầu -->
+    <datalist id="listFields"></datalist>
+    <datalist id="listUnits"></datalist>
+    <datalist id="listIssuers"></datalist>
+
+    <input type="file" id="driveFileInput" class="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx">
+
+    <div class="flex-none flex flex-col md:flex-row border-b shadow-sm z-30 bg-white relative">
+        <div class="hidden md:flex flex-none bg-white items-center justify-center border-r w-[130px] min-h-[100px]">
+            <img src="PVGLPG.gif" alt="Logo PVGAS" class="w-[100px] h-[100px] object-contain">
+        </div>
+
+        <div class="flex-grow flex flex-col min-w-0">
+            <header class="bg-blue-900 text-white flex-none">
+                <div class="w-full px-3 md:px-4 py-2 md:py-3 flex justify-between items-center h-[45px] md:h-[50px]">
+                    <h1 class="text-sm md:text-lg font-bold uppercase tracking-wide flex items-center truncate">
+                        <i class="fa-solid fa-folder-tree mr-2"></i> QL Tài Liệu
+                    </h1>
+                    <div class="flex items-center gap-3">
+                        <div id="userInfo" class="text-[10px] md:text-xs italic text-blue-200 hidden whitespace-nowrap">
+                            <i class="fa-solid fa-user-check mr-1"></i> Đã đăng nhập
+                        </div>
+                        <button onclick="toggleMobileFilters()" class="md:hidden flex items-center gap-1 bg-blue-700 hover:bg-blue-600 border border-blue-500 text-white px-2 py-1 rounded text-xs shadow-sm active:scale-95 transition">
+                            <i class="fa-solid fa-filter"></i> Lọc
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <div id="filterContainer" class="hidden md:flex flex-col p-3 bg-white absolute md:relative w-full z-40 top-[45px] md:top-0 shadow-lg md:shadow-none border-b md:border-none left-0">
+                <!-- Vùng HTML bộ lọc (giữ nguyên) -->
+                <div class="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3 items-end">
+                    <div class="md:col-span-4 relative">
+                        <label class="block text-[10px] md:text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Từ khóa</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+                                <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
+                            </span>
+                            <input type="text" id="searchInput" 
+                                class="w-full pl-9 pr-3 py-1.5 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" 
+                                placeholder="Tìm kiếm...">
+                        </div>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-[10px] md:text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Lĩnh vực</label>
+                        <select id="fieldFilter" class="w-full p-1.5 border rounded bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Tất cả</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-[10px] md:text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">CQ Ban Hành</label>
+                        <select id="issuerFilter" class="w-full p-1.5 border rounded bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Tất cả</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-[10px] md:text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">ĐV Sử Dụng</label>
+                        <select id="unitFilter" class="w-full p-1.5 border rounded bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Tất cả</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2 flex items-center h-full pb-1 md:pb-2 pt-2 md:pt-0">
+                        <label class="inline-flex items-center cursor-pointer select-none">
+                            <input type="checkbox" id="strictUnitFilter" class="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" onchange="handleFilterChange()">
+                            <span class="ml-2 text-[11px] md:text-xs text-gray-600 tracking-tight">Chọn xem tài liệu chỉ ban hành riêng cho đơn vị</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Giữ nguyên phần Body Content (Table, Buttons, Modals) -->
+    <main class="w-full px-2 md:px-4 py-2 flex-grow flex flex-col h-full overflow-hidden relative">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 flex-none gap-2 w-full">
+            <div id="paginationContainer" class="flex items-center space-x-1 md:space-x-2 select-none overflow-x-auto w-full md:w-auto pb-1 scrollbar-hide"></div>
+
+            <div class="flex items-center gap-1.5 md:gap-2 ml-0 md:ml-auto w-full md:w-auto overflow-x-auto pb-1 scrollbar-hide justify-start md:justify-end flex-nowrap">
+                <div id="editTools" class="hidden flex items-center gap-1.5 md:gap-2">
+                    <label class="cursor-pointer bg-green-700 hover:bg-green-800 text-white px-2 md:px-3 py-1 rounded text-[11px] md:text-sm font-bold shadow flex items-center border border-green-600 h-7 md:h-8 whitespace-nowrap">
+                        <i class="fa-solid fa-file-excel md:mr-1"></i> <span class="hidden md:inline">Excel nhập</span>
+                        <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden">
+                    </label>
+                    <button onclick="openHierarchyModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-2 md:px-3 py-1 rounded text-[11px] md:text-sm font-bold shadow h-7 md:h-8 whitespace-nowrap">
+                        <i class="fa-solid fa-sitemap md:mr-1"></i> <span class="hidden md:inline">Phân cấp</span>
+                    </button>
+                    <button id="addEditBtn" onclick="handleAddEditAction()" class="bg-green-600 hover:bg-green-700 text-white px-2 md:px-3 py-1 rounded text-[11px] md:text-sm font-bold shadow min-w-[60px] md:min-w-[80px] h-7 md:h-8 whitespace-nowrap">
+                        <i class="fa-solid fa-plus md:mr-1"></i> Thêm
+                    </button>
+                    <button onclick="deleteSelected()" class="bg-red-600 hover:bg-red-700 text-white px-2 md:px-3 py-1 rounded text-[11px] md:text-sm font-bold shadow h-7 md:h-8 whitespace-nowrap">
+                        <i class="fa-solid fa-trash md:mr-1"></i> Xóa
+                    </button>
+                </div>
+			
+			    <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2 md:px-4 py-1 rounded text-[11px] md:text-sm font-bold shadow text-center h-7 md:h-8 whitespace-nowrap">
+                    <i class="fa-solid fa-file-export md:mr-1"></i> Xuất
+                </button>
+				
+                <button id="toggleEditBtn" onclick="handleEditButtonClick()" class="bg-blue-600 hover:bg-blue-700 text-white px-2 md:px-4 py-1 rounded text-[11px] md:text-sm font-bold shadow text-center h-7 md:h-8 whitespace-nowrap">
+                    <i class="fa-solid fa-pen-to-square md:mr-1"></i> <span id="toggleEditBtnText">Chỉnh sửa</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="notification" class="hidden mb-3 p-3 rounded text-sm font-medium flex-none text-center shadow-sm"></div>
+
+        <div class="bg-white rounded-lg shadow border border-gray-200 flex-grow flex flex-col overflow-hidden">
+            <div class="overflow-auto flex-grow relative">
+                <table class="min-w-full leading-normal table-fixed">
+                    <!-- Header Giữ nguyên -->
+                    <thead class="sticky top-0 z-10 bg-gray-100 text-blue-700 text-xs font-bold tracking-wider border-b-2 border-gray-300">
+                        <tr>
+                            <th id="colCheckbox" class="hidden px-2 py-3 w-10 text-center"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+                            <th class="px-2 py-3 w-28 text-left sortable-header" ondblclick="sortData('code')">Mã hiệu <i id="sort-code" class="fa-solid fa-sort text-gray-300 ml-1"></i></th>
+                            <th class="px-2 py-3 text-left sortable-header w-[50vw] md:w-[30vw] min-w-[250px]" ondblclick="sortData('name')">Tên tài liệu <i id="sort-name" class="fa-solid fa-sort text-gray-300 ml-1"></i></th>
+                            <th class="px-2 py-3 w-28 text-center sortable-header" ondblclick="sortData('issuer')">CQBH <i id="sort-issuer" class="fa-solid fa-sort text-gray-300 ml-1"></i></th>
+                            <th class="px-2 py-3 w-32 text-left sortable-header" ondblclick="sortData('field')">Lĩnh vực <i id="sort-field" class="fa-solid fa-sort text-gray-300 ml-1"></i></th>
+                            <th class="px-2 py-3 w-32 text-left sortable-header" ondblclick="sortData('unit')">ĐV sử dụng <i id="sort-unit" class="fa-solid fa-sort text-gray-300 ml-1"></i></th>
+                            <th class="px-2 py-3 w-24 text-center sortable-header" ondblclick="sortData('date')">Ngày BH <i id="sort-date" class="fa-solid fa-sort text-gray-300 ml-1"></i></th>
+                            <th class="px-2 py-3 w-12 text-center text-gray-600">Rev.</th>
+                            <th class="px-2 py-3 w-16 text-center">Scan</th>
+                            <th class="px-2 py-3 w-16 text-center">Mềm</th>
+							<th class="px-2 py-3 w-12 text-center">Cũ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="bg-white divide-y divide-gray-200"></tbody>
+                </table>
+            </div>
+            <div class="px-4 py-2 bg-gray-50 border-t flex-none flex justify-between items-center">
+                <span class="text-xs font-semibold text-gray-600" id="recordCount">0 bản ghi</span>
+            </div>
+        </div>
+    </main>
+
+
+    <!-- HTML Modals giữ nguyên -->
+    <!-- ... (Phần LoginModal, DataModal, HierarchyModal giữ nguyên code ban đầu) ... -->
+    <div id="loginModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-60"></div>
+        <div class="modal-container bg-white w-96 mx-auto rounded shadow-lg z-50">
+            <div class="modal-content py-4 text-left px-6">
+                <div class="flex justify-between items-center pb-3"><p class="text-xl font-bold text-blue-900">Đăng nhập</p><div class="cursor-pointer z-50" onclick="closeLoginModal()"><i class="fa-solid fa-times text-gray-500"></i></div></div>
+                <div class="mb-4"><label class="block text-gray-700 text-sm font-bold mb-2">Tài khoản</label><div class="flex items-center border rounded w-full py-2 px-3 bg-gray-100"><i class="fa-solid fa-user mr-2 text-gray-400"></i><span>****@pvgaslpg.com.vn</span></div></div>
+                <div class="mb-4"><label class="block text-gray-700 text-sm font-bold mb-2">Mật khẩu</label><input type="password" id="loginPassword" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Nhập mật khẩu..." onkeydown="if(event.key==='Enter') performLogin()"></div>
+                <div class="flex justify-end pt-2"><button onclick="performLogin()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full">Xác thực</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="dataModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50"></div>
+        <div class="modal-container bg-white w-full max-w-[95%] mx-4 rounded shadow-lg z-50 overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="modal-header flex justify-between items-center p-3 border-b bg-gray-50 flex-none"><h3 id="modalTitle" class="text-base font-bold text-gray-700">Thêm mới tài liệu</h3><div class="cursor-pointer" onclick="closeModal()"><i class="fa-solid fa-times text-gray-500 hover:text-red-500 text-lg"></i></div></div>
+            <div class="modal-body p-2 overflow-y-auto bg-gray-50 flex-grow">
+                <div class="bg-white border rounded shadow-sm overflow-x-auto"><table class="min-w-full divide-y divide-gray-200" id="modalTable"><thead class="bg-gray-100 text-gray-600 uppercase font-bold modal-table-header"><tr><th class="px-1 py-1 w-20">Mã hiệu</th><th class="px-1 py-1 min-w-[200px]">Tên tài liệu <span class="text-red-500">*</span></th><th class="px-1 py-1 w-20">CQBH</th><th class="px-1 py-1 w-20">Lĩnh vực</th><th class="px-1 py-1 w-20">Đơn vị</th><th class="px-1 py-1 w-24">Ngày BH</th><th class="px-1 py-1 w-10">Lần</th><th class="px-1 py-1 w-28">Link Scan</th><th class="px-1 py-1 w-28">Link Soft</th><th class="px-1 py-1 w-8"></th></tr></thead><tbody id="modalTableBody" class="bg-white divide-y divide-gray-200"></tbody></table></div>
+                <div class="mt-2" id="addMoreRowContainer"><button onclick="addNewRow()" class="flex items-center px-3 py-1 bg-green-100 text-green-700 hover:bg-green-200 rounded border border-green-300 text-xs font-bold transition"><i class="fa-solid fa-plus-circle mr-1"></i> Thêm dòng mới</button><span class="text-[10px] text-gray-500 ml-2 italic">Mẹo: Dùng phím Lên/Xuống để chuyển dòng.</span></div>
+            </div>
+            <div class="modal-footer flex justify-end p-3 border-t bg-white flex-none space-x-2"><button onclick="closeModal()" class="px-3 py-1.5 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 font-bold text-xs">Hủy bỏ</button><button onclick="handleModalSave()" id="modalSaveBtn" class="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 font-bold text-xs shadow"><i class="fa-solid fa-save mr-1"></i> Lưu lại</button></div>
+        </div>
+    </div>
+
+    <div id="hierarchyModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50"></div>
+        <div class="modal-container bg-white w-full max-w-lg mx-4 rounded shadow-lg z-50 overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="modal-header flex justify-between items-center p-3 border-b bg-gray-50 flex-none"><h3 class="text-base font-bold text-gray-700"><i class="fa-solid fa-sitemap mr-1"></i> Thiết lập Phân Cấp</h3><div class="cursor-pointer" onclick="closeHierarchyModal()"><i class="fa-solid fa-times text-gray-500 hover:text-red-500 text-lg"></i></div></div>
+            <div class="modal-body p-4 overflow-y-auto bg-gray-50 flex-grow">
+                <div class="bg-white p-3 rounded border mb-4"><h4 class="text-xs font-bold text-blue-800 uppercase mb-2">Thêm liên kết Khối - bộ phận</h4><div class="grid grid-cols-2 gap-3 mb-2"><div><label class="block text-xs text-gray-500 mb-1">Đơn vị lớn (Khối)</label><input type="text" id="hParent" list="listUnits" class="w-full border p-1.5 rounded text-sm focus:ring-1 focus:ring-blue-500" placeholder="Chọn đơn vị lớn (Khối)..." onfocus="handleDatalistFocus(event)" onblur="handleDatalistBlur(event)"></div><div><label class="block text-xs text-gray-500 mb-1">Đơn vị nhỏ</label><input type="text" id="hChild" list="listUnits" class="w-full border p-1.5 rounded text-sm focus:ring-1 focus:ring-blue-500" placeholder="Chọn đơn vị..." onfocus="handleDatalistFocus(event)" onblur="handleDatalistBlur(event)"></div></div><button onclick="addHierarchyLink()" class="w-full bg-blue-600 text-white text-xs font-bold py-1.5 rounded hover:bg-blue-700 transition">Thêm Liên Kết</button></div>
+                <div class="bg-white p-3 rounded border"><h4 class="text-xs font-bold text-gray-700 uppercase mb-2 border-b pb-1">Cấu trúc hiện tại</h4><div id="hierarchyList" class="space-y-1 max-h-60 overflow-y-auto"></div></div>
+            </div>
+            <div class="modal-footer flex justify-end p-3 border-t bg-white flex-none"><button onclick="closeHierarchyModal()" class="px-3 py-1.5 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 font-bold text-xs">Đóng</button></div>
+        </div>
+    </div>
+	<div id="oldLinksModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50" onclick="closeOldLinksModal()"></div>
+        <div class="modal-container bg-white w-96 mx-auto rounded shadow-lg z-50 overflow-hidden flex flex-col">
+            <div class="modal-header flex justify-between items-center p-3 border-b bg-gray-50 flex-none">
+                <h3 class="text-base font-bold text-gray-700"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Lịch sử File cũ</h3>
+                <div class="cursor-pointer" onclick="closeOldLinksModal()"><i class="fa-solid fa-times text-gray-500 hover:text-red-500"></i></div>
+            </div>
+            <div class="modal-body p-4 overflow-y-auto max-h-60" id="oldLinksList">
+                <!-- Danh sách link cũ sẽ hiển thị ở đây -->
+            </div>
+        </div>
+    </div>
+
+
+	<script>
+        // --- 1. CONFIGURATION TỐI ƯU HÓA ---
+        const RECAPTCHA_SITE_KEY = '6Ldl4UIsAAAAAJHqtzZeGxXmfNzFNGd5vf-s4QkK';
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwlfEd9fnn3JoG9zdSoDm_k5JVV-NJpH0PqA1_FjbuG9DssaEOvmBnwBkC4kjM8qkAU/exec";
+
+        // Tự động load script reCAPTCHA v3 tránh duplicate key
+        const scriptRecaptcha = document.createElement('script');
+        scriptRecaptcha.src = `https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`;
+        document.head.appendChild(scriptRecaptcha);
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDg9EEQoXle1Sraw5RbZQ7FEDL5c0MChbI",
+            authDomain: "chinhanhmienbac-76730.firebaseapp.com",
+            projectId: "chinhanhmienbac-76730",
+            storageBucket: "chinhanhmienbac-76730.firebasestorage.app",
+            messagingSenderId: "562846259410",
+            appId: "1:562846259410:web:71101f799bdadf5ad5b50b",
+            measurementId: "G-3WJMVDMJLE"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+		const appCheck = firebase.appCheck();
+        appCheck.activate(RECAPTCHA_SITE_KEY, true); // Sử dụng chung biến hằng SITE_KEY
+		
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        const COLLECTION_NAME = "documents";
+        const SYSTEM_COLLECTION = "system";
+
+
+
+        let currentUploadContext = null;
+        let allDocuments = [], filteredDocuments = [];
+        let currentPage = 1, rowsPerPage = 20;
+        let isEditMode = false, selectedIds = new Set(), currentModalMode = 'ADD';
+        let unitHierarchy = {}, currentUser = null;
+        let sortConfig = { column: null, direction: 'asc' };
+
+        const els = {
+            tableBody: document.getElementById('tableBody'),
+            searchInput: document.getElementById('searchInput'),
+            fieldFilter: document.getElementById('fieldFilter'),
+            issuerFilter: document.getElementById('issuerFilter'),
+            unitFilter: document.getElementById('unitFilter'),
+            recordCount: document.getElementById('recordCount'),
+            notification: document.getElementById('notification'),
+            excelInput: document.getElementById('excelFileInput'),
+            driveFileInput: document.getElementById('driveFileInput'),
+            paginationContainer: document.getElementById('paginationContainer'),
+            toggleEditBtn: document.getElementById('toggleEditBtn'),
+            editTools: document.getElementById('editTools'),
+            addEditBtn: document.getElementById('addEditBtn'),
+            colCheckbox: document.getElementById('colCheckbox'),
+            selectAll: document.getElementById('selectAll'),
+            modal: document.getElementById('dataModal'),
+            modalTitle: document.getElementById('modalTitle'),
+            modalTableBody: document.getElementById('modalTableBody'),
+            modalSaveBtn: document.getElementById('modalSaveBtn'),
+            addMoreRowContainer: document.getElementById('addMoreRowContainer'),
+            listFields: document.getElementById('listFields'),
+            listUnits: document.getElementById('listUnits'),
+            listIssuers: document.getElementById('listIssuers'),
+            hierarchyModal: document.getElementById('hierarchyModal'),
+            hParent: document.getElementById('hParent'),
+            hChild: document.getElementById('hChild'),
+            hierarchyList: document.getElementById('hierarchyList'),
+            loginModal: document.getElementById('loginModal'),
+            loginPassword: document.getElementById('loginPassword'),
+            userInfo: document.getElementById('userInfo')
+        };
+			// Hàm chống giật lag khi tìm kiếm
+			function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+			}
+	// Hàm đóng/mở khối Filter trên Mobile
+        function toggleMobileFilters() {
+            const filterContainer = document.getElementById('filterContainer');
+            if (filterContainer.classList.contains('hidden')) {
+                filterContainer.classList.remove('hidden');
+                filterContainer.classList.add('flex');
+            } else {
+                filterContainer.classList.add('hidden');
+                filterContainer.classList.remove('flex');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await auth.signOut();
+            fetchDocuments();
+            fetchHierarchy();
+            els.searchInput.addEventListener('input', debounce(handleFilterChange, 300));
+            els.fieldFilter.addEventListener('change', handleFilterChange);
+            els.issuerFilter.addEventListener('change', handleFilterChange);
+            els.unitFilter.addEventListener('change', handleFilterChange);
+            els.excelInput.addEventListener('change', handleExcelUpload);
+            els.driveFileInput.addEventListener('change', handleDriveFileSelected);
+            setupKeyboardNavigation();
+            auth.onAuthStateChanged(user => {
+                currentUser = user;
+                if(user) els.userInfo.classList.remove('hidden');
+                else { els.userInfo.classList.add('hidden'); if(isEditMode) toggleEditMode(false); }
+            });
+        });
+
+
+        function handleAddEditAction() { if (selectedIds.size > 0) openModal('EDIT'); else openModal('ADD'); }
+        function updateAddEditButton() {
+            const btn = els.addEditBtn;
+            if (selectedIds.size > 0) {
+                btn.innerHTML = '<i class="fa-solid fa-pen mr-1"></i> Sửa';
+                btn.className = "bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm font-bold shadow transition min-w-[80px] h-8 whitespace-nowrap";
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-plus mr-1"></i> Thêm';
+                btn.className = "bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-bold shadow transition min-w-[80px] h-8 whitespace-nowrap";
+            }
+        }
+
+        function sortData(column) { /* Giữ nguyên script sort */
+            if (sortConfig.column === column) sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+            else { sortConfig.column = column; sortConfig.direction = 'asc'; }
+            filteredDocuments.sort((a, b) => { let valA = a[column] || ''; let valB = b[column] || ''; if (column === 'date') { valA = new Date(valA).getTime() || 0; valB = new Date(valB).getTime() || 0; } else if (column === 'revision') { valA = parseInt(valA) || 0; valB = parseInt(valB) || 0; } else { valA = String(valA).toLowerCase(); valB = String(valB).toLowerCase(); } if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1; if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1; return 0; });
+            document.querySelectorAll('.fa-sort, .fa-sort-up, .fa-sort-down').forEach(i => i.className = 'fa-solid fa-sort text-gray-300 ml-1');
+            const activeIcon = document.getElementById(`sort-${column}`); if (activeIcon) activeIcon.className = sortConfig.direction === 'asc' ? 'fa-solid fa-sort-up text-blue-600 ml-1' : 'fa-solid fa-sort-down text-blue-600 ml-1';
+            currentPage = 1; renderTable();
+        }
+
+        function handleEditButtonClick() { if (isEditMode) toggleEditMode(false); else { if (currentUser) toggleEditMode(true); else openLoginModal(); } }
+        function openLoginModal() { document.body.classList.add('modal-active'); els.loginModal.classList.remove('opacity-0', 'pointer-events-none'); els.loginPassword.value = ''; els.loginPassword.focus(); }
+        function closeLoginModal() { document.body.classList.remove('modal-active'); els.loginModal.classList.add('opacity-0', 'pointer-events-none'); }
+        function performLogin() { const email = "tailieu@pvgaslpg.com.vn"; const password = els.loginPassword.value.trim(); if (!password) { showNotify("Vui lòng nhập mật khẩu!", "red"); return; } showNotify("Đang xác thực...", "blue"); auth.signInWithEmailAndPassword(email, password).then(() => { closeLoginModal(); showNotify("Đăng nhập thành công!", "green"); toggleEditMode(true); }).catch((error) => { showNotify("Mật khẩu không đúng!", "red"); }); }
+
+        function fetchDocuments() {
+            db.collection(COLLECTION_NAME).orderBy('date', 'desc').limit(1000).onSnapshot((snapshot) => {
+                allDocuments = []; snapshot.forEach((doc) => allDocuments.push({ id: doc.id, ...doc.data() }));
+                const term = els.searchInput.value.toLowerCase();
+                if(term) handleFilterChange(); else { filteredDocuments = [...allDocuments]; populateFilters(); updateDatalists(); currentPage = 1; renderTable(); }
+            }, (error) => { console.error(error); showNotify("Lỗi kết nối CSDL!", "red"); });
+        }
+        function fetchHierarchy() {
+            db.collection(SYSTEM_COLLECTION).doc('hierarchy').onSnapshot((doc) => {
+                unitHierarchy = doc.exists ? doc.data() : {};
+                renderHierarchyList(); if(els.unitFilter.value) handleFilterChange();
+            });
+        }
+
+        function renderTable() { /* Giữ nguyên script renderTable */ 
+            els.tableBody.innerHTML = '';
+            const totalRows = filteredDocuments.length;
+            const totalPages = Math.ceil(totalRows / rowsPerPage);
+            if (currentPage > totalPages) currentPage = 1; if (currentPage < 1) currentPage = 1;
+            const currentData = filteredDocuments.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+            renderPaginationControls(totalPages);
+            if (totalRows === 0) { els.tableBody.innerHTML = `<tr><td colspan="10" class="text-center py-8 text-gray-500 italic">Không có dữ liệu.</td></tr>`; els.recordCount.innerText = `0 bản ghi`; return; }
+            if(isEditMode) els.tableBody.classList.add('editing-mode'); else els.tableBody.classList.remove('editing-mode');
+
+            currentData.forEach(item => {
+                const row = document.createElement('tr'); row.className = "hover:bg-blue-50 transition group";
+                const safeCode = escapeHtml(item.code || ''), safeName = escapeHtml(item.name || '');
+                const safeIssuer = escapeHtml(item.issuer || ''), safeField = escapeHtml(item.field || 'Khác');
+                const safeUnit = escapeHtml(item.unit || ''), safeDate = escapeHtml(item.date || '');
+                const safeRev = escapeHtml(item.revision || '0');
+                const shortIssuer = safeIssuer.length > 9 ? safeIssuer.substring(0, 9) : safeIssuer;
+                const scanUrl = String(item.linkScan||'').trim(), softUrl = String(item.linkSoft||'').trim();
+                
+                const scanTitle = scanUrl.startsWith('http') ? "Tải file Scan thay thế lên Drive" : "Tải file Scan lên Drive";
+                const softTitle = softUrl.startsWith('http') ? "Tải file Mềm thay thế lên Drive" : "Tải file Mềm lên Drive";
+
+                let linkScanHtml, linkSoftHtml;
+                if (isEditMode) {
+                    const scanColor = (scanUrl.startsWith('http')) ? 'text-red-600' : 'text-gray-400';
+                    const softColor = (softUrl.startsWith('http')) ? 'text-blue-600' : 'text-gray-400';
+                    linkScanHtml = `<button onclick="handleDriveUpload('${item.id}', 'linkScan')" class="btn-upload ${scanColor} hover:text-red-800 transition text-lg" title="${scanTitle}"><i class="fa-solid fa-cloud-arrow-up"></i></button>`;
+                    linkSoftHtml = `<button onclick="handleDriveUpload('${item.id}', 'linkSoft')" class="btn-upload ${softColor} hover:text-blue-800 transition text-lg" title="${softTitle}"><i class="fa-solid fa-cloud-arrow-up"></i></button>`;
+                } else {
+                    linkScanHtml = '<span class="text-gray-200">-</span>'; linkSoftHtml = '<span class="text-gray-200">-</span>';
+                    if (scanUrl.startsWith('http')) linkScanHtml = `<a href="${escapeHtml(scanUrl)}" target="_blank" class="text-red-600 hover:text-red-800 text-lg"><i class="fa-solid fa-file-pdf"></i></a>`;
+                    if (softUrl.startsWith('http')) linkSoftHtml = `<a href="${escapeHtml(softUrl)}" target="_blank" class="text-blue-600 hover:text-blue-800 text-lg"><i class="fa-solid fa-file-word"></i></a>`;
+                }
+                
+                // Logic render cột Cũ
+                let linkOldHtml = '<span class="text-gray-200">-</span>';
+                const linkOldArr = Array.isArray(item.linkOld) ? item.linkOld : [];
+                if (linkOldArr.length > 0) {
+                    linkOldHtml = `<button onclick="showOldLinks('${item.id}')" class="text-yellow-500 hover:text-yellow-700 text-lg transition" title="Xem ${linkOldArr.length} file cũ"><i class="fa-solid fa-clock-rotate-left"></i></button>`;
+                }
+
+                const checkboxClass = isEditMode ? "" : "hidden";
+                const isChecked = selectedIds.has(item.id) ? "checked" : "";
+                const createCell = (field, value, displayValue, extraAttr = '') => { if (!isEditMode) return displayValue; return `<div class="editable-cell" data-id="${item.id}" data-field="${field}" data-val="${escapeHtml(value)}" ${extraAttr} ondblclick="makeEditable(this)">${displayValue}</div>`; };
+                
+                row.innerHTML = `<td class="px-2 py-3 text-center align-middle ${checkboxClass}"><input type="checkbox" class="cursor-pointer transform scale-125" value="${item.id}" ${isChecked} onchange="toggleRowSelection('${item.id}')"></td><td class="px-2 py-3 text-sm font-semibold text-gray-700 align-middle break-words">${createCell('code', item.code, safeCode)}</td><td class="px-2 py-3 text-sm text-gray-800 align-middle">${createCell('name', item.name, `<div class="line-clamp-2" title="${safeName}">${safeName}</div>`)}</td><td class="px-2 py-3 text-xs text-center text-gray-500 align-middle relative">${createCell('issuer', item.issuer, `<span class="bg-gray-100 rounded px-1 border" title="${safeIssuer}">${shortIssuer}</span>`, 'data-list="listIssuers"')}</td><td class="px-2 py-3 text-xs text-gray-600 align-middle">${createCell('field', item.field, `<span class="px-2 py-0.5 rounded-full bg-gray-100 border block truncate">${safeField}</span>`, 'data-list="listFields"')}</td><td class="px-2 py-3 text-xs text-gray-600 align-middle">${createCell('unit', item.unit, `<span class="block truncate" title="${safeUnit}">${safeUnit}</span>`, 'data-list="listUnits"')}</td><td class="px-2 py-3 text-xs text-center text-gray-600 align-middle whitespace-nowrap">${createCell('date', item.date, safeDate ? formatDate(safeDate) : '-', 'data-type="date"')}</td><td class="px-2 py-3 text-xs text-center font-bold text-gray-700 align-middle">${createCell('revision', item.revision, safeRev)}</td><td class="px-2 py-3 text-center align-middle">${linkScanHtml}</td><td class="px-2 py-3 text-center align-middle">${linkSoftHtml}</td><td class="px-2 py-3 text-center align-middle">${linkOldHtml}</td>`;
+                els.tableBody.appendChild(row);
+            });
+            els.recordCount.innerText = `Hiển thị ${(currentPage-1)*rowsPerPage + 1}-${Math.min(currentPage*rowsPerPage, totalRows)} trong ${totalRows} bản ghi`; 
+            if(isEditMode) updateSelectAllState();
+        }
+
+        // --- 2. CẬP NHẬT LOGIC TRIGGER UPLOAD MỚI ---
+        function handleDriveUpload(docId, fieldType) {
+            currentUploadContext = { mode: 'inline', docId, fieldType };
+            els.driveFileInput.click(); 
+        }
+
+
+        function handleModalUpload(btn, fieldType) {
+            const inputElement = btn.previousElementSibling; 
+            currentUploadContext = { mode: 'modal', targetInput: inputElement };
+            els.driveFileInput.click();
+        }
+
+
+
+        // --- 3. LOGIC UPLOAD KẾT HỢP APPS SCRIPT VÀ RECAPTCHA V3 ---
+        function handleDriveFileSelected(e) {
+            const file = e.target.files[0]; 
+            if (!file || !currentUploadContext) return; 
+            e.target.value = '';
+
+            if (file.size > 1024 * 1024 * 50) {
+                showNotify('Tệp quá lớn. Vui lòng chọn tệp nhỏ hơn 50MB.', 'red');
+                return;
+            }
+
+            showNotify(`Đang xử lý ${file.name}...`, 'blue');
+
+            const reader = new FileReader();
+            
+            reader.onload = function(evt) {
+                const base64Data = evt.target.result.split(',')[1]; 
+
+                // Gọi grecaptcha để xác thực trước khi fetch
+                grecaptcha.ready(function() {
+                    grecaptcha.execute(RECAPTCHA_SITE_KEY, {action: 'upload'}).then(async function(token) {
+                        
+                        const formData = new FormData();
+                        formData.append('fileName', file.name);
+                        formData.append('mimeType', file.type || 'application/octet-stream');
+                        formData.append('fileData', base64Data);
+                        formData.append('recaptchaToken', token);
+
+                        try {
+                            showNotify(`Đang tải lên máy chủ...`, 'blue');
+                            const response = await fetch(WEB_APP_URL, {
+                                method: 'POST',
+                                body: formData
+                            });
+
+                            const result = await response.json();
+                            
+                            if (result.status === "success") {
+                                const driveLink = result.url;
+                                
+                                // Phân luồng lưu theo Context Upload
+                                if (currentUploadContext.mode === 'inline') { 
+                                    const doc = allDocuments.find(d => d.id === currentUploadContext.docId);
+                                    let updateData = { [currentUploadContext.fieldType]: driveLink, updatedAt: new Date() };
+                                    if (doc) {
+                                        const oldVal = doc[currentUploadContext.fieldType];
+                                        // Chỉ lưu nếu giá trị cũ bắt đầu bằng 'http' (đường link chuẩn)
+                                        if (oldVal && String(oldVal).trim().startsWith('http') && oldVal !== driveLink) {
+                                            let linkOldArr = Array.isArray(doc.linkOld) ? [...doc.linkOld] : [];
+                                            linkOldArr.push(oldVal);
+                                            updateData.linkOld = linkOldArr;
+                                        }
+                                    }
+                                    await db.collection(COLLECTION_NAME).doc(currentUploadContext.docId).update(updateData); 
+                                } 
+                                else if (currentUploadContext.mode === 'modal') { 
+                                    currentUploadContext.targetInput.value = driveLink; 
+                                }
+                                showNotify("Tải lên thành công!", "green");
+                            } else {
+                                throw new Error(result.message);
+                            }
+
+                        } catch (err) {
+                            console.error('Lỗi khi tải tệp:', err);
+                            showNotify(`Đã xảy ra lỗi: ${err.message}`, "red");
+                        }
+                    });
+                });
+            };
+
+            reader.onerror = function() {
+                showNotify("Không thể đọc tệp.", "red");
+            };
+
+            reader.readAsDataURL(file);
+        }
+        function makeEditable(element) {
+            if (element.querySelector('input')) return;
+            const id = element.dataset.id; const field = element.dataset.field; const currentVal = element.dataset.val || ""; const type = element.dataset.type || "text"; const listId = element.dataset.list || "";
+            let inputHtml = '';
+            if (type === 'date') { inputHtml = `<input type="date" class="inline-input-active" value="${currentVal}" onblur="saveEdit(this, '${id}', '${field}')" onkeydown="if(event.key==='Enter') this.blur()">`; } 
+            else { const listAttr = listId ? `list="${listId}"` : ''; const datalistEvents = listId ? `onfocus="handleDatalistFocus(event)"` : ''; inputHtml = `<input type="text" spellcheck="false" class="inline-input-active" value="${escapeHtml(currentVal)}" data-original="${escapeHtml(currentVal)}" ${listAttr} ${datalistEvents} onblur="saveEdit(this, '${id}', '${field}')" onkeydown="if(event.key==='Enter') this.blur()">`; }
+            element.innerHTML = inputHtml; const input = element.querySelector('input'); input.focus();
+        }
+        async function saveEdit(input, id, field) {
+            let newValue = input.value.trim();
+            if (input.hasAttribute('list') && newValue === '') { const original = input.getAttribute('data-original'); newValue = original || ''; }
+            try { 
+                const doc = allDocuments.find(d => d.id === id); 
+                if (doc && String(doc[field]) !== newValue) { 
+                    let updateData = { [field]: newValue, updatedAt: new Date() };
+                    // Nếu sửa ở cột Link Scan hoặc Link Soft và dữ liệu cũ là đường link
+                    if ((field === 'linkScan' || field === 'linkSoft') && doc[field] && String(doc[field]).trim().startsWith('http')) {
+                        let linkOldArr = Array.isArray(doc.linkOld) ? [...doc.linkOld] : [];
+                        linkOldArr.push(String(doc[field]));
+                        updateData.linkOld = linkOldArr;
+                    }
+                    await db.collection(COLLECTION_NAME).doc(id).update(updateData); 
+                } else { 
+                    renderTable(); 
+                } 
+            } catch (e) { console.error(e); showNotify("Lỗi cập nhật!", "red"); renderTable(); }
+        }
+        function toggleEditMode(enable) {
+            isEditMode = enable;
+            if (isEditMode) { els.toggleEditBtn.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Xong'; els.toggleEditBtn.className = "bg-gray-600 hover:bg-gray-700 text-white px-4 py-1 rounded text-sm font-bold shadow transition w-24 text-center h-8 whitespace-nowrap"; els.editTools.classList.remove('hidden'); els.colCheckbox.classList.remove('hidden'); }
+            else { els.toggleEditBtn.innerHTML = '<i class="fa-solid fa-pen-to-square mr-1"></i> Chỉnh sửa'; els.toggleEditBtn.className = "bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded text-sm font-bold shadow transition w-36 text-center h-8 whitespace-nowrap"; els.editTools.classList.add('hidden'); els.colCheckbox.classList.add('hidden'); selectedIds.clear(); els.selectAll.checked = false; }
+            updateAddEditButton(); renderTable();
+        }
+        function handleFilterChange() {
+            const term = els.searchInput.value.toLowerCase(); 
+            const field = els.fieldFilter.value; 
+            const issuer = els.issuerFilter.value;
+            const unit = els.unitFilter.value;
+            // [THAY ĐỔI 2: LOGIC LỌC]
+            const isStrict = document.getElementById('strictUnitFilter').checked;
+            let validUnits = [];
+            if (unit) {
+                if (isStrict) { validUnits = [unit]; } 
+                else { validUnits = [unit, ...getAncestors(unit)]; }
+            }
+            filteredDocuments = allDocuments.filter(item => {
+                const codeStr = String(item.code || '').toLowerCase(); const nameStr = String(item.name || '').toLowerCase();
+                const matchesSearch = (codeStr.includes(term) || nameStr.includes(term)); 
+                const matchesField = field ? item.field === field : true;
+                const matchesIssuer = issuer ? item.issuer === issuer : true;
+                const matchesUnit = unit ? validUnits.includes(item.unit) : true;
+                return matchesSearch && matchesField && matchesIssuer && matchesUnit;
+            });
+            if (sortConfig.column) sortData(sortConfig.column); else { currentPage = 1; renderTable(); }
+        }
+        function getAncestors(targetUnit) { let ancestors = []; for (const [parent, children] of Object.entries(unitHierarchy)) { if (children.includes(targetUnit)) { ancestors.push(parent); ancestors = ancestors.concat(getAncestors(parent)); break; } } return ancestors; }
+        function getAllDescendants(root) { let desc = []; const children = unitHierarchy[root] || []; children.forEach(c => { desc.push(c); desc = desc.concat(getAllDescendants(c)); }); return [...new Set(desc)]; }
+        function isAncestor(potential, unit) { return getAllDescendants(unit).includes(potential); }
+        async function addHierarchyLink() {
+            const p = els.hParent.value.trim(), c = els.hChild.value.trim();
+            if (!p || !c || p===c) { showNotify("Dữ liệu không hợp lệ!", "red"); return; }
+            if (isAncestor(p, c)) { showNotify("Lỗi vòng lặp!", "red"); return; }
+            if (!unitHierarchy[p]) unitHierarchy[p] = [];
+            if (!unitHierarchy[p].includes(c)) unitHierarchy[p].push(c); else { showNotify("Đã tồn tại!", "blue"); return; }
+            await db.collection(SYSTEM_COLLECTION).doc('hierarchy').set(unitHierarchy);
+            showNotify("Đã thêm!", "green"); els.hParent.value=''; els.hChild.value=''; renderHierarchyList();
+        }
+        async function removeHierarchyLink(p, c) { if (!confirm("Xóa liên kết?")) return; if (unitHierarchy[p]) { unitHierarchy[p] = unitHierarchy[p].filter(x => x !== c); if (unitHierarchy[p].length === 0) delete unitHierarchy[p]; await db.collection(SYSTEM_COLLECTION).doc('hierarchy').set(unitHierarchy); renderHierarchyList(); } }
+        function renderHierarchyList() { const list = els.hierarchyList; list.innerHTML = ''; if (Object.keys(unitHierarchy).length === 0) { list.innerHTML = '<p class="text-xs text-gray-400 italic text-center">Chưa có phân cấp.</p>'; return; } for (const [p, cs] of Object.entries(unitHierarchy)) { cs.forEach(c => { const d = document.createElement('div'); d.className = "flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-100 text-xs"; d.innerHTML = `<div class="flex items-center"><span class="font-bold text-blue-700">${escapeHtml(p)}</span><i class="fa-solid fa-arrow-right mx-2 text-gray-400 text-[10px]"></i><span class="text-gray-700">${escapeHtml(c)}</span></div><button onclick="removeHierarchyLink('${escapeHtml(p)}','${escapeHtml(c)}')" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-times"></i></button>`; list.appendChild(d); }); } }
+        function openHierarchyModal() { document.body.classList.add('modal-active'); els.hierarchyModal.classList.remove('opacity-0', 'pointer-events-none'); renderHierarchyList(); }
+        function closeHierarchyModal() { document.body.classList.remove('modal-active'); els.hierarchyModal.classList.add('opacity-0', 'pointer-events-none'); }
+        function toggleRowSelection(id) { if (selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id); updateSelectAllState(); updateAddEditButton(); }
+        function toggleSelectAll() { const isChecked = els.selectAll.checked; filteredDocuments.forEach(item => { if (isChecked) selectedIds.add(item.id); else selectedIds.delete(item.id); }); updateSelectAllState(); updateAddEditButton(); renderTable(); }
+        function updateSelectAllState() { const total = filteredDocuments.length; const selected = selectedIds.size; if (selected > 0 && selected < total) { els.selectAll.indeterminate = true; els.selectAll.checked = false; } else { els.selectAll.indeterminate = false; els.selectAll.checked = (total > 0 && selected === total); } }
+        function renderPaginationControls(totalPages) {
+            const container = els.paginationContainer; container.innerHTML = ''; if (totalPages <= 1) { container.classList.add('hidden'); return; } container.classList.remove('hidden');
+            const getBtnClass = (active) => `px-3 py-1 rounded-md border text-sm font-semibold transition shadow-sm cursor-pointer ${active ? "bg-blue-500 border-blue-500 text-white" : "bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"}`;
+            let pages = []; if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i); } else { if (currentPage <= 4) pages = [1, 2, 3, 4, 5, '...', totalPages]; else if (currentPage >= totalPages - 3) pages = [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages]; else pages = [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages]; }
+            if (currentPage > 1) { const prev = document.createElement('button'); prev.innerHTML = '<i class="fa-solid fa-chevron-left"></i>'; prev.className = getBtnClass(false); prev.onclick = () => { currentPage--; renderTable(); }; container.appendChild(prev); }
+            pages.forEach(p => { const btn = document.createElement('button'); if (p === '...') { btn.innerText = '...'; btn.className = "px-2 py-1 text-gray-500 text-sm cursor-default"; btn.disabled = true; } else { btn.innerText = p; btn.className = getBtnClass(p === currentPage); btn.onclick = () => { currentPage = p; renderTable(); }; } container.appendChild(btn); });
+            if (currentPage < totalPages) { const next = document.createElement('button'); next.innerHTML = '<i class="fa-solid fa-chevron-right"></i>'; next.className = getBtnClass(false); next.onclick = () => { currentPage++; renderTable(); }; container.appendChild(next); }
+        }
+        function setupKeyboardNavigation() { els.modalTableBody.addEventListener('keydown', (e) => { if (e.isComposing || e.keyCode === 229) return; if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'].includes(e.key)) return; const activeEl = document.activeElement; if (!activeEl || activeEl.tagName !== 'INPUT') return; const currentCell = activeEl.closest('td'); const currentRow = activeEl.closest('tr'); if (!currentCell || !currentRow) return; const cells = Array.from(currentRow.querySelectorAll('td')); const rows = Array.from(els.modalTableBody.querySelectorAll('tr')); const colIndex = cells.indexOf(currentCell); const rowIndex = rows.indexOf(currentRow); if (e.key === 'ArrowDown' || e.key === 'Enter') { if (rowIndex < rows.length - 1) { e.preventDefault(); const target = rows[rowIndex + 1].querySelectorAll('td')[colIndex].querySelector('input'); if(target) {target.focus(); target.select();} } else if (currentModalMode === 'ADD' && e.key === 'Enter') { e.preventDefault(); addNewRow(); setTimeout(() => { const newRows = els.modalTableBody.querySelectorAll('tr'); const target = newRows[newRows.length - 1].querySelectorAll('td')[colIndex].querySelector('input'); if(target) {target.focus(); target.select();} }, 50); } } else if (e.key === 'ArrowUp') { if (rowIndex > 0) { e.preventDefault(); const target = rows[rowIndex - 1].querySelectorAll('td')[colIndex].querySelector('input'); if(target) {target.focus(); target.select();} } } else if (e.key === 'ArrowLeft') { const isText = activeEl.type === 'text' || activeEl.type === 'number'; const isStart = isText ? (activeEl.selectionStart === 0 && activeEl.selectionEnd === 0) : true; if (colIndex > 0 && isStart) { e.preventDefault(); const target = cells[colIndex - 1].querySelector('input'); if(target) {target.focus(); target.select();} } } else if (e.key === 'ArrowRight') { const isText = activeEl.type === 'text' || activeEl.type === 'number'; const isEnd = isText ? (activeEl.selectionStart === activeEl.value.length) : true; if (colIndex < cells.length - 2 && isEnd) { e.preventDefault(); const target = cells[colIndex + 1].querySelector('input'); if(target) {target.focus(); target.select();} } } }); }
+        function handleDatalistFocus(e) { e.target.setAttribute('data-original', e.target.value); e.target.value = ''; }
+        function handleDatalistBlur(e) { if (e.target.value === '') { const original = e.target.getAttribute('data-original'); if (original) e.target.value = original; } }
+        function openModal(mode) { currentModalMode = mode; document.body.classList.add('modal-active'); els.modal.classList.remove('opacity-0', 'pointer-events-none'); els.modalTableBody.innerHTML = ''; if (mode === 'ADD') { els.modalTitle.innerText = "Thêm mới (Batch)"; els.modalSaveBtn.innerHTML = '<i class="fa-solid fa-save mr-1"></i> Lưu toàn bộ'; els.addMoreRowContainer.classList.remove('hidden'); addNewRow(); } else if (mode === 'EDIT') { if (selectedIds.size === 0) { closeModal(); showNotify("Chưa chọn!", "red"); return; } els.modalTitle.innerText = `Cập nhật ${selectedIds.size} tài liệu`; els.modalSaveBtn.innerHTML = '<i class="fa-solid fa-sync mr-1"></i> Cập nhật'; els.addMoreRowContainer.classList.add('hidden'); selectedIds.forEach(id => { const doc = allDocuments.find(d => d.id === id); if (doc) addNewRow(doc); }); } }
+        function closeModal() { document.body.classList.remove('modal-active'); els.modal.classList.add('opacity-0', 'pointer-events-none'); }
+        function addNewRow(data = null) {
+            let defaultIssuer="", defaultField="", defaultUnit=""; if(!data) { const rs = els.modalTableBody.querySelectorAll('tr'); if(rs.length>0) { const last=rs[rs.length-1]; defaultIssuer=last.querySelector('input[name="issuer"]').value; defaultField=last.querySelector('input[name="field"]').value; defaultUnit=last.querySelector('input[name="unit"]').value; } }
+            const row = document.createElement('tr'); row.className = "data-row group hover:bg-gray-50"; const val = (k) => data ? escapeHtml(data[k]) : ""; const idVal = data ? data.id : ""; const valIssuer = data ? val('issuer') : defaultIssuer; const valField = data ? val('field') : defaultField; const valUnit = data ? val('unit') : defaultUnit;
+            row.innerHTML = `<input type="hidden" name="docId" value="${idVal}"><td class="px-1 py-1"><input type="text" name="code" value="${val('code')}" class="input-mini w-full border rounded focus:ring-1 focus:ring-blue-500" onfocus="this.select()"></td><td class="px-1 py-1"><input type="text" name="name" value="${val('name')}" class="input-mini w-full border rounded focus:ring-1 focus:ring-blue-500 bg-yellow-50 placeholder-gray-300" placeholder="Bắt buộc" onfocus="this.select()"></td><td class="px-1 py-1"><input type="text" name="issuer" value="${valIssuer}" list="listIssuers" class="input-mini w-full border rounded focus:ring-1 focus:ring-blue-500 cursor-pointer" onfocus="handleDatalistFocus(event)" onblur="handleDatalistBlur(event)"></td><td class="px-1 py-1"><input type="text" name="field" value="${valField}" list="listFields" class="input-mini w-full border rounded focus:ring-1 focus:ring-blue-500 cursor-pointer" onfocus="handleDatalistFocus(event)" onblur="handleDatalistBlur(event)"></td><td class="px-1 py-1"><input type="text" name="unit" value="${valUnit}" list="listUnits" class="input-mini w-full border rounded focus:ring-1 focus:ring-blue-500 cursor-pointer" onfocus="handleDatalistFocus(event)" onblur="handleDatalistBlur(event)"></td><td class="px-1 py-1"><input type="date" name="date" value="${data ? data.date : ''}" class="input-mini w-full border rounded focus:ring-1 focus:ring-blue-500 text-xs" onfocus="this.select()"></td><td class="px-1 py-1"><input type="text" name="revision" value="${val('revision')}" class="input-mini w-full border rounded focus:ring-1 focus:ring-blue-500" onfocus="this.select()"></td><td class="px-1 py-1"><div class="flex items-center space-x-1"><input type="text" name="linkScan" value="${val('linkScan')}" class="input-mini w-full border rounded focus:ring-1 focus:ring-blue-500 text-xs placeholder-gray-300" onfocus="this.select()"><button type="button" onclick="handleModalUpload(this, 'linkScan')" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-cloud-arrow-up"></i></button></div></td><td class="px-1 py-1"><div class="flex items-center space-x-1"><input type="text" name="linkSoft" value="${val('linkSoft')}" class="input-mini w-full border rounded focus:ring-1 focus:ring-blue-500 text-xs placeholder-gray-300" onfocus="this.select()"><button type="button" onclick="handleModalUpload(this, 'linkSoft')" class="text-blue-500 hover:text-blue-700"><i class="fa-solid fa-cloud-arrow-up"></i></button></div></td><td class="px-1 py-1 text-center"><button onclick="this.closest('tr').remove()" class="text-gray-400 hover:text-red-500 transition" tabindex="-1"><i class="fa-solid fa-trash-can"></i></button></td>`;
+            els.modalTableBody.appendChild(row);
+        }
+        async function handleModalSave() { const rows = els.modalTableBody.querySelectorAll('.data-row'); if (rows.length === 0) return; const batch = db.batch(); let count = 0; const now = new Date(); 
+		const name = row.querySelector('input[name="name"]').value.trim(); if (!name) return; 
+            const docId = row.querySelector('input[name="docId"]').value; 
+            
+            const newScan = row.querySelector('input[name="linkScan"]').value.trim();
+            const newSoft = row.querySelector('input[name="linkSoft"]').value.trim();
+            let linkOldArr = [];
+
+            if (currentModalMode === 'EDIT' && docId) {
+                const oldDoc = allDocuments.find(d => d.id === docId);
+                if (oldDoc) {
+                    linkOldArr = Array.isArray(oldDoc.linkOld) ? [...oldDoc.linkOld] : [];
+                    // Bắt LinkScan cũ
+                    if (oldDoc.linkScan && oldDoc.linkScan !== newScan && String(oldDoc.linkScan).trim().startsWith('http')) linkOldArr.push(oldDoc.linkScan);
+                    // Bắt LinkSoft cũ
+                    if (oldDoc.linkSoft && oldDoc.linkSoft !== newSoft && String(oldDoc.linkSoft).trim().startsWith('http')) linkOldArr.push(oldDoc.linkSoft);
+                }
+            }
+
+            const dd = { code: row.querySelector('input[name="code"]').value.trim(), name, issuer: row.querySelector('input[name="issuer"]').value.trim(), field: row.querySelector('input[name="field"]').value.trim(), unit: row.querySelector('input[name="unit"]').value.trim(), date: row.querySelector('input[name="date"]').value, revision: row.querySelector('input[name="revision"]').value.trim(), linkScan: newScan, linkSoft: newSoft, linkOld: linkOldArr, updatedAt: now }; 
+            
+            if (currentModalMode === 'EDIT' && docId) batch.update(db.collection(COLLECTION_NAME).doc(docId), dd); else { dd.createdAt = now; batch.set(db.collection(COLLECTION_NAME).doc(), dd); } count++;
+		if (count === 0) { showNotify("Thiếu tên!", "red"); return; } try { showNotify("Đang lưu...", "blue"); await batch.commit(); closeModal(); showNotify("Thành công!", "green"); if (currentModalMode === 'EDIT') { selectedIds.clear(); els.selectAll.checked = false; } } catch (e) { console.error(e); showNotify("Lỗi!", "red"); } }
+        async function deleteSelected() { if (selectedIds.size === 0) { showNotify("Chưa chọn!", "red"); return; } if (!confirm(`Xóa ${selectedIds.size} dòng?`)) return; const batch = db.batch(); selectedIds.forEach(id => batch.delete(db.collection(COLLECTION_NAME).doc(id))); try { await batch.commit(); showNotify("Đã xóa.", "green"); selectedIds.clear(); els.selectAll.checked = false; renderTable(); } catch (e) { console.error(e); showNotify("Lỗi!", "red"); } }
+        function updateDatalists() { els.listFields.innerHTML=''; els.listUnits.innerHTML=''; els.listIssuers.innerHTML=''; [...new Set(allDocuments.map(i=>i.field).filter(Boolean))].sort().forEach(f=>els.listFields.appendChild(new Option(f,f))); [...new Set(allDocuments.map(i=>i.unit).filter(Boolean))].sort().forEach(u=>els.listUnits.appendChild(new Option(u,u))); [...new Set(allDocuments.map(i=>i.issuer).filter(Boolean))].sort().forEach(i=>els.listIssuers.appendChild(new Option(i,i))); }
+        
+        function populateFilters() { 
+            const fV = els.fieldFilter.value, uV = els.unitFilter.value, iV = els.issuerFilter.value; 
+            els.fieldFilter.innerHTML = '<option value="">Tất cả</option>'; 
+            els.unitFilter.innerHTML = '<option value="">Tất cả</option>'; 
+            els.issuerFilter.innerHTML = '<option value="">Tất cả</option>'; 
+            
+            [...new Set(allDocuments.map(i=>i.field).filter(Boolean))].sort().forEach(f=>els.fieldFilter.add(new Option(f,f))); 
+            [...new Set(allDocuments.map(i=>i.unit).filter(Boolean))].sort().forEach(u=>els.unitFilter.add(new Option(u,u))); 
+            [...new Set(allDocuments.map(i=>i.issuer).filter(Boolean))].sort().forEach(i=>els.issuerFilter.add(new Option(i,i))); 
+            
+            els.fieldFilter.value = fV; 
+            els.unitFilter.value = uV; 
+            els.issuerFilter.value = iV; 
+        }
+
+        function escapeHtml(t) { return t == null ? "" : t.toString().replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+        function formatDate(s) { if (!s) return ''; try { const d = new Date(s); return isNaN(d) ? s : `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`; } catch { return s; } }
+        function showNotify(m, c) { els.notification.className = `mb-3 p-3 rounded text-sm font-medium flex-none text-center shadow-sm bg-${c}-100 text-${c}-800 border border-${c}-300`; els.notification.innerHTML = m; els.notification.classList.remove('hidden'); setTimeout(()=>els.notification.classList.add('hidden'), 5000); }
+        
+		async function exportToExcel() {
+            if (!filteredDocuments || filteredDocuments.length === 0) {
+                showNotify("Không có dữ liệu nào khớp với bộ lọc để xuất!", "red");
+                return;
+            }
+            
+            showNotify("Đang khởi tạo file Excel...", "blue");
+            
+            try {
+                // Khởi tạo Workbook và Worksheet mới
+                const workbook = new ExcelJS.Workbook();
+                workbook.creator = 'Hệ Thống Quản Lý Tài Liệu';
+                const worksheet = workbook.addWorksheet('Danh Sách Tài Liệu');
+                
+                // Định nghĩa các cột (Bao gồm cột Thứ tự ở đầu)
+                worksheet.columns = [
+                    { header: 'STT', key: 'stt', width: 5 },
+                    { header: 'Mã hiệu', key: 'code', width: 15 },
+                    { header: 'Tên tài liệu, Quy trình', key: 'name', width: 45 },
+                    { header: 'Cơ quan ban hành', key: 'issuer', width: 20 },
+                    { header: 'Lĩnh vực', key: 'field', width: 15 },
+                    { header: 'Đơn vị sử dụng', key: 'unit', width: 25 },
+                    { header: 'Ngày BH', key: 'date', width: 15 },
+                    { header: 'Lần BH (Rev.)', key: 'revision', width: 12 },
+                    { header: 'Link Scan', key: 'linkScan', width: 40 },
+                    { header: 'Link Mềm', key: 'linkSoft', width: 40 }
+                ];
+                
+                // Tráng trí cho dòng Tiêu đề (Header)
+                const headerRow = worksheet.getRow(1);
+                headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                headerRow.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FF1E3A8A' } // Màu xanh đậm giống theme web
+                };
+                headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+                
+                // Đổ dữ liệu từ mảng filteredDocuments vào sheet
+                filteredDocuments.forEach((doc, index) => {
+                    const row = worksheet.addRow({
+                        stt: index + 1,
+                        code: doc.code || '',
+                        name: doc.name || '',
+                        issuer: doc.issuer || '',
+                        field: doc.field || '',
+                        unit: doc.unit || '',
+                        date: formatDate(doc.date), // Dùng lại hàm formatDate có sẵn của bạn
+                        revision: doc.revision || '',
+                        linkScan: doc.linkScan || '',
+                        linkSoft: doc.linkSoft || ''
+                    });
+
+                    // Căn giữa cho một số cột đặc thù
+                    row.getCell('stt').alignment = { horizontal: 'center' };
+                    row.getCell('date').alignment = { horizontal: 'center' };
+                    row.getCell('revision').alignment = { horizontal: 'center' };
+                });
+                
+                // Thêm viền (border) cho toàn bộ bảng
+                worksheet.eachRow((row) => {
+                    row.eachCell((cell) => {
+                        cell.border = {
+                            top: { style: 'thin' },
+                            left: { style: 'thin' },
+                            bottom: { style: 'thin' },
+                            right: { style: 'thin' }
+                        };
+                    });
+                });
+                
+                // Sinh ra bộ đệm (buffer) và gọi trình duyệt tải về
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                
+                // Tự động sinh tên file có chứa ngày tháng hiện tại
+                const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+                saveAs(blob, `DanhSachTaiLieu_${dateStr}.xlsx`);
+                
+                showNotify("Xuất Excel thành công!", "green");
+            } catch (error) {
+                console.error("Lỗi khi xuất Excel: ", error);
+                showNotify("Có lỗi xảy ra trong quá trình xuất Excel!", "red");
+            }
+        }
+		
+		async function handleExcelUpload(e) { const f = e.target.files[0]; if(!f) return; e.target.value=''; showNotify("Đang đọc...","blue"); const r = new FileReader(); r.onload=async e=>{ try { const d = new Uint8Array(e.target.result); const wb = XLSX.read(d,{type:'array'}); await processImport(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]])); } catch(err){ console.error(err); showNotify("Lỗi file!", "red"); } }; r.readAsArrayBuffer(f); }
+        
+		async function processImport(d) { 
+            let u = 0, a = 0; 
+            const total = d.length; 
+            if (total === 0) return;
+            
+            showNotify(`Xử lý ${total} dòng...`, "blue"); 
+            
+            const m = new Map(); 
+            allDocuments.forEach(doc => { if (doc.code) m.set(String(doc.code).trim(), doc.id) }); 
+            const limit = 400; 
+            let b = db.batch(), ops = 0; 
+            
+            // BƯỚC 1: QUÉT TẤT CẢ TIÊU ĐỀ VÀ MAP THÔNG MINH (Chỉ chạy 1 lần)
+            const headerMap = {};
+            const allKeys = new Set();
+            
+            // Lấy ra tất cả các tên cột có trong file excel
+            d.forEach(row => Object.keys(row).forEach(k => allKeys.add(k)));
+            
+            // Quét qua các cột, chuyển về chữ thường, xóa khoảng trắng thừa và so khớp
+            allKeys.forEach(key => {
+                const normalizedKey = key.toLowerCase().replace(/\s+/g, ' ').trim();
+                
+                // Sử dụng Regex để nhận diện tổ hợp chéo, từ viết tắt, không phân biệt hoa thường
+                if (/(mã hiệu|mã tl|mã tài|số hiệu|mã|mã số)/i.test(normalizedKey)) headerMap['code'] = key;
+                else if (/(tên tài|tài liệu|quy trình|tên quy)/i.test(normalizedKey)) headerMap['name'] = key;
+                else if (/(cơ quan|cqbh|cơ ban)/i.test(normalizedKey)) headerMap['issuer'] = key;
+                else if (/(lĩnh vực)/i.test(normalizedKey)) headerMap['field'] = key;
+                else if (/(đơn vị|đv sử|đv thực|sử dụng|thực hiện)/i.test(normalizedKey)) headerMap['unit'] = key;
+                else if (/(ngày ban|ngày bh)/i.test(normalizedKey)) headerMap['date'] = key;
+                else if (/(lần ban|lần bh|rev)/i.test(normalizedKey)) headerMap['revision'] = key;
+                else if (/(scan)/i.test(normalizedKey)) headerMap['linkScan'] = key; 
+                else if (/(mềm|soft)/i.test(normalizedKey)) headerMap['linkSoft'] = key; 
+            });
+
+            // BƯỚC 2: TIẾN HÀNH IMPORT TỪ BỘ MAP ĐÃ QUÉT
+            for(const r of d) { 
+                const c = String(r[headerMap['code']] || '').trim(); 
+                const n = String(r[headerMap['name']] || '').trim(); 
+                
+                // Phải có ít nhất Mã hiệu hoặc Tên thì mới là dữ liệu hợp lệ
+                if(!c && !n) continue; 
+                
+                // Xử lý thông minh ngày tháng (Hỗ trợ cả format Date chuẩn Excel và Text)
+                const rawDate = r[headerMap['date']];
+                let parsedDate = '';
+                
+                if (rawDate) {
+                    if (typeof rawDate === 'number') {
+                        // Công thức convert serial date của Excel sang format YYYY-MM-DD
+                        parsedDate = new Date(Math.round((rawDate - 25569) * 86400 * 1000)).toISOString().split('T')[0];
+                    } else {
+                        // Xử lý chuỗi Text dạng dd/mm/yyyy hoặc dd-mm-yyyy
+                        let textDate = String(rawDate).trim();
+                        let parts = textDate.split(/[\/\-]/); // Cắt theo dấu gạch chéo hoặc gạch ngang
+                        
+                        if (parts.length >= 3) {
+                            let dd = parts[0].padStart(2, '0');
+                            let mm = parts[1].padStart(2, '0');
+                            let yyyy = parts[2].substring(0, 4);
+                            
+                            // Nếu năm chỉ có 2 số (vd: 24), chuyển thành 2024
+                            if (yyyy.length === 2) {
+                                yyyy = '20' + yyyy;
+                            }
+                            
+                            parsedDate = `${yyyy}-${mm}-${dd}`;
+                            
+                            // Kiểm tra xem ngày sau khi ghép có hợp lệ không (vd tránh 35/15/2024)
+                            if (isNaN(new Date(parsedDate).getTime())) {
+                                parsedDate = '';
+                            }
+                        } else {
+                            parsedDate = ''; // Không đủ 3 phần ngày tháng năm thì bỏ trống
+                        }
+                    }
+                }
+
+                // Gán dữ liệu dựa theo map key
+                const dd = { 
+                    code: c, 
+                    name: n, 
+                    issuer: String(r[headerMap['issuer']] || '').trim(), 
+                    field: String(r[headerMap['field']] || '').trim(), 
+                    unit: String(r[headerMap['unit']] || '').trim(), 
+                    date: parsedDate, 
+                    revision: String(r[headerMap['revision']] || '').trim(), 
+                    linkScan: String(r[headerMap['linkScan']] || '').trim(), 
+                    linkSoft: String(r[headerMap['linkSoft']] || '').trim(), 
+                    updatedAt: new Date() 
+                }; 
+                
+                // Cập nhật Database
+                if(c && m.has(c)) { 
+                    b.update(db.collection(COLLECTION_NAME).doc(m.get(c)), dd); 
+                    u++; 
+                } else { 
+                    dd.createdAt = new Date(); 
+                    b.set(db.collection(COLLECTION_NAME).doc(), dd); 
+                    a++; 
+                } 
+                
+                ops++; 
+                if(ops >= limit) { 
+                    await b.commit(); 
+                    b = db.batch(); 
+                    ops = 0; 
+                } 
+            } 
+            
+            if(ops > 0) await b.commit(); 
+            showNotify(`Nhập từ Excel thành công!<br>Thêm mới: ${a} | Cập nhật: ${u}`, "green"); 
+        }
+			function showOldLinks(id) {
+            const doc = allDocuments.find(d => d.id === id);
+            if (!doc || !doc.linkOld || doc.linkOld.length === 0) return;
+            const listEl = document.getElementById('oldLinksList');
+            listEl.innerHTML = doc.linkOld.map((link, i) => `<a href="${escapeHtml(link)}" target="_blank" class="flex items-center gap-2 mb-2 text-sm text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 p-2 rounded border transition break-all"><i class="fa-solid fa-cloud-arrow-down"></i> Tải về file cũ (${i + 1})</a>`).join('');
+            document.body.classList.add('modal-active');
+            document.getElementById('oldLinksModal').classList.remove('opacity-0', 'pointer-events-none');
+        }
+        function closeOldLinksModal() {
+            document.body.classList.remove('modal-active');
+            document.getElementById('oldLinksModal').classList.add('opacity-0', 'pointer-events-none');
+        }
+    </script>
+</body>
+</html>
